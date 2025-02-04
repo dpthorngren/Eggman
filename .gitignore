@@ -1,7 +1,11 @@
 # Directories not version-controlled
 old/
 plots
+data
 scratch/
+cspice/
+src/*.c
+*.ipynb
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
