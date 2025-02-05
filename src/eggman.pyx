@@ -1,7 +1,18 @@
-cdef double darkening(double r, void* params) noexcept:
-    cdef IntegralParams* g = <IntegralParams*>params
-    cdef double mu = 1. - sqrt(max(1. - r*r, 0.))
-    return g.limb[0] - g.limb[1]*mu - g.limb[2]*mu*mu
+cdef double darkening(double rSq, int limbType, double limb0, double limb1, double limb2, double limb3) noexcept:
+    cdef double x
+    if limbType == 0:
+        # double x = 1 - sqrt(1.-rsq);
+        # return (1. - limb0*x - limb1*x*x/((1. - limb0/3 - limb1/6)*pi);
+        # Quadratic; x = 1 - mu
+        x = 1. - sqrt(max(1. - rSq, 0.))
+        return (1 - limb0*x - limb1*x*x) / ((1. - limb0/3. - limb1/6.)*pi)
+    elif limbType == 1:
+        # Nonlinear; x = sqrt(mu)
+        x = sqrt(sqrt(1 - rSq))
+        norm = (-limb0/10. - limb1/6. - 3.*limb2/14. - limb3/4. + 0.5)*2.*pi
+        return (1. - limb0*(1. - x) - limb1*(1. - x**2) - limb2*(1. - x**3) - limb3*(1. - x**4)) / norm
+    # Invalid limbType
+    return nan
  
 
 cdef double originDist(double t, void* params) noexcept:
@@ -41,7 +52,7 @@ cdef double integrand(double rad, void* params) noexcept:
     if thetaLeft < thetaRight:
         thetaLeft += 2*pi
 
-    return (thetaLeft-thetaRight) * rad * darkening(rad, g)
+    return (thetaLeft-thetaRight) * rad * darkening(g.rsq, g.limbType, g.limb[0], g.limb[1], g.limb[2], g.limb[3])
 
 
 cpdef double transitDepth(double a, double b, double c, double semimajor, double theta, double phi, double[:] limb):
@@ -52,6 +63,59 @@ cpdef double transitDepth(double a, double b, double c, double semimajor, double
     a, b, xe, ye  = orbitGeometry(a, b, c, semimajor, theta, phi)
     # Feed them into the transit depth integral
     return transitIntegral(a, b, xe, ye, limb) / pi
+
+cpdef double asymmetricTransit(double rMorning, double rEvening, double rPole, double t, double t0, double period, double semimajor, double inclination, int limbType, double[:] limb):
+    '''Calculates the transit of a piecewise-elliptical planet.  Assumes the same projected shape regardless of its position
+    in the orbit.  Uses the same model as catwoman (two spheres split down the middle) if rPole is negative.
+
+    Parameters:
+        rMorning        The radius of the planet at the morning (right) side of the planet at the equator relative to
+                            the stellar radius.
+        rEvening        The radius of the planet at the evening (left) side of the planet at the equator relative top
+                            the stellar radius.
+        rPole           The radius of the planet at the poles (top and bottom) relative to the stellar radius.  If -1,
+                            rPole is set to rMorning one morning side and rEvening on the evening side.
+        t               The time of the observation to be simulated (must be the same unit as t0 and period).
+        t0              The time of a mid-transit (needn't be the observed one).
+        period          The orbital period of the planet.
+        semimajor       The semimajor axis of the planet relative to the stellar radius.
+        inclination     The inclination of the orbit in degrees (near 90 for transiting planets).
+        limbType        The type of limb darkening to use: 0 is quadratic and 1 is non-linear.
+        limb            An array of limb darkening parameters of length 5 (required even if not all are used).
+
+    Returns:
+        The relative flux from the star at the time given, so 1 if the planet is out of transit.
+    '''
+    # Check inputs
+    assert limbType in [0, 1]
+    # Get orbit angles
+    cdef double theta = (2*pi*(t-t0)/period)%(2*pi)
+    cdef double phi = pi*inclination/180. - pi/2
+    # No transit if the planet is behind the star
+    if (theta > 0.5*pi) and (theta < 1.5*pi):
+        return 1.
+    # Calculate the planet's position in the sky (aligned with orbit) frame
+    cdef double xe = semimajor * sin(theta)
+    cdef double ye = semimajor * cos(theta) * sin(phi)
+
+    # Handle negative rPole (asymmetric pole radius locked to circles)
+    cdef double rPoleMorning = rPole
+    cdef double rPoleEvening = rPole
+    if rPole < 0:
+        rPoleMorning = rMorning
+        rPoleEvening = rEvening
+
+    # Axis-aligned bounding box check to rule out trivial non-transits
+    if (xe + rMorning < -1.) or (xe - rEvening > 1) or \
+            (ye + max(rPoleMorning, rPoleEvening) < -1) or (ye - max(rPoleMorning, rPoleEvening) > 1):
+        return 1.
+
+    cdef double result = 0.
+    if xe > -1.:
+        result += bruteIntegrate(rEvening, rPoleEvening, xe, ye, limb, limbType=limbType, limitsMode=1)
+    if xe < 1.:
+        result += bruteIntegrate(rMorning, rPoleMorning, xe, ye, limb, limbType=limbType, limitsMode=2)
+    return 1. - result
 
 
 cpdef double transitIntegral(double a, double b, double xe, double ye, double[:] limb, int preferBrute=1):
@@ -69,7 +133,7 @@ cpdef double transitIntegral(double a, double b, double xe, double ye, double[:]
 
     # Init root-finding requirements
     gsl_set_error_handler_off()
-    cdef IntegralParams g = IntegralParams(a, b, xe, ye, -1., -1., 0, [limb[i] for i in range(5)], NULL, NULL)
+    cdef IntegralParams g = IntegralParams(a, b, xe, ye, -1., -1., 0., 0, [limb[i] for i in range(5)], NULL, NULL)
     cdef gsl_function dist
     dist.function = &originDistDiff
     dist.params = &g
@@ -132,29 +196,34 @@ cpdef double transitIntegral(double a, double b, double xe, double ye, double[:]
 
 cdef double bruteIntegrand(double y, void* params) noexcept:
     cdef BruteIntegralParams* g = <BruteIntegralParams*>params
-    cdef double mu = 1. - g.x*g.x - y*y
-    mu = 1 - sqrt(max(mu, 0.))
-    return g.limb[0] - g.limb[1]*mu - g.limb[2]*mu*mu
+    cdef double rsq = g.x*g.x + y*y
+    return darkening(rsq, g.limbType, g.limb[0], g.limb[1], g.limb[2], g.limb[3])
 
 
 cdef double bruteIntegrateY(double x, void* params) noexcept:
     cdef double result, err
     cdef BruteIntegralParams* g = <BruteIntegralParams*>params
+    g.x = x
 
     # Calculate the bounds of integration in y
     cdef double yMin = (x-g.xe)/g.a
     yMin = g.b * sqrt(1.-yMin*yMin)
     cdef double yMax = g.ye + yMin
     yMin = g.ye - yMin
-    g.x = x
+    # Clip to within the bounds of the star
+    cdef double yStarEdge = sqrt(1 - x*x)
+    yMin = max(yMin, -yStarEdge)
+    yMax = min(yMax, yStarEdge)
+    if yMin >= yMax:
+        return 0.
 
     gsl_integration_qag(g.integrand, yMin, yMax, 0., 1e-7, 100, 1, g.work, &result, &err)
     return result
 
 
-cpdef double bruteIntegrate(double a, double b, double xe, double ye, double[:] limb):
+cpdef double bruteIntegrate(double a, double b, double xe, double ye, double[:] limb, int limbType=0, int limitsMode=0):
     cdef double result, err
-    cdef BruteIntegralParams g = BruteIntegralParams(a, b, xe, ye, 0., [limb[i] for i in range(5)], NULL, NULL)
+    cdef BruteIntegralParams g = BruteIntegralParams(a, b, xe, ye, 0., limbType, [limb[i] for i in range(5)], NULL, NULL)
     
     # Prepare the inner (y) integral variables
     cdef gsl_integration_workspace* workspaceInner = gsl_integration_workspace_alloc(100)
@@ -170,7 +239,21 @@ cpdef double bruteIntegrate(double a, double b, double xe, double ye, double[:] 
     integOuter.function = &bruteIntegrateY
     integOuter.params = &g
 
-    gsl_integration_qag(&integOuter, xe-a, xe+a, 0., 1e-7, 100, 1, workspaceOuter, &result, &err)
+    # Compute limits of integration on the x axis
+    cdef double x0, x1
+    if limitsMode == 0:     # Integrate both sides of the planet
+        x0 = max(xe-a, -1)
+        x1 = min(xe+a, 1)
+    elif limitsMode == 1:   # Integrate only the evening (left) side of the planet
+        x0 = max(xe-a, -1)
+        x1 = min(xe, 1)
+    elif limitsMode == 2:   # Integrate only the morning (right) side of the planet
+        x0 = max(xe, -1)
+        x1 = min(xe+a, 1)
+    if x0 >= x1:
+        result = 0.
+    else:
+        gsl_integration_qag(&integOuter, x0, x1, 0., 1e-7, 100, 1, workspaceOuter, &result, &err)
 
     gsl_integration_workspace_free(workspaceInner)
     gsl_integration_workspace_free(workspaceOuter)

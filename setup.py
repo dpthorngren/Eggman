@@ -12,7 +12,7 @@ ext = Extension(
 
 setup(
     name="eggman",
-    version='0.2',
+    version='0.3',
     description="Code for calculating the geometry and transit depths of piecewise ellipsoidal objects.",
     author="Daniel Thorngren",
     ext_modules=cythonize([ext], compiler_directives={'embedsignature': True, 'language_level': "3"}),

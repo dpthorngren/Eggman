@@ -70,6 +70,7 @@ cdef struct IntegralParams:
     double tNear
     double tFar
     double rsq
+    int limbType
     double limb[5]
     gsl_root_fsolver* solver
     gsl_function* func
@@ -80,6 +81,7 @@ cdef struct BruteIntegralParams:
     double xe
     double ye
     double x
+    int limbType
     double limb[5]
     gsl_integration_workspace* work
     gsl_function* integrand
