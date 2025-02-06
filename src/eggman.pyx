@@ -1,18 +1,24 @@
 cdef double darkening(double rSq, int limbType, double limb0, double limb1, double limb2, double limb3) noexcept:
     cdef double x
     if limbType == 0:
-        # double x = 1 - sqrt(1.-rsq);
-        # return (1. - limb0*x - limb1*x*x/((1. - limb0/3 - limb1/6)*pi);
         # Quadratic; x = 1 - mu
         x = 1. - sqrt(max(1. - rSq, 0.))
-        return (1 - limb0*x - limb1*x*x) / ((1. - limb0/3. - limb1/6.)*pi)
+        return (1 - limb0*x - limb1*x*x)
     elif limbType == 1:
         # Nonlinear; x = sqrt(mu)
         x = sqrt(sqrt(1 - rSq))
-        norm = (-limb0/10. - limb1/6. - 3.*limb2/14. - limb3/4. + 0.5)*2.*pi
-        return (1. - limb0*(1. - x) - limb1*(1. - x**2) - limb2*(1. - x**3) - limb3*(1. - x**4)) / norm
+        return (1. - limb0*(1. - x) - limb1*(1. - x**2) - limb2*(1. - x**3) - limb3*(1. - x**4))
     # Invalid limbType
     return nan
+
+cdef double darkeningNormalization(int limbType, double limb0, double limb1, double limb2, double limb3) noexcept:
+    if limbType == 0:
+        return (1. - limb0/3. - limb1/6.)*pi
+    elif limbType == 1:
+        return (-limb0/5. - limb1/3. - 3.*limb2/7. - limb3/2. + 1.)*pi
+    # Invalid limbType
+    return nan
+
  
 
 cdef double originDist(double t, void* params) noexcept:
@@ -115,7 +121,7 @@ cpdef double asymmetricTransit(double rMorning, double rEvening, double rPole, d
         result += bruteIntegrate(rEvening, rPoleEvening, xe, ye, limb, limbType=limbType, limitsMode=1)
     if xe < 1.:
         result += bruteIntegrate(rMorning, rPoleMorning, xe, ye, limb, limbType=limbType, limitsMode=2)
-    return 1. - result
+    return 1. - result / darkeningNormalization(limbType, limb[0], limb[1], limb[2], limb[3])
 
 
 cpdef double transitIntegral(double a, double b, double xe, double ye, double[:] limb, int preferBrute=1):
