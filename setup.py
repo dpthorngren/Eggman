@@ -5,7 +5,7 @@ import os
 
 ext = Extension(
     "eggman", ["src/eggman.pyx"],
-    libraries=[":cspice.a", "gsl"],
+    libraries=["cspice", "gsl", "gslcblas"],
     library_dirs=[os.getcwd()+"/cspice/lib/"],
     include_dirs=[os.getcwd()+"/cspice/include/"],
 )
@@ -16,5 +16,5 @@ setup(
     description="Code for calculating the geometry and transit depths of piecewise ellipsoidal objects.",
     author="Daniel Thorngren",
     ext_modules=cythonize([ext], compiler_directives={'embedsignature': True, 'language_level': "3"}),
-    install_requires=['cython']
+    install_requires=['cython', 'numpy']
 )
