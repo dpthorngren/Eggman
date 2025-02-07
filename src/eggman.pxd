@@ -3,7 +3,7 @@ from libc.math cimport sin, cos, sqrt, atan2, acos, log, exp
 from libc.math cimport M_PI as pi, NAN as nan
 
 
-cdef extern from "SpiceUsr.h":
+cdef extern from "cspice/SpiceUsr.h":
     ctypedef double SpiceDouble
     ctypedef bint SpiceBoolean
     ctypedef struct SpicePlane:
@@ -12,7 +12,7 @@ cdef extern from "SpiceUsr.h":
         pass
     
 
-cdef extern from "SpiceZfc.h":
+cdef extern from "cspice/SpiceZfc.h":
     # Initializes a SpicePlane given a normal vector and an offset from the origin
     cdef void nvc2pl_c(SpiceDouble* normal, SpiceDouble offset, SpicePlane* outPlane)
     # Gets the ellipse defined by the intersection of an ellipsoid and a plane

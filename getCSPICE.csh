@@ -31,3 +31,7 @@ tar xfv cspice.tar
 echo "=== Compiling CSPICE ==="
 cd cspice
 csh makeall.csh
+# Reformatting things like an actual shared library
+cp ./lib/cspice.a ./lib/libcspice.a
+mkdir ./include/cspice
+mv ./include/*.h ./include/cspice/
