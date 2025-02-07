@@ -22,23 +22,23 @@ import numpy as np
 import eggman
 
 eggman.asymmetricTransit(
-    rMorning=.12,     # Relative to stellar radius
+    rMorning=.12,                   # Relative to stellar radius
     rEvening=.1,
     rPole=.11,
-    t=0.001,          # In any unit, so long as it's the same as t0 and period.
+    t=np.linspace(-.05,.05,100),    # In any unit, so long as it's the same as t0 and period.
     t0=0,
     period=1.,
-    semimajor=10.,    # Relative to the stellar radius
-    inclination=89.,  # In degrees
-    limbType=0,
-    limb=np.array([.3, .2, 0., 0., 0.])
+    semimajor=10.,                  # Relative to the stellar radius
+    inclination=89.,                # In degrees
+    limbType='quadratic',           # Must be one of 'quadratic', 'nonlinear'
+    limb=[.3, .2]                   # Two parameters for quadratic, 4 for nonlinear
 )
 ```
 
 ## Limb Darkening Settings
-The limb darkening of the star is set by the `limbType` and `limb` parameters.  `limbType` is an integer specifying the darkening formula to use and `limb` is the parameters of that formula.  The latter must *always* be a length-5 numpy array, regardless of how many parameters are actually used.  The limb darkening options are (note the zero-indexing):
+The limb darkening of the star is set by the `limbType` and `limb` parameters.  `limbType` is the name of the darkening formula to use and `limb` is the parameters of that formula.  `limb` must have exactly the correct number of parameters for that `limbType`.  Currently, the options for limb darkening types are:
 
-0. Quadratic: $I(\mu)/N = 1 - \gamma_0 (1-\mu) - \gamma_1 (1-\mu)^2$
-1. Non-linear: $I(\mu)/N = 1 - \gamma_0 (1 - \sqrt{\mu}) - \gamma_1 (1-\mu) - \gamma_2 (1-\mu^{3/2}) - \gamma_3 (1-\mu^2)$
+1. `quadratic`, 2 parameters, $I(\mu)/N = 1 - \gamma_0 (1-\mu) - \gamma_1 (1-\mu)^2$
+2. `nonlinear`, 4 parameters, $I(\mu)/N = 1 - \gamma_0 (1 - \sqrt{\mu}) - \gamma_1 (1-\mu) - \gamma_2 (1-\mu^{3/2}) - \gamma_3 (1-\mu^2)$
 
-where $N$ is a normalization factor, $\gamma$ are model parameters (specified in `limb`), $\mu$ is the cosine of the angle between the viewer-star vector and the star-surface-point vector.  See [Mandel & Agol (2002)](https://ui.adsabs.harvard.edu/abs/2002ApJ...580L.171M/abstract) for more information.
+where $N$ is a normalization factor, $\gamma$ are model parameters (specified in `limb`), $\mu$ is the cosine of the angle between the viewer-star vector and the star center-to-surface-point vector.  See [Mandel & Agol (2002)](https://ui.adsabs.harvard.edu/abs/2002ApJ...580L.171M/abstract) for more information.

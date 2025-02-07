@@ -82,7 +82,10 @@ cdef struct BruteIntegralParams:
     double ye
     double x
     int limbType
-    double limb[5]
+    double limb0
+    double limb1
+    double limb2
+    double limb3
     gsl_integration_workspace* work
     gsl_function* integrand
 

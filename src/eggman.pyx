@@ -1,3 +1,6 @@
+import numpy as np
+
+
 cdef double darkening(double rSq, int limbType, double limb0, double limb1, double limb2, double limb3) noexcept:
     cdef double x
     if limbType == 0:
@@ -11,6 +14,7 @@ cdef double darkening(double rSq, int limbType, double limb0, double limb1, doub
     # Invalid limbType
     return nan
 
+
 cdef double darkeningNormalization(int limbType, double limb0, double limb1, double limb2, double limb3) noexcept:
     if limbType == 0:
         return (1. - limb0/3. - limb1/6.)*pi
@@ -19,7 +23,7 @@ cdef double darkeningNormalization(int limbType, double limb0, double limb1, dou
     # Invalid limbType
     return nan
 
- 
+
 
 cdef double originDist(double t, void* params) noexcept:
     cdef IntegralParams* g = <IntegralParams*>params
@@ -53,7 +57,7 @@ cdef double integrand(double rad, void* params) noexcept:
     # Calculate the actual integrand, which is the integral of darkening across the arc
     cdef double thetaLeft = atan2(g.b*sin(tLeft)+g.ye, g.a*cos(tLeft)+g.xe)
     cdef double thetaRight = atan2(g.b*sin(tRight)+g.ye, g.a*cos(tRight)+g.xe)
-   
+
     # Ensure that we're getting the length of the correct arc (the one inside the ellipse)
     if thetaLeft < thetaRight:
         thetaLeft += 2*pi
@@ -70,7 +74,8 @@ cpdef double transitDepth(double a, double b, double c, double semimajor, double
     # Feed them into the transit depth integral
     return transitIntegral(a, b, xe, ye, limb) / pi
 
-cpdef double asymmetricTransit(double rMorning, double rEvening, double rPole, double t, double t0, double period, double semimajor, double inclination, int limbType, double[:] limb):
+
+cpdef object asymmetricTransit(double rMorning, double rEvening, double rPole, double[:] t, double t0, double period, double semimajor, double inclination, str limbType, object limb):
     '''Calculates the transit of a piecewise-elliptical planet.  Assumes the same projected shape regardless of its position
     in the orbit.  Uses the same model as catwoman (two spheres split down the middle) if rPole is negative.
 
@@ -81,29 +86,42 @@ cpdef double asymmetricTransit(double rMorning, double rEvening, double rPole, d
                             the stellar radius.
         rPole           The radius of the planet at the poles (top and bottom) relative to the stellar radius.  If -1,
                             rPole is set to rMorning one morning side and rEvening on the evening side.
-        t               The time of the observation to be simulated (must be the same unit as t0 and period).
+        t               A 1-d Numpy array of observation times to be simulated (must be the same unit as t0 and period).
         t0              The time of a mid-transit (needn't be the observed one).
         period          The orbital period of the planet.
         semimajor       The semimajor axis of the planet relative to the stellar radius.
         inclination     The inclination of the orbit in degrees (near 90 for transiting planets).
-        limbType        The type of limb darkening to use: 0 is quadratic and 1 is non-linear.
-        limb            An array of limb darkening parameters of length 5 (required even if not all are used).
+        limbType        The type of limb darkening to use: 'quadratic' or 'nonlinear'.
+        limb            An iterable of limb darkening parameters, length 2 for quadratic and 4 for nonlinear.
 
     Returns:
         The relative flux from the star at the time given, so 1 if the planet is out of transit.
     '''
-    # Check inputs
-    assert limbType in [0, 1]
-    # Get orbit angles
-    cdef double theta = (2*pi*(t-t0)/period)%(2*pi)
-    cdef double phi = pi*inclination/180. - pi/2
-    # No transit if the planet is behind the star
-    if (theta > 0.5*pi) and (theta < 1.5*pi):
-        return 1.
-    # Calculate the planet's position in the sky (aligned with orbit) frame
-    cdef double xe = semimajor * sin(theta)
-    cdef double ye = semimajor * cos(theta) * sin(phi)
+    cdef double theta, sinphi, xe, ye
+    cdef int i = 0
+    cdef int nTimes = t.shape[0]
+    output = np.empty_like(t)
+    cdef double[:] outputView = output
+    cdef double result
 
+    # Check inputs
+    cdef int limbCode
+    cdef double[:] limbParams = np.zeros(5)
+    limbType = limbType.lower().strip()
+    if limbType == "quadratic":
+        assert len(limb) == 2, "Error: Quadratic limb darkening takes exactly two parameters."
+        limbCode = 0
+        for i in range(2):
+            limbParams[i] = limb[i]
+    elif limbType == "nonlinear":
+        assert len(limb) == 4, "Error: Nonlinear limb darkening takes exactly two parameters."
+        limbCode = 1
+        for i in range(4):
+            limbParams[i] = limb[i]
+    else:
+        raise ValueError("limbType not recognized, must be one of quadratic, nonlinear.")
+
+    sinphi = sin(pi*inclination/180. - pi/2)
     # Handle negative rPole (asymmetric pole radius locked to circles)
     cdef double rPoleMorning = rPole
     cdef double rPoleEvening = rPole
@@ -111,17 +129,31 @@ cpdef double asymmetricTransit(double rMorning, double rEvening, double rPole, d
         rPoleMorning = rMorning
         rPoleEvening = rEvening
 
-    # Axis-aligned bounding box check to rule out trivial non-transits
-    if (xe + rMorning < -1.) or (xe - rEvening > 1) or \
-            (ye + max(rPoleMorning, rPoleEvening) < -1) or (ye - max(rPoleMorning, rPoleEvening) > 1):
-        return 1.
+    for i in range(nTimes):
+        # Get orbit angles
+        theta = (2*pi*(t[i]-t0)/period)%(2*pi)
+        # No transit if the planet is behind the star
+        if (theta > 0.5*pi) and (theta < 1.5*pi):
+            outputView[i] = 1.
+            continue
 
-    cdef double result = 0.
-    if xe > -1.:
-        result += bruteIntegrate(rEvening, rPoleEvening, xe, ye, limb, limbType=limbType, limitsMode=1)
-    if xe < 1.:
-        result += bruteIntegrate(rMorning, rPoleMorning, xe, ye, limb, limbType=limbType, limitsMode=2)
-    return 1. - result / darkeningNormalization(limbType, limb[0], limb[1], limb[2], limb[3])
+        # Calculate the planet's position in the sky (aligned with orbit) frame
+        xe = semimajor * sin(theta)
+        ye = semimajor * cos(theta) * sinphi
+
+        # Axis-aligned bounding box check to rule out trivial non-transits
+        if (xe + rMorning < -1.) or (xe - rEvening > 1) or \
+                (ye + max(rPoleMorning, rPoleEvening) < -1) or (ye - max(rPoleMorning, rPoleEvening) > 1):
+            outputView[i] = 1.
+            continue
+
+        result = 0.
+        if xe > -1.:
+            result += bruteIntegrate(rEvening, rPoleEvening, xe, ye, limbParams, limbType=limbCode, limitsMode=1)
+        if xe < 1.:
+            result += bruteIntegrate(rMorning, rPoleMorning, xe, ye, limbParams, limbType=limbCode, limitsMode=2)
+        outputView[i] = 1. - result / darkeningNormalization(limbCode, limbParams[0], limbParams[1], limbParams[2], limbParams[3])
+    return output
 
 
 cpdef double transitIntegral(double a, double b, double xe, double ye, double[:] limb, int preferBrute=1):
@@ -203,7 +235,7 @@ cpdef double transitIntegral(double a, double b, double xe, double ye, double[:]
 cdef double bruteIntegrand(double y, void* params) noexcept:
     cdef BruteIntegralParams* g = <BruteIntegralParams*>params
     cdef double rsq = g.x*g.x + y*y
-    return darkening(rsq, g.limbType, g.limb[0], g.limb[1], g.limb[2], g.limb[3])
+    return darkening(rsq, g.limbType, g.limb0, g.limb1, g.limb2, g.limb3)
 
 
 cdef double bruteIntegrateY(double x, void* params) noexcept:
@@ -229,8 +261,8 @@ cdef double bruteIntegrateY(double x, void* params) noexcept:
 
 cpdef double bruteIntegrate(double a, double b, double xe, double ye, double[:] limb, int limbType=0, int limitsMode=0):
     cdef double result, err
-    cdef BruteIntegralParams g = BruteIntegralParams(a, b, xe, ye, 0., limbType, [limb[i] for i in range(5)], NULL, NULL)
-    
+    cdef BruteIntegralParams g = BruteIntegralParams(a, b, xe, ye, 0., limbType, limb[0], limb[1], limb[2], limb[3], NULL, NULL)
+
     # Prepare the inner (y) integral variables
     cdef gsl_integration_workspace* workspaceInner = gsl_integration_workspace_alloc(100)
     cdef gsl_function integInner
