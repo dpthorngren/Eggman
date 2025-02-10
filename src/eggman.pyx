@@ -129,6 +129,9 @@ cpdef object asymmetricTransit(double rMorning, double rEvening, double rPole, d
         rPoleMorning = rMorning
         rPoleEvening = rEvening
 
+    # Do not crash the program due to lack of precision
+    gsl_set_error_handler_off()
+
     for i in range(nTimes):
         # Get orbit angles
         theta = (2*pi*(t[i]-t0)/period)%(2*pi)
@@ -225,10 +228,15 @@ cpdef double transitIntegral(double a, double b, double xe, double ye, double[:]
     integ.function = &integrand
     integ.params = &g
 
-    gsl_integration_qag(&integ, rNear, min(1., rFar), 0., 1e-7, 100, 1, workspace, &result, &err)
+    cdef int code = gsl_integration_qag(&integ, rNear, min(1., rFar), 1e-7, 1e-7, 100, 1, workspace, &result, &err)
 
     gsl_root_fsolver_free(g.solver)
     gsl_integration_workspace_free(workspace)
+
+    if code != 0:
+        raise RuntimeError("Integration failed in transitIntegral().  Code: " + str(code) + ", message: " + bytes(gsl_strerror(code)).decode("ascii"),
+                           (a, b, xe, ye, np.asarray(limb), preferBrute))
+
     return result
 
 
@@ -255,12 +263,15 @@ cdef double bruteIntegrateY(double x, void* params) noexcept:
     if yMin >= yMax:
         return 0.
 
-    gsl_integration_qag(g.integrand, yMin, yMax, 0., 1e-7, 100, 1, g.work, &result, &err)
+    cdef int code = gsl_integration_qag(g.integrand, yMin, yMax, 1e-7, 1e-7, 100, 1, g.work, &result, &err)
+    if code != 0:
+        return nan
     return result
 
 
-cpdef double bruteIntegrate(double a, double b, double xe, double ye, double[:] limb, int limbType=0, int limitsMode=0):
+cpdef double bruteIntegrate(double a, double b, double xe, double ye, double[:] limb, int limbType=0, int limitsMode=0) except -999.:
     cdef double result, err
+    cdef int code = 0
     cdef BruteIntegralParams g = BruteIntegralParams(a, b, xe, ye, 0., limbType, limb[0], limb[1], limb[2], limb[3], NULL, NULL)
 
     # Prepare the inner (y) integral variables
@@ -291,10 +302,15 @@ cpdef double bruteIntegrate(double a, double b, double xe, double ye, double[:] 
     if x0 >= x1:
         result = 0.
     else:
-        gsl_integration_qag(&integOuter, x0, x1, 0., 1e-7, 100, 1, workspaceOuter, &result, &err)
+        code = gsl_integration_qag(&integOuter, x0, x1, 1e-7, 1e-7, 100, 1, workspaceOuter, &result, &err)
 
     gsl_integration_workspace_free(workspaceInner)
     gsl_integration_workspace_free(workspaceOuter)
+
+    if code != 0:
+        raise RuntimeError("Integration failed in bruteIntegrate().  Code: " + str(code) + ", message: " + bytes(gsl_strerror(code)).decode("ascii"),
+                           (a, b, xe, ye, np.asarray(limb), limbType, limitsMode))
+
     return result
 
 

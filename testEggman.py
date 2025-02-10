@@ -3,6 +3,61 @@ import numpy as np
 import eggman
 
 class EggmanTester(unittest.TestCase):
+
+    def testGrazing(self):
+        # Grazing transits can cause numerical issues, let's double-check that doesn't happen.
+        # Grazing on ingress
+        baseArgs = {'t':np.array([-np.arcsin(1.1/10)]), 't0': 0., 'period':2*np.pi, 'semimajor':10.,
+                    'inclination':90., 'limbType':'quadratic', 'limb':[.3, .2]}
+        try:
+            eggman.asymmetricTransit(.1+1e-3, .11, .1, **dict(baseArgs))
+            eggman.asymmetricTransit(.1+1e-6, .09, -1, **dict(baseArgs))
+            eggman.asymmetricTransit(.1+1e-12, .1, .09, **dict(baseArgs))
+        except:
+            self.fail("Error raised on ingress grazing transit.")
+        # Just barely non-grazing
+        try:
+            result1 = eggman.asymmetricTransit(.1-1e-3, .11, .1, **dict(baseArgs))
+            result2 = eggman.asymmetricTransit(.1-1e-6, .09, -1, **dict(baseArgs))
+            result3 = eggman.asymmetricTransit(.1-1e-12, .1, .09, **dict(baseArgs))
+        except:
+            self.fail("Error raised on ingress barely non-grazing transit.")
+        self.assertEqual(result1, 1.)
+        self.assertEqual(result2, 1.)
+        self.assertEqual(result3, 1.)
+
+        # Grazing on egress
+        baseArgs['t'] = -baseArgs['t']
+        try:
+            eggman.asymmetricTransit(.11, .1+1e-3, .1, **dict(baseArgs))
+            eggman.asymmetricTransit(.09, .1+1e-6, -1, **dict(baseArgs))
+            eggman.asymmetricTransit(.1, .1+1e-12, .09, **dict(baseArgs))
+        except:
+            self.fail("Error raised on egress grazing transit.")
+        eggman.asymmetricTransit(.1+1e-6, .1, .1, **dict(baseArgs, t=np.array([5.])))
+
+        # Grazing on top (true grazing transit)
+        baseArgs['inclination'] = 90. - abs(baseArgs['t'][0])*180/np.pi
+        baseArgs['t'] = np.array([0.])
+        try:
+            eggman.asymmetricTransit(.11, .1, .1+1e-3, **dict(baseArgs))
+            eggman.asymmetricTransit(.09, .1, .1+1e-6, **dict(baseArgs))
+            eggman.asymmetricTransit(.1, .09, .1+1e-12, **dict(baseArgs))
+        except:
+            self.fail("Error raised on top-side (t=mid-transit, i<90) grazing transit.")
+
+        # Barely non-grazing on top
+        try:
+            result1 = eggman.asymmetricTransit(.11, .1, .1-1e-3, **dict(baseArgs))
+            result2 = eggman.asymmetricTransit(.09, .1, .1-1e-6, **dict(baseArgs))
+            result3 = eggman.asymmetricTransit(.1, .09, .1-1e-12, **dict(baseArgs))
+        except:
+            self.fail("Error raised on top-side (t=mid-transit, i<90) barely non-transit.")
+        self.assertEqual(result1, 1.)
+        self.assertEqual(result2, 1.)
+        self.assertEqual(result3, 1.)
+
+
     def testIsTransiting(self):
         # Ensure we correctly can tell transit from non-transit
         baseArgs = {'t':np.array([0.]), 't0': 0., 'period':10., 'semimajor':10.,

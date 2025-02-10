@@ -60,6 +60,7 @@ cdef extern from "gsl/gsl_errno.h":
         pass
     gsl_error_handler_t* gsl_set_error_handler(gsl_error_handler_t *new_handler)
     gsl_error_handler_t* gsl_set_error_handler_off()
+    const char *gsl_strerror(const int gsl_errno)
 
 
 cdef struct IntegralParams:
