@@ -96,3 +96,5 @@ cpdef (double, double, double, double) orbitGeometry(double a, double b, double 
 cpdef double transitDepth(double a, double b, double c, double semimajor, double theta, double phi, double[:] limb)
 
 cpdef double transitIntegral(double a, double b, double xe, double ye, double[:] limb, int preferBrute=?)
+
+cpdef object asymmetricTransit(double rMorning, double rEvening, double rPole, double[:] t, double t0, double period, double semimajor, double inclination, str limbType, object limb)
