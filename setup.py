@@ -16,5 +16,5 @@ setup(
     description="Code for calculating the geometry and transit depths of piecewise ellipsoidal objects.",
     author="Daniel Thorngren",
     ext_modules=cythonize([ext], compiler_directives={'embedsignature': True, 'language_level': "3"}),
-    install_requires=['cython', 'numpy']
+    install_requires=['numpy']
 )
