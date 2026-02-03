@@ -2,12 +2,12 @@
 Code for calculating the geometry and transit depths of piecewise ellipsoidal objects.
 
 ## Installation
-Eggman relies on two packages that the user must install themselves before compiling: NASA's CSPICE library and the GNU Scientific Library (GSL).  See below for instructions on how to do this.  These are C libraries so the Python setup script cannot retrieve them itself.
+Eggman relies on two packages that the user must install themselves before compiling: NASA's CSPICE library and the GNU Scientific Library (GSL).  See below for instructions on how to do this.  These are C libraries so the Python setup script cannot retrieve them itself. For Anaconda users, they may be installed with `conda install conda-forge::cspice anaconda:gsl`.
 
 Once the prerequisites are installed, eggman can be compiled and installed from the terminal with `pip install .` from the eggman directory.
 
 ### CSPICE
-The [CSPICE library](https://naif.jpl.nasa.gov/naif/toolkit.html) can be installed by navigating the terminal to the eggman directory and running the included install script with `csh getCSPICE.csh`.  This requires csh be installed, which it is by default on Mac and can be acquired from the system package manager on Linux (sorry, I'd have used Bash if CSPICE didn't use csh already).  Other (Anaconda or system) installations of CSPICE *probably* work correctly, but please report any errors encountered.
+The [CSPICE library](https://naif.jpl.nasa.gov/naif/toolkit.html) can be installed by navigating the terminal to the eggman directory and running the included install script with `csh getCSPICE.csh`.  This requires csh be installed, which it is by default on Mac and can be acquired from the system package manager on Linux (sorry, I'd have used Bash if CSPICE didn't use csh already).  Installation via Anaconda (package `conda-forge::cspice`) is supported.
 
 ### GSL
 The GNU Scientific Library (GSL) can be installed through essentially any system package manager: `anaconda::gsl` for [Anaconda](https://anaconda.org/anaconda/gsl), `gsl` [for MacPorts](https://ports.macports.org/port/gsl/), `gsl` for [Homebrew](https://formulae.brew.sh/formula/gsl)and `libgsl-dev` for Linux using apt-get.  It can also be installed directly from the [GSL website](https://www.gnu.org/software/gsl/); just make sure you install it such that the compiler can locate it.
