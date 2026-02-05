@@ -391,3 +391,50 @@ cpdef (double, double, double, double) orbitGeometry(double a, double b, double 
 
     # Write out the results and return
     return majorLen, minorLen, xp, yp
+
+
+cpdef double solve_kepler(double mean_anomaly, double eccen):
+    cdef double e_anom = mean_anomaly
+    cdef double e_new = mean_anomaly
+    cdef int i = 0
+    if eccen > 0.95:
+        # Direct iteration
+        for i in range(50):
+            e_new = mean_anomaly + eccen * sin(e_anom)
+            if abs(e_new - e_anom) < 1e-12:
+                break
+            e_anom = e_new
+    if eccen > 0.:
+        # Newton-Raphson
+        for i in range(50):
+            e_new -= (e_anom - eccen*sin(e_anom) - mean_anomaly) / (1 - eccen * cos(e_anom))
+            if abs(e_new - e_anom) < 1e-12:
+                break
+            e_anom = e_new
+    return e_new
+
+
+cpdef (double, double, double) orbit_to_position(double t, double semimajor, double period, double eccen, double inclination, double lon_periapse):
+    # Notation: t = time, ta = true anomaly, ea = eccentric anomaly, ma = mean anomaly, x,y,z = position
+    cdef double ta_c = (lon_periapse-90)*pi/180.
+    cdef double sta_c = sin(ta_c)
+    cdef double cta_c = cos(ta_c)
+    # Get time of conjunction given longitude of periapse
+    cdef double ea_c = atan2(sqrt(1 - eccen*eccen) * sta_c, eccen + cta_c)
+    cdef double ma_c = ea_c - eccen * sin(ea_c)
+    cdef double t_c = ma_c * period / (2*pi)
+    # Solve Kepler's equation in the rotated and inclined frame, relative to inferior conjunction
+    cdef double ma = 2*pi * (t-t_c) / period
+    cdef double ea = solve_kepler(ma, eccen)
+    # Position in the rotated frame where lon_periapse = 0, inclination = 0
+    cdef double x_p = semimajor * sqrt(1 - eccen*eccen) * sin(ea)
+    cdef double y_p = semimajor * (cos(ea) - eccen)
+    # Transform back to frame where lon_periapse != 0 (still inclination = 0)
+    cdef double x_inc = x_p * cta_c + y_p * sta_c
+    cdef double y_inc = x_p * -sta_c + y_p * cta_c
+    # Transform back to the view frame (x = right, y = up, z = towards observer) centered on star
+    # Longitude of ascending node is 270 degrees by construction, so x = x_inc
+    inclination = inclination*pi/180
+    cdef double y = y_inc * cos(inclination)
+    cdef double z = y_inc * sin(inclination)
+    return x_inc, y, z

@@ -98,3 +98,7 @@ cpdef double transitDepth(double a, double b, double c, double semimajor, double
 cpdef double transitIntegral(double a, double b, double xe, double ye, double[:] limb, int preferBrute=?)
 
 cpdef object asymmetricTransit(double rMorning, double rEvening, double rPole, double[:] t, double t0, double period, double semimajor, double inclination, str limbType, object limb)
+
+cpdef double solve_kepler(double mean_anomaly, double eccen)
+
+cpdef (double, double, double) orbit_to_position(double t, double semimajor, double period, double eccen, double inclination, double lon_periapse)
