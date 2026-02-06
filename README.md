@@ -28,7 +28,9 @@ eggman.asymmetricTransit(
     semimajor=10.,                  # Relative to the stellar radius
     inclination=89.,                # In degrees
     limbType='quadratic',           # Must be one of 'quadratic', 'nonlinear'
-    limb=[.3, .2]                   # Two parameters for quadratic, 4 for nonlinear
+    limb=[.3, .2],                  # Two parameters for quadratic, 4 for nonlinear
+    eccen=0.05,                     # The orbital eccentricity, defaults to zero
+    lonPeriapse=65.                 # The longitude of the periapse in degrees (90 is mid-transit)
 )
 ```
 

@@ -75,7 +75,7 @@ cpdef double transitDepth(double a, double b, double c, double semimajor, double
     return transitIntegral(a, b, xe, ye, limb) / pi
 
 
-cpdef object asymmetricTransit(double rMorning, double rEvening, double rPole, double[:] t, double t0, double period, double semimajor, double inclination, str limbType, object limb):
+cpdef object asymmetricTransit(double rMorning, double rEvening, double rPole, double[:] t, double t0, double period, double semimajor, double inclination, str limbType, object limb, double eccen=0, double lonPeriapse=90.):
     '''Calculates the transit of a piecewise-elliptical planet.  Assumes the same projected shape regardless of its position
     in the orbit.  Uses the same model as catwoman (two spheres split down the middle) if rPole is negative.
 
@@ -93,11 +93,13 @@ cpdef object asymmetricTransit(double rMorning, double rEvening, double rPole, d
         inclination     The inclination of the orbit in degrees (near 90 for transiting planets).
         limbType        The type of limb darkening to use: 'quadratic' or 'nonlinear'.
         limb            An iterable of limb darkening parameters, length 2 for quadratic and 4 for nonlinear.
+        eccen           The orbital eccentricity of the planet.  Must be 0 <= e < 1, defaults to zero.
+        lonPeriapse     The longitude of the periapse of the planet's orbit, in degrees.  The default of 90 means the pariapse occurs at mid-transit.
 
     Returns:
         The relative flux from the star at the time given, so 1 if the planet is out of transit.
     '''
-    cdef double theta, sinphi, xe, ye
+    cdef double theta, sinphi, xe, ye, ze
     cdef int i = 0
     cdef int nTimes = t.shape[0]
     output = np.empty_like(t)
@@ -120,8 +122,8 @@ cpdef object asymmetricTransit(double rMorning, double rEvening, double rPole, d
             limbParams[i] = limb[i]
     else:
         raise ValueError("limbType not recognized, must be one of quadratic, nonlinear.")
+    assert eccen >= 0. and eccen < 1.
 
-    sinphi = sin(pi*inclination/180. - pi/2)
     # Handle negative rPole (asymmetric pole radius locked to circles)
     cdef double rPoleMorning = rPole
     cdef double rPoleEvening = rPole
@@ -133,16 +135,13 @@ cpdef object asymmetricTransit(double rMorning, double rEvening, double rPole, d
     gsl_set_error_handler_off()
 
     for i in range(nTimes):
-        # Get orbit angles
-        theta = (2*pi*(t[i]-t0)/period)%(2*pi)
+        # Calculate the planet's position in the sky (aligned with orbit) frame
+        xe, ye, ze = orbit_to_position(t[i], semimajor, period, eccen, inclination, lonPeriapse)
+
         # No transit if the planet is behind the star
-        if (theta > 0.5*pi) and (theta < 1.5*pi):
+        if ze < 0:
             outputView[i] = 1.
             continue
-
-        # Calculate the planet's position in the sky (aligned with orbit) frame
-        xe = semimajor * sin(theta)
-        ye = semimajor * cos(theta) * sinphi
 
         # Axis-aligned bounding box check to rule out trivial non-transits
         if (xe + rMorning < -1.) or (xe - rEvening > 1) or \
