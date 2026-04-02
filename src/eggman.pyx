@@ -24,7 +24,6 @@ cdef double darkeningNormalization(int limbType, double limb0, double limb1, dou
     return nan
 
 
-
 cdef double originDist(double t, void* params) noexcept:
     cdef IntegralParams* g = <IntegralParams*>params
     return (g.a*cos(t)+g.xe)**2 + (g.b*sin(t)+g.ye)**2 - g.rsq
@@ -66,11 +65,11 @@ cdef double integrand(double rad, void* params) noexcept:
 
 
 cpdef double transitDepth(double a, double b, double c, double semimajor, double theta, double phi, double[:] limb):
-    theta = (theta+pi)%(2*pi) - pi
+    theta = (theta+pi) % (2*pi) - pi
     if abs(theta) > pi/2.:
         return 0.
     # Get the sky-projected coordinates
-    a, b, xe, ye  = orbitGeometry(a, b, c, semimajor, theta, phi)
+    a, b, xe, ye = orbitGeometry(a, b, c, semimajor, theta, phi)
     # Feed them into the transit depth integral
     return transitIntegral(a, b, xe, ye, limb) / pi
 
@@ -99,7 +98,7 @@ cpdef object asymmetricTransit(double rMorning, double rEvening, double rPole, d
     Returns:
         The relative flux from the star at the time given, so 1 if the planet is out of transit.
     '''
-    cdef double theta, sinphi, xe, ye, ze
+    cdef double xe, ye, ze
     cdef int i = 0
     cdef int nTimes = t.shape[0]
     output = np.empty_like(t)
@@ -199,8 +198,7 @@ cpdef double transitIntegral(double a, double b, double xe, double ye, double[:]
         # Try again but with a narrow focus around pi/2.
         if gsl_root_fsolver_set(g.solver, &dist, pi/2-.1, pi/2+.1):
             if gsl_root_fsolver_set(g.solver, &dist, -.1, .1):
-            # print("Root solver error while finding max distance!")
-                print("Max error", xe, ye, originDistDiff(-.1, <void*>&g), originDistDiff(.1,<void*>&g), flush=True)
+                print("Max error", xe, ye, originDistDiff(-.1, <void*>&g), originDistDiff(.1, <void*>&g), flush=True)
                 gsl_root_fsolver_free(g.solver)
                 return nan
     while (gsl_root_fsolver_x_upper(g.solver) - gsl_root_fsolver_x_lower(g.solver)) > 1e-9:
@@ -360,7 +358,7 @@ cpdef (double, double, double, double) orbitGeometry(double a, double b, double 
 
     # print("=== Planet Frame ===")
     if abs(majorAx[1]*view[1]+majorAx[2]*view[2] + majorAx[0]*view[0]) > 1e-14 or \
-          abs(minorAx[1]*view[1]+minorAx[2]*view[2] + minorAx[0]*view[0]) > 1e-14:
+       abs(minorAx[1]*view[1]+minorAx[2]*view[2] + minorAx[0]*view[0]) > 1e-14:
         print("ERROR: projected axes were not perpendicular to the view vector!")
     # print("View         ", view)
     # print("MajorAx      ", majorAx)
@@ -370,7 +368,7 @@ cpdef (double, double, double, double) orbitGeometry(double a, double b, double 
     majorAx = [
         -st*majorAx[0]      - ct*majorAx[1],
         -ct*sp*majorAx[0]   + st*sp*majorAx[1]  + cp*majorAx[2],
-        0. # Zero by contsruction: -ct*cp*majorAx[0]    + st*cp*majorAx[1]  - sp*majorAx[2]
+        0.  # Zero by construction: -ct*cp*majorAx[0]    + st*cp*majorAx[1]  - sp*majorAx[2]
     ]
     if majorAx[0] < 0:
         majorAx[0] = -majorAx[0]

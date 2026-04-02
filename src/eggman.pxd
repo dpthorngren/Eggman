@@ -10,7 +10,7 @@ cdef extern from "cspice/SpiceUsr.h":
         pass
     ctypedef struct SpiceEllipse:
         pass
-    
+
 
 cdef extern from "cspice/SpiceZfc.h":
     # Initializes a SpicePlane given a normal vector and an offset from the origin
