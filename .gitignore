@@ -1,11 +1,14 @@
 # Directories not version-controlled
+projects/
 old/
 plots
 data
 scratch/
 cspice/
-src/*.c
+src/eggman/*.c
+src/eggman/*.html
 *.ipynb
+.task
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

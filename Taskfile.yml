@@ -1,0 +1,36 @@
+version: 3
+
+
+tasks:
+  default:
+    deps: [test]
+
+  devbuild:
+    desc: "Rebuild shared library (if cython files have changed) and reinstall."
+    deps: [lint]
+    run: once
+    sources:
+      - src/eggman/*.pyx
+      - src/eggman/*.pxd
+    generates:
+      - src/eggman/*.so
+    cmds:
+      - rm -rf build eggman.egg-info src/eggman/*.so
+      - pip uninstall eggman --yes
+      - mkdir -p htmlcov/
+      - pip install -e .[develop]
+      - mv src/eggman/*.html htmlcov
+
+  lint:
+    desc: "Run cython linter"
+    run: once
+    cmds:
+      # - flake8 $(git ls-tree -r main --name-only | grep '.*py$') --count --show-source --statistics
+      - cython-lint .
+
+  test:
+    deps: [lint, devbuild]
+    desc: "Run pytest with coverage"
+    cmds:
+      - pytest --cov=eggman  --cov-report='term' --cov-report="html"
+

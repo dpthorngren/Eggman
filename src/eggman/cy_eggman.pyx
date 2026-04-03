@@ -366,8 +366,8 @@ cpdef (double, double, double, double) orbitGeometry(double a, double b, double 
 
     # Rotate the major axis into the unaligned view frame
     majorAx = [
-        -st*majorAx[0]      - ct*majorAx[1],
-        -ct*sp*majorAx[0]   + st*sp*majorAx[1]  + cp*majorAx[2],
+        -st*majorAx[0]      - ct*majorAx[1],                        # no-cython-lint
+        -ct*sp*majorAx[0]   + st*sp*majorAx[1]  + cp*majorAx[2],    # no-cython-lint
         0.  # Zero by construction: -ct*cp*majorAx[0]    + st*cp*majorAx[1]  - sp*majorAx[2]
     ]
     if majorAx[0] < 0:

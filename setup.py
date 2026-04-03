@@ -1,20 +1,28 @@
-from setuptools import setup, Extension
-from Cython.Build import cythonize
 import os
 
+from Cython.Build import cythonize
+from setuptools import Extension, setup
 
 ext = Extension(
-    "eggman", ["src/eggman.pyx"],
+    "eggman.cy_eggman",
+    ["src/eggman/cy_eggman.pyx"],
     libraries=["cspice", "gsl", "gslcblas"],
-    library_dirs=[os.getcwd()+"/cspice/lib/"],
-    include_dirs=[os.getcwd()+"/cspice/include/"],
+    library_dirs=[os.getcwd() + "/cspice/lib/"],
+    include_dirs=[os.getcwd() + "/cspice/include/"],
 )
 
-setup(
-    name="eggman",
-    version='0.3',
-    description="Code for calculating the geometry and transit depths of piecewise ellipsoidal objects.",
-    author="Daniel Thorngren",
-    ext_modules=cythonize([ext], compiler_directives={'embedsignature': True, 'language_level': "3"}),
-    install_requires=['numpy']
-)
+directives = {
+    'language_level': "3",
+    'embedsignature': True,
+    'cdivision': True,
+    'initializedcheck': False,
+    'boundscheck': False,
+    'binding': True,
+}
+
+# Hack to detect if coverage data is being generated
+if os.path.exists("./htmlcov"):
+    ext.define_macros = [("CYTHON_TRACE_NOGIL", "1")]
+    directives['linetrace'] = True
+
+setup(ext_modules=cythonize([ext], compiler_directives=directives, annotate=True))
