@@ -15,7 +15,7 @@ cdef double darkening(double rSq, int limbType, double limb0, double limb1, doub
     return nan
 
 
-cdef double darkeningNormalization(int limbType, double limb0, double limb1, double limb2, double limb3) noexcept:
+cdef double darkening_normalization(int limbType, double limb0, double limb1, double limb2, double limb3) noexcept:
     if limbType == 0:
         return (1. - limb0/3. - limb1/6.)*pi
     elif limbType == 1:
@@ -24,57 +24,58 @@ cdef double darkeningNormalization(int limbType, double limb0, double limb1, dou
     return nan
 
 
-cdef double originDist(double t, void* params) noexcept:
-    cdef IntegralParams* g = <IntegralParams*>params
-    return (g.a*cos(t)+g.xe)**2 + (g.b*sin(t)+g.ye)**2 - g.rsq
+cpdef object prolate_transit(double rPrograde, double rSubstellar, double rPolar, double[:] t, double t0, double period, double semimajor, double inclination, str limbType, object limb):
+    cdef double xp, yp
+    cdef int i = 0
+    cdef int nTimes = t.shape[0]
+    output = np.empty_like(t)
+    cdef double[:] outputView = output
+    cdef double result
+    cdef double theta
+
+    # Check inputs
+    cdef int limbCode
+    cdef double[:] limbParams = np.zeros(5)
+    limbType = limbType.lower().strip()
+    if limbType == "quadratic":
+        assert len(limb) == 2, "Error: Quadratic limb darkening takes exactly two parameters."
+        limbCode = 0
+        for i in range(2):
+            limbParams[i] = limb[i]
+    elif limbType == "nonlinear":
+        assert len(limb) == 4, "Error: Nonlinear limb darkening takes exactly two parameters."
+        limbCode = 1
+        for i in range(4):
+            limbParams[i] = limb[i]
+    else:
+        raise ValueError("limbType not recognized, must be one of quadratic, nonlinear.")
+
+    # Do not crash the program due to lack of precision
+    gsl_set_error_handler_off()
+
+    for i in range(nTimes):
+        theta = 2*pi * (t[i]-t0) / period
+
+        if abs(theta) > pi/2.:
+            # No transit if the planet is behind the star
+            outputView[i] = 1.
+            continue
+
+        # Calculate the planet's position in the sky (aligned with orbit) frame
+        majorLen, minorLen, xp, yp = orbit_geometry(rPrograde, rSubstellar, rPolar, semimajor, theta, inclination)
+        # xe, ye, ze = orbit_to_position(t[i], semimajor, period, eccen, inclination, lonPeriapse)
+
+        # Axis-aligned bounding box check to rule out trivial non-transits
+        if (xp + majorLen < -1.) or (xp - majorLen > 1) or (yp + minorLen < -1) or (yp - minorLen > 1):
+            outputView[i] = 1.
+            continue
+
+        result = brute_integrate(majorLen, minorLen, xp, yp, limbParams, limbType=limbCode, limitsMode=0)
+        outputView[i] = 1. - result / darkening_normalization(limbCode, limbParams[0], limbParams[1], limbParams[2], limbParams[3])
+    return output
 
 
-cdef double originDistDiff(double theta, void* params) noexcept:
-    # Note: I left out a constant factor of 2 because it doesn't matter
-    cdef IntegralParams* g = <IntegralParams*>params
-    cdef double ct = cos(theta)
-    cdef double st = sin(theta)
-    return -g.a*st*(g.xe + g.a*ct) + g.b*ct*(g.ye + g.b*st)
-
-
-cdef double integrand(double rad, void* params) noexcept:
-    cdef IntegralParams* g = <IntegralParams*>params
-    g.rsq = rad*rad
-
-    # Find right-side intersection
-    gsl_root_fsolver_set(g.solver, g.func, g.tFar, g.tNear+2*pi)
-    while (gsl_root_fsolver_x_upper(g.solver) - gsl_root_fsolver_x_lower(g.solver)) > 1e-9:
-        gsl_root_fsolver_iterate(g.solver)
-    cdef double tLeft = gsl_root_fsolver_root(g.solver)
-
-    # Find right-side intersection
-    gsl_root_fsolver_set(g.solver, g.func, g.tNear, g.tFar)
-    while (gsl_root_fsolver_x_upper(g.solver) - gsl_root_fsolver_x_lower(g.solver)) > 1e-9:
-        gsl_root_fsolver_iterate(g.solver)
-    cdef double tRight = gsl_root_fsolver_root(g.solver)
-
-    # Calculate the actual integrand, which is the integral of darkening across the arc
-    cdef double thetaLeft = atan2(g.b*sin(tLeft)+g.ye, g.a*cos(tLeft)+g.xe)
-    cdef double thetaRight = atan2(g.b*sin(tRight)+g.ye, g.a*cos(tRight)+g.xe)
-
-    # Ensure that we're getting the length of the correct arc (the one inside the ellipse)
-    if thetaLeft < thetaRight:
-        thetaLeft += 2*pi
-
-    return (thetaLeft-thetaRight) * rad * darkening(g.rsq, g.limbType, g.limb[0], g.limb[1], g.limb[2], g.limb[3])
-
-
-cpdef double transitDepth(double a, double b, double c, double semimajor, double theta, double phi, double[:] limb):
-    theta = (theta+pi) % (2*pi) - pi
-    if abs(theta) > pi/2.:
-        return 0.
-    # Get the sky-projected coordinates
-    a, b, xe, ye = orbitGeometry(a, b, c, semimajor, theta, phi)
-    # Feed them into the transit depth integral
-    return transitIntegral(a, b, xe, ye, limb) / pi
-
-
-cpdef object asymmetricTransit(double rMorning, double rEvening, double rPole, double[:] t, double t0, double period, double semimajor, double inclination, str limbType, object limb, double eccen=0, double lonPeriapse=90.):
+cpdef object asymmetric_transit(double rMorning, double rEvening, double rPole, double[:] t, double t0, double period, double semimajor, double inclination, str limbType, object limb, double eccen=0, double lonPeriapse=90.):
     '''Calculates the transit of a piecewise-elliptical planet.  Assumes the same projected shape regardless of its position
     in the orbit.  Uses the same model as catwoman (two spheres split down the middle) if rPole is negative.
 
@@ -150,100 +151,20 @@ cpdef object asymmetricTransit(double rMorning, double rEvening, double rPole, d
 
         result = 0.
         if xe > -1.:
-            result += bruteIntegrate(rEvening, rPoleEvening, xe, ye, limbParams, limbType=limbCode, limitsMode=1)
+            result += brute_integrate(rEvening, rPoleEvening, xe, ye, limbParams, limbType=limbCode, limitsMode=1)
         if xe < 1.:
-            result += bruteIntegrate(rMorning, rPoleMorning, xe, ye, limbParams, limbType=limbCode, limitsMode=2)
-        outputView[i] = 1. - result / darkeningNormalization(limbCode, limbParams[0], limbParams[1], limbParams[2], limbParams[3])
+            result += brute_integrate(rMorning, rPoleMorning, xe, ye, limbParams, limbType=limbCode, limitsMode=2)
+        outputView[i] = 1. - result / darkening_normalization(limbCode, limbParams[0], limbParams[1], limbParams[2], limbParams[3])
     return output
 
 
-cpdef double transitIntegral(double a, double b, double xe, double ye, double[:] limb, int preferBrute=1):
-    # Ensure the planet is in the first quadrant for consistency
-    ye = abs(ye)
-    xe = abs(xe)
-
-    # Simple, blazing fast axis-aligned bounding box check to rule out many non-transits
-    if xe - a > 1. or ye-b > 1:
-        return 0.
-
-    # If the ellipse contains the center, jump straight to the brute integral
-    if (((xe/a)**2 + (ye/b)**2) < 1) or ():
-        return bruteIntegrate(a, b, xe, ye, limb)
-
-    # Init root-finding requirements
-    gsl_set_error_handler_off()
-    cdef IntegralParams g = IntegralParams(a, b, xe, ye, -1., -1., 0., 0, [limb[i] for i in range(5)], NULL, NULL)
-    cdef gsl_function dist
-    dist.function = &originDistDiff
-    dist.params = &g
-    g.solver = gsl_root_fsolver_alloc(gsl_root_fsolver_brent)
-    g.func = &dist
-
-    # Find the pseudo-angle t that minimizes the distance to the origin
-    if gsl_root_fsolver_set(g.solver, &dist, pi-.1, .1+3*pi/2):
-        print("Root solver error while finding min distance!")
-        gsl_root_fsolver_free(g.solver)
-        return nan
-    while (gsl_root_fsolver_x_upper(g.solver) - gsl_root_fsolver_x_lower(g.solver)) > 1e-9:
-        gsl_root_fsolver_iterate(g.solver)
-    g.tNear = gsl_root_fsolver_root(g.solver)
-    cdef double rNear = sqrt(abs(originDist(g.tNear, &g)))
-    if rNear > 1.:
-        # Planet and star do not overlap -> zero transit depth.
-        gsl_root_fsolver_free(g.solver)
-        return 0.
-
-    # Now find the t of max distance
-    if gsl_root_fsolver_set(g.solver, &dist, 0., pi/2.):
-        # Try again but with a narrow focus around pi/2.
-        if gsl_root_fsolver_set(g.solver, &dist, pi/2-.1, pi/2+.1):
-            if gsl_root_fsolver_set(g.solver, &dist, -.1, .1):
-                print("Max error", xe, ye, originDistDiff(-.1, <void*>&g), originDistDiff(.1, <void*>&g), flush=True)
-                gsl_root_fsolver_free(g.solver)
-                return nan
-    while (gsl_root_fsolver_x_upper(g.solver) - gsl_root_fsolver_x_lower(g.solver)) > 1e-9:
-        gsl_root_fsolver_iterate(g.solver)
-    g.tFar = gsl_root_fsolver_root(g.solver)
-    cdef double rFar = sqrt(abs(originDist(g.tFar, &g)))
-
-    # If the planet is fully in-transit, we can use either integrator
-    # Which one is faster depends on how well-behaved the limb-darkening is
-    if (rFar < 1.0) and preferBrute:
-        gsl_root_fsolver_free(g.solver)
-        return bruteIntegrate(a, b, xe, ye, limb)
-
-    # Ensure that tNear and tFar are sorted
-    if g.tNear > g.tFar:
-        g.tNear -= 2*pi
-
-    # Prepare the integrator
-    cdef double result, err
-    dist.function = &originDist
-    cdef gsl_integration_workspace* workspace
-    workspace = gsl_integration_workspace_alloc(100)
-    cdef gsl_function integ
-    integ.function = &integrand
-    integ.params = &g
-
-    cdef int code = gsl_integration_qag(&integ, rNear, min(1., rFar), 1e-7, 1e-7, 100, 1, workspace, &result, &err)
-
-    gsl_root_fsolver_free(g.solver)
-    gsl_integration_workspace_free(workspace)
-
-    if code != 0:
-        raise RuntimeError("Integration failed in transitIntegral().  Code: " + str(code) + ", message: " + bytes(gsl_strerror(code)).decode("ascii"),
-                           (a, b, xe, ye, np.asarray(limb), preferBrute))
-
-    return result
-
-
-cdef double bruteIntegrand(double y, void* params) noexcept:
+cdef double brute_integrand(double y, void* params) noexcept:
     cdef BruteIntegralParams* g = <BruteIntegralParams*>params
     cdef double rsq = g.x*g.x + y*y
     return darkening(rsq, g.limbType, g.limb0, g.limb1, g.limb2, g.limb3)
 
 
-cdef double bruteIntegrateY(double x, void* params) noexcept:
+cdef double brute_integrateY(double x, void* params) noexcept:
     cdef double result, err
     cdef BruteIntegralParams* g = <BruteIntegralParams*>params
     g.x = x
@@ -266,7 +187,7 @@ cdef double bruteIntegrateY(double x, void* params) noexcept:
     return result
 
 
-cpdef double bruteIntegrate(double a, double b, double xe, double ye, double[:] limb, int limbType=0, int limitsMode=0) except -999.:
+cpdef double brute_integrate(double a, double b, double xe, double ye, double[:] limb, int limbType=0, int limitsMode=0) except -999.:
     cdef double result, err
     cdef int code = 0
     cdef BruteIntegralParams g = BruteIntegralParams(a, b, xe, ye, 0., limbType, limb[0], limb[1], limb[2], limb[3], NULL, NULL)
@@ -274,7 +195,7 @@ cpdef double bruteIntegrate(double a, double b, double xe, double ye, double[:] 
     # Prepare the inner (y) integral variables
     cdef gsl_integration_workspace* workspaceInner = gsl_integration_workspace_alloc(100)
     cdef gsl_function integInner
-    integInner.function = &bruteIntegrand
+    integInner.function = &brute_integrand
     integInner.params = &g
     g.work = workspaceInner
     g.integrand = &integInner
@@ -282,7 +203,7 @@ cpdef double bruteIntegrate(double a, double b, double xe, double ye, double[:] 
     # Now prepare the outer (x) integral variables
     cdef gsl_integration_workspace* workspaceOuter = gsl_integration_workspace_alloc(100)
     cdef gsl_function integOuter
-    integOuter.function = &bruteIntegrateY
+    integOuter.function = &brute_integrateY
     integOuter.params = &g
 
     # Compute limits of integration on the x axis
@@ -305,20 +226,21 @@ cpdef double bruteIntegrate(double a, double b, double xe, double ye, double[:] 
     gsl_integration_workspace_free(workspaceOuter)
 
     if code != 0:
-        raise RuntimeError("Integration failed in bruteIntegrate().  Code: " + str(code) + ", message: " + bytes(gsl_strerror(code)).decode("ascii"),
+        raise RuntimeError("Integration failed in brute_integrate().  Code: " + str(code) + ", message: " + bytes(gsl_strerror(code)).decode("ascii"),
                            (a, b, xe, ye, np.asarray(limb), limbType, limitsMode))
 
     return result
 
 
-cpdef (double, double, double, double) orbitGeometry(double a, double b, double c, double semimajor, double theta, double phi):
+cpdef (double, double, double, double) orbit_geometry(double a, double b, double c, double semimajor, double theta, double phi):
     ''' a, b, and c are the planet radii relative to the stellar radius
         semimajor is the semimajor axis / stellar radius
         Theta is 2 * pi * time / orbital period
-        phi is inclination - 90 degrees'''
+        phi is inclination'''
     # Calculate the sine and cosine of the angles: we'll use them repeatedly
     cdef SpiceDouble ct = cos(theta)
     cdef SpiceDouble st = sin(theta)
+    phi = (90 - phi)*pi/180
     cdef SpiceDouble cp = cos(phi)
     cdef SpiceDouble sp = sin(phi)
 

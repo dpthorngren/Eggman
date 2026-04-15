@@ -1,4 +1,8 @@
-from .cy_eggman import (
-    asymmetricTransit, orbit_to_position, orbitGeometry, solve_kepler, transitDepth, transitIntegral)
+from .cy_eggman import (asymmetric_transit, orbit_geometry, orbit_to_position, prolate_transit, solve_kepler)
 
-__all__ = ["asymmetricTransit", "orbit_to_position", "orbitGeometry", "solve_kepler", "transitDepth", "transitIntegral"]
+# Backwards compatibility
+asymmetricTransit = asymmetric_transit
+
+__all__ = [
+    "asymmetricTransit", "asymmetric_transit", "orbit_to_position", "orbit_geometry", "solve_kepler", "prolate_transit"
+]

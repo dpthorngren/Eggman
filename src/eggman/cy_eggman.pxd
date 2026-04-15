@@ -63,19 +63,6 @@ cdef extern from "gsl/gsl_errno.h":
     const char *gsl_strerror(const int gsl_errno)
 
 
-cdef struct IntegralParams:
-    double a
-    double b
-    double xe
-    double ye
-    double tNear
-    double tFar
-    double rsq
-    int limbType
-    double limb[5]
-    gsl_root_fsolver* solver
-    gsl_function* func
-
 cdef struct BruteIntegralParams:
     double a
     double b
@@ -91,13 +78,11 @@ cdef struct BruteIntegralParams:
     gsl_function* integrand
 
 
-cpdef (double, double, double, double) orbitGeometry(double a, double b, double c, double semimajor, double theta, double phi)
+cpdef (double, double, double, double) orbit_geometry(double a, double b, double c, double semimajor, double theta, double phi)
 
-cpdef double transitDepth(double a, double b, double c, double semimajor, double theta, double phi, double[:] limb)
+cpdef object prolate_transit(double rPrograde, double rSubstellar, double rPolar, double[:] t, double t0, double period, double semimajor, double inclination, str limbType, object limb):
 
-cpdef double transitIntegral(double a, double b, double xe, double ye, double[:] limb, int preferBrute=?)
-
-cpdef object asymmetricTransit(double rMorning, double rEvening, double rPole, double[:] t, double t0, double period, double semimajor, double inclination, str limbType, object limb, double eccen=?, double lonPeriapse=?)
+cpdef object asymmetric_transit(double rMorning, double rEvening, double rPole, double[:] t, double t0, double period, double semimajor, double inclination, str limbType, object limb, double eccen=?, double lonPeriapse=?)
 
 cpdef double solve_kepler(double mean_anomaly, double eccen)
 
