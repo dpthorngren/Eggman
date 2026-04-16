@@ -1,5 +1,5 @@
 cimport cython
-from libc.math cimport sin, cos, sqrt, atan2, acos, log, exp
+from libc cimport math
 from libc.math cimport M_PI as pi, NAN as nan
 
 
@@ -78,12 +78,25 @@ cdef struct BruteIntegralParams:
     gsl_function* integrand
 
 
+cdef class Biellipsoid:
+    cdef public double[3] position
+    cdef public double[3] scale_f
+    cdef public double[3] scale_b
+    # Rotation matrix of the biellipsoid (forward vector is first column (rot[::3])
+    cdef public double[9] rot
+    # Basis vectors 1 and 2 for the bounding ellipsoids [f]orward and [b]ack
+    cdef public double[3] f1
+    cdef public double[3] f2
+    cdef public double[3] b1
+    cdef public double[3] b2
+    # View-axis-aligned bounding box relative to position
+    cdef public double bounds[4]
+
+    cpdef double get_half_width(self, int axis=?, int side=?) noexcept
+    cpdef (double, double) get_ybounds(self, double x) noexcept
+
 cpdef (double, double, double, double) orbit_geometry(double a, double b, double c, double semimajor, double theta, double phi)
-
-cpdef object prolate_transit(double rPrograde, double rSubstellar, double rPolar, double[:] t, double t0, double period, double semimajor, double inclination, str limbType, object limb):
-
+cpdef object prolate_transit(double rPrograde, double rSubstellar, double rPolar, double[:] t, double t0, double period, double semimajor, double inclination, str limbType, object limb)
 cpdef object asymmetric_transit(double rMorning, double rEvening, double rPole, double[:] t, double t0, double period, double semimajor, double inclination, str limbType, object limb, double eccen=?, double lonPeriapse=?)
-
 cpdef double solve_kepler(double mean_anomaly, double eccen)
-
 cpdef (double, double, double) orbit_to_position(double t, double semimajor, double period, double eccen, double inclination, double lon_periapse)

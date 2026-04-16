@@ -5,11 +5,11 @@ cdef double darkening(double rSq, int limbType, double limb0, double limb1, doub
     cdef double x
     if limbType == 0:
         # Quadratic; x = 1 - mu
-        x = 1. - sqrt(max(1. - rSq, 0.))
+        x = 1. - math.sqrt(max(1. - rSq, 0.))
         return (1 - limb0*x - limb1*x*x)
     elif limbType == 1:
-        # Nonlinear; x = sqrt(mu)
-        x = sqrt(sqrt(1 - rSq))
+        # Nonlinear; x = math.sqrt(mu)
+        x = math.sqrt(math.sqrt(1 - rSq))
         return (1. - limb0*(1. - x) - limb1*(1. - x**2) - limb2*(1. - x**3) - limb3*(1. - x**4))
     # Invalid limbType
     return nan
@@ -171,11 +171,11 @@ cdef double brute_integrateY(double x, void* params) noexcept:
 
     # Calculate the bounds of integration in y
     cdef double yMin = (x-g.xe)/g.a
-    yMin = g.b * sqrt(1.-yMin*yMin)
+    yMin = g.b * math.sqrt(1.-yMin*yMin)
     cdef double yMax = g.ye + yMin
     yMin = g.ye - yMin
     # Clip to within the bounds of the star
-    cdef double yStarEdge = sqrt(1 - x*x)
+    cdef double yStarEdge = math.sqrt(1 - x*x)
     yMin = max(yMin, -yStarEdge)
     yMax = min(yMax, yStarEdge)
     if yMin >= yMax:
@@ -238,11 +238,11 @@ cpdef (double, double, double, double) orbit_geometry(double a, double b, double
         Theta is 2 * pi * time / orbital period
         phi is inclination'''
     # Calculate the sine and cosine of the angles: we'll use them repeatedly
-    cdef SpiceDouble ct = cos(theta)
-    cdef SpiceDouble st = sin(theta)
+    cdef SpiceDouble ct = math.cos(theta)
+    cdef SpiceDouble st = math.sin(theta)
     phi = (90 - phi)*pi/180
-    cdef SpiceDouble cp = cos(phi)
-    cdef SpiceDouble sp = sin(phi)
+    cdef SpiceDouble cp = math.cos(phi)
+    cdef SpiceDouble sp = math.sin(phi)
 
     # Calculate the view angle in the planet's frame
     cdef SpiceDouble[3] view = [ct*cp, -st*cp, sp]
@@ -275,8 +275,8 @@ cpdef (double, double, double, double) orbit_geometry(double a, double b, double
     cdef SpiceDouble[3] minorAx
     saelgv_c(gv1, gv2, majorAx, minorAx)
 
-    cdef double majorLen = sqrt(majorAx[0]*majorAx[0] + majorAx[1]*majorAx[1] + majorAx[2]*majorAx[2])
-    cdef double minorLen = sqrt(minorAx[0]*minorAx[0] + minorAx[1]*minorAx[1] + minorAx[2]*minorAx[2])
+    cdef double majorLen = math.sqrt(majorAx[0]*majorAx[0] + majorAx[1]*majorAx[1] + majorAx[2]*majorAx[2])
+    cdef double minorLen = math.sqrt(minorAx[0]*minorAx[0] + minorAx[1]*minorAx[1] + minorAx[2]*minorAx[2])
 
     # print("=== Planet Frame ===")
     if abs(majorAx[1]*view[1]+majorAx[2]*view[2] + majorAx[0]*view[0]) > 1e-14 or \
@@ -312,6 +312,115 @@ cpdef (double, double, double, double) orbit_geometry(double a, double b, double
     return majorLen, minorLen, xp, yp
 
 
+cdef class Biellipsoid:
+    def __init__(self, double x, double y, double z, double theta, double phi, double gamma,
+                 double r_forward, double r_back, double r_up, double r_side):
+        self.position = [x, y, z]
+        self.scale_f = [r_forward, r_up, r_side]
+        self.scale_b = [r_back, r_up, r_side]
+        cdef int i
+        theta = theta * pi / 180
+        phi = phi * pi / 180
+        gamma = gamma * pi / 180
+        cdef double ct = math.cos(theta)
+        cdef double st = math.sin(theta)
+        cdef double cp = math.cos(phi)
+        cdef double sp = math.sin(phi)
+        cdef double cg = math.cos(gamma)
+        cdef double sg = math.sin(gamma)
+        self.rot = [
+            cp*ct,  -cp*st*cg + sp*sg, cp*st*sg + sp*cg,
+            st,     ct*cg,             -ct*sg,
+            -sp*ct, sp*st*cg + cp*sg,  -sp*st*sg + cp*cg
+        ]
+
+        # Calculate limb vectors
+        cdef double[3] plane = [self.rot[2] / r_forward, self.rot[5] / r_up, self.rot[8] / r_side]
+        normalize3(plane)
+        self.f1 = [1., 0., 0.]
+        self.f2 = [0., 1., 0.]
+        # TODO: Fix wrong condition?  Also below
+        if (plane[0]*plane[0] + plane[1]*plane[1] > 1e-12):
+            self.f1 = [plane[1], -plane[0], 0.]
+            normalize3(self.f1)
+            cross(plane, self.f1, out=self.f2)
+        # Calculate limb vectors
+        plane = [self.rot[2] / r_back, self.rot[5] / r_up, self.rot[8] / r_side]
+        normalize3(plane)
+        self.b1 = [1., 0., 0.]
+        self.b2 = [0., 1., 0.]
+        if (plane[0]*plane[0] + plane[1]*plane[1] > 1e-12):
+            self.b1 = [plane[1], -plane[0], 0.]
+            normalize3(self.b1)
+            cross(plane, self.b1, out=self.b2)
+
+        # Transform back to view space
+        for i in range(3):
+            self.f1[i] *= self.scale_f[i]
+            self.f2[i] *= self.scale_f[i]
+            self.b1[i] *= self.scale_b[i]
+            self.b2[i] *= self.scale_b[i]
+        matmul3x3(self.rot, self.f1, self.f1)
+        matmul3x3(self.rot, self.f2, self.f2)
+        matmul3x3(self.rot, self.b1, self.b1)
+        matmul3x3(self.rot, self.b2, self.b2)
+
+    cpdef double get_half_width(self, int axis=0, int side=0) noexcept:
+        if side == 0:
+            return math.sqrt(self.f1[axis]*self.f1[axis] + self.f2[axis]*self.f2[axis])
+        else:
+            return math.sqrt(self.b1[axis]*self.b1[axis] + self.b2[axis]*self.b2[axis])
+
+    cpdef (double, double) get_ybounds(self, double x) noexcept:
+        cdef int i
+        cdef double[3] xf1, xf2, xb1, xb2
+
+        cdef double xwidth2 = self.f1[0]*self.f1[0] + self.f2[0]*self.f2[0]
+        cdef double disc = self.f1[0]**4 - self.f1[0]**2 * x**2 + self.f1[0]**2 * self.f2[0]**2
+        cdef double B = (x * self.f2[0] + math.sqrt(disc)) / xwidth2
+        cdef double A = (x - self.f2[0] * B) / self.f1[0]
+        for i in range(3):
+            xf1[i] = A * self.f1[i] + B * self.f2[i]
+        B = (x * self.f2[0] - math.sqrt(disc)) / xwidth2
+        A = (x - self.f2[0] * B) / self.f1[0]
+        for i in range(3):
+            xf2[i] = A * self.f1[i] + B * self.f2[i]
+        B = (x * self.f2[0] - math.sqrt(disc)) / xwidth2
+        A = (x - self.f2[0] * B) / self.f1[0]
+        for i in range(3):
+            xb1[i] = A * self.f1[i] + B * self.f2[i]
+        B = (x * self.f2[0] + math.sqrt(disc)) / xwidth2
+        A = (x - self.f2[0] * B) / self.f1[0]
+        for i in range(3):
+            xb2[i] = A * self.f1[i] + B * self.f2[i]
+
+        # Select bounds based on their location
+        cdef double ymin=0.
+        cdef double ymax=0.
+        cdef double[3] forward = [self.rot[0], self.rot[3], self.rot[5]]
+        if dot3(xf1, forward) >= 0:
+            if xf1[1] < ymin:
+                ymin = xf1[1]
+            elif xf1[1] > ymax:
+                ymax = xf1[1]
+        if dot3(xf2, forward) >= 0:
+            if xf2[1] < ymin:
+                ymin = xf2[1]
+            elif xf2[1] > ymax:
+                ymax = xf2[1]
+        if dot3(xb1, forward) < 0:
+            if xb1[1] < ymin:
+                ymin = xb1[1]
+            elif xb1[1] > ymax:
+                ymax = xb1[1]
+        if dot3(xb2, forward) < 0:
+            if xb2[1] < ymin:
+                ymin = xb2[1]
+            elif xb2[1] > ymax:
+                ymax = xb2[1]
+        return ymin, ymax
+
+
 cpdef double solve_kepler(double mean_anomaly, double eccen):
     cdef double e_anom = mean_anomaly
     cdef double e_new = mean_anomaly
@@ -319,14 +428,14 @@ cpdef double solve_kepler(double mean_anomaly, double eccen):
     if eccen > 0.95:
         # Direct iteration
         for i in range(50):
-            e_new = mean_anomaly + eccen * sin(e_anom)
+            e_new = mean_anomaly + eccen * math.sin(e_anom)
             if abs(e_new - e_anom) < 1e-12:
                 break
             e_anom = e_new
     if eccen > 0.:
         # Newton-Raphson
         for i in range(50):
-            e_new -= (e_anom - eccen*sin(e_anom) - mean_anomaly) / (1 - eccen * cos(e_anom))
+            e_new -= (e_anom - eccen*math.sin(e_anom) - mean_anomaly) / (1 - eccen * math.cos(e_anom))
             if abs(e_new - e_anom) < 1e-12:
                 break
             e_anom = e_new
@@ -336,24 +445,56 @@ cpdef double solve_kepler(double mean_anomaly, double eccen):
 cpdef (double, double, double) orbit_to_position(double t, double semimajor, double period, double eccen, double inclination, double lon_periapse):
     # Notation: t = time, ta = true anomaly, ea = eccentric anomaly, ma = mean anomaly, x,y,z = position
     cdef double ta_c = (lon_periapse-90)*pi/180.
-    cdef double sta_c = sin(ta_c)
-    cdef double cta_c = cos(ta_c)
+    cdef double sta_c = math.sin(ta_c)
+    cdef double cta_c = math.cos(ta_c)
     # Get time of conjunction given longitude of periapse
-    cdef double ea_c = atan2(sqrt(1 - eccen*eccen) * sta_c, eccen + cta_c)
-    cdef double ma_c = ea_c - eccen * sin(ea_c)
+    cdef double ea_c = math.atan2(math.sqrt(1 - eccen*eccen) * sta_c, eccen + cta_c)
+    cdef double ma_c = ea_c - eccen * math.sin(ea_c)
     cdef double t_c = ma_c * period / (2*pi)
     # Solve Kepler's equation in the rotated and inclined frame, relative to inferior conjunction
     cdef double ma = 2*pi * (t-t_c) / period
     cdef double ea = solve_kepler(ma, eccen)
     # Position in the rotated frame where lon_periapse = 0, inclination = 0
-    cdef double x_p = semimajor * sqrt(1 - eccen*eccen) * sin(ea)
-    cdef double y_p = semimajor * (cos(ea) - eccen)
+    cdef double x_p = semimajor * math.sqrt(1 - eccen*eccen) * math.sin(ea)
+    cdef double y_p = semimajor * (math.cos(ea) - eccen)
     # Transform back to frame where lon_periapse != 0 (still inclination = 0)
     cdef double x_inc = x_p * cta_c + y_p * sta_c
     cdef double y_inc = x_p * -sta_c + y_p * cta_c
     # Transform back to the view frame (x = right, y = up, z = towards observer) centered on star
     # Longitude of ascending node is 270 degrees by construction, so x = x_inc
     inclination = inclination*pi/180
-    cdef double y = y_inc * cos(inclination)
-    cdef double z = y_inc * sin(inclination)
+    cdef double y = y_inc * math.cos(inclination)
+    cdef double z = y_inc * math.sin(inclination)
     return x_inc, y, z
+
+
+# ========== Helpers ==========
+cdef inline double normalize3(double[3] vec) noexcept:
+    cdef double length = vec[0]*vec[0] + vec[1]*vec[1] + vec[2]*vec[2]
+    length = math.sqrt(length)
+    vec[0] /= length
+    vec[1] /= length
+    vec[2] /= length
+    return length
+
+
+cdef inline double dot3(double[3] a, double[3] b) noexcept:
+    return a[0]*b[0] + a[1]*b[1] + a[2]*b[2]
+
+
+cdef inline void cross(double[3] a, double[3] b, double[3] out) noexcept:
+    out[0] = a[1]*b[2] - b[1]*a[2]
+    out[1] = a[2]*b[0] - b[2]*a[0]
+    out[2] = a[0]*b[1] - b[0]*a[1]
+    return
+
+
+cdef inline void matmul3x3(double[9] m, double[3] v, double[3] out) noexcept:
+    # Separated in case v is out
+    cdef double[3] result
+    result[0] = m[0]*v[0] + m[1]*v[1] + m[2]*v[2]
+    result[1] = m[3]*v[0] + m[4]*v[1] + m[5]*v[2]
+    result[2] = m[6]*v[0] + m[7]*v[1] + m[8]*v[2]
+    out[0] = result[0]
+    out[1] = result[1]
+    out[2] = result[2]
