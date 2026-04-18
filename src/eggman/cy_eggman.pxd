@@ -3,100 +3,24 @@ from libc cimport math
 from libc.math cimport M_PI as pi, NAN as nan
 
 
-cdef extern from "cspice/SpiceUsr.h":
-    ctypedef double SpiceDouble
-    ctypedef bint SpiceBoolean
-    ctypedef struct SpicePlane:
+cdef extern from "orbit.c":
+    ctypedef struct Orbit:
         pass
-    ctypedef struct SpiceEllipse:
-        pass
+    void init_orbit(Orbit* orb, double period, double semimajor, double eccen, double inclination, double lon_periapse)
+    double solve_kepler(double mean_anomaly, double eccen)
+    void get_position(Orbit* orb, double t, double* x, double* y, double* z)
 
 
-cdef extern from "cspice/SpiceZfc.h":
-    # Initializes a SpicePlane given a normal vector and an offset from the origin
-    cdef void nvc2pl_c(SpiceDouble* normal, SpiceDouble offset, SpicePlane* outPlane)
-    # Gets the ellipse defined by the intersection of an ellipsoid and a plane
-    cdef void inedpl_c(SpiceDouble a, SpiceDouble b, SpiceDouble c, SpicePlane* plane, SpiceEllipse* limbEllipse, SpiceBoolean* found)
-    # Projects an ellipse onto the given plane
-    cdef void pjelpl_c(SpiceEllipse* inEllipse, SpicePlane* projPlane, SpiceEllipse* outEllipse)
-    # Gets the center and constructing vectors of an ellipse
-    cdef void el2cgv_c(SpiceEllipse* inEllipse, SpiceDouble* center, SpiceDouble* vec1, SpiceDouble* vec2)
-    # Gets the major and minor axis vectors from the constructing vectors.
-    cdef void saelgv_c(SpiceDouble* vec1, SpiceDouble* vec2, SpiceDouble* majorAxis, SpiceDouble* minorAxis)
+cdef extern from "biellipsoid.c":
+    ctypedef struct Biellipsoid:
+        double[3] position
+        double[9] rot
+        double[3] f1
+        double[3] f2
+        double[3] b1
+        double[3] b2
+        double[4] bounds
+    void init_biellipsoid(Biellipsoid* f, double x, double y, double z, double theta, double phi, double gamma, double r_forward, double r_back, double r_up, double r_side)
 
 
-cdef extern from "gsl/gsl_math.h":
-    ctypedef struct gsl_function:
-        double (*function)(double x, void *params)
-        void * params
-
-
-cdef extern from "gsl/gsl_roots.h":
-    ctypedef struct gsl_root_fsolver:
-        pass
-    ctypedef struct gsl_root_fsolver_type:
-        pass
-
-    const gsl_root_fsolver_type* gsl_root_fsolver_brent
-
-    gsl_root_fsolver* gsl_root_fsolver_alloc(const gsl_root_fsolver_type* T)
-    void gsl_root_fsolver_free(gsl_root_fsolver *s)
-    int gsl_root_fsolver_set(gsl_root_fsolver *s, gsl_function *f, double x_lower, double x_upper)
-    int gsl_root_fsolver_iterate(gsl_root_fsolver *s)
-    double gsl_root_fsolver_root(const gsl_root_fsolver *s)
-    double gsl_root_fsolver_x_lower(const gsl_root_fsolver *s)
-    double gsl_root_fsolver_x_upper(const gsl_root_fsolver *s)
-
-cdef extern from "gsl/gsl_integration.h":
-    ctypedef struct gsl_integration_workspace:
-        size_t size
-
-    gsl_integration_workspace *gsl_integration_workspace_alloc(size_t n)
-    void gsl_integration_workspace_free(gsl_integration_workspace *w)
-    int gsl_integration_qag(const gsl_function *f, double a, double b, double epsabs, double epsrel, size_t limit, int key, gsl_integration_workspace *workspace, double *result, double *abserr)
-
-cdef extern from "gsl/gsl_errno.h":
-    ctypedef struct gsl_error_handler_t:
-        pass
-    gsl_error_handler_t* gsl_set_error_handler(gsl_error_handler_t *new_handler)
-    gsl_error_handler_t* gsl_set_error_handler_off()
-    const char *gsl_strerror(const int gsl_errno)
-
-
-cdef struct BruteIntegralParams:
-    double a
-    double b
-    double xe
-    double ye
-    double x
-    int limbType
-    double limb0
-    double limb1
-    double limb2
-    double limb3
-    gsl_integration_workspace* work
-    gsl_function* integrand
-
-
-cdef class Biellipsoid:
-    cdef public double[3] position
-    cdef public double[3] scale_f
-    cdef public double[3] scale_b
-    # Rotation matrix of the biellipsoid (forward vector is first column (rot[::3])
-    cdef public double[9] rot
-    # Basis vectors 1 and 2 for the bounding ellipsoids [f]orward and [b]ack
-    cdef public double[3] f1
-    cdef public double[3] f2
-    cdef public double[3] b1
-    cdef public double[3] b2
-    # View-axis-aligned bounding box relative to position
-    cdef public double bounds[4]
-
-    cpdef double get_half_width(self, int axis=?, int side=?) noexcept
-    cpdef (double, double) get_ybounds(self, double x) noexcept
-
-cpdef (double, double, double, double) orbit_geometry(double a, double b, double c, double semimajor, double theta, double phi)
-cpdef object prolate_transit(double rPrograde, double rSubstellar, double rPolar, double[:] t, double t0, double period, double semimajor, double inclination, str limbType, object limb)
-cpdef object asymmetric_transit(double rMorning, double rEvening, double rPole, double[:] t, double t0, double period, double semimajor, double inclination, str limbType, object limb, double eccen=?, double lonPeriapse=?)
-cpdef double solve_kepler(double mean_anomaly, double eccen)
-cpdef (double, double, double) orbit_to_position(double t, double semimajor, double period, double eccen, double inclination, double lon_periapse)
+cpdef (double, double, double) orbit_to_position(double t, double period, double semimajor, double eccen, double inclination, double lon_periapse) noexcept

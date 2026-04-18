@@ -4,8 +4,7 @@ old/
 plots
 data
 scratch/
-cspice/
-src/eggman/*.c
+src/eggman/cy_*.c
 src/eggman/*.html
 *.ipynb
 .task

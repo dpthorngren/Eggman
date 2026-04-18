@@ -12,8 +12,10 @@ tasks:
     sources:
       - src/eggman/*.pyx
       - src/eggman/*.pxd
+      - src/eggman/[a-z]*.c
     generates:
       - src/eggman/*.so
+      - src/eggman/cy_*.c
     cmds:
       - rm -rf build eggman.egg-info src/eggman/*.so
       - pip uninstall eggman --yes

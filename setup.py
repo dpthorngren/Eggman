@@ -6,9 +6,10 @@ from setuptools import Extension, setup
 ext = Extension(
     "eggman.cy_eggman",
     ["src/eggman/cy_eggman.pyx"],
-    libraries=["cspice", "gsl", "gslcblas"],
-    library_dirs=[os.getcwd() + "/cspice/lib/"],
-    include_dirs=[os.getcwd() + "/cspice/include/"],
+    libraries=["gsl", "gslcblas"],
+    # libraries=["cspice", "gsl", "gslcblas"],
+    # library_dirs=[os.getcwd() + "/cspice/lib/"],
+    # include_dirs=[os.getcwd() + "/cspice/include/"],
 )
 
 directives = {
