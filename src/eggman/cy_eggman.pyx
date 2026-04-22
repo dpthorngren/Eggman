@@ -135,7 +135,7 @@ cpdef object asymmetricTransit(double rMorning, double rEvening, double rPole, d
 
     for i in range(nTimes):
         # Calculate the planet's position in the sky (aligned with orbit) frame
-        xe, ye, ze = orbit_to_position(t[i], semimajor, period, eccen, inclination, lonPeriapse)
+        xe, ye, ze = orbit_to_position(t[i]-t0, semimajor, period, eccen, inclination, lonPeriapse)
 
         # No transit if the planet is behind the star
         if ze < 0:
