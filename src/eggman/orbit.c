@@ -16,7 +16,7 @@ typedef struct{
 } Orbit;
 
 
-void init_orbit(Orbit* orb, double period, double semimajor, double eccen, double inclination, double lon_periapse){
+Orbit create_orbit(double period, double semimajor, double eccen, double inclination, double lon_periapse){
     /*Notation:
         t: time...
         ta: true anomaly...
@@ -31,21 +31,22 @@ void init_orbit(Orbit* orb, double period, double semimajor, double eccen, doubl
         [no suffix]: ...in the view frame
     */
     // Basic data
-    orb->period = period;
-    orb->semimajor = semimajor;
-    orb->eccen = eccen;
+    Orbit orb;
+    orb.period = period;
+    orb.semimajor = semimajor;
+    orb.eccen = eccen;
     // Precompute inclination sin and cosine
     inclination *= M_PI/180.;
-    orb->s_inc = sin(inclination);
-    orb->c_inc = cos(inclination);
+    orb.s_inc = sin(inclination);
+    orb.c_inc = cos(inclination);
     // Precompute periapse data
     double ta_p = (lon_periapse-90.)*M_PI/180.;
-    orb->sta_p = sin(ta_p);
-    orb->cta_p = cos(ta_p);
-    double ea_p = atan2(sqrt(1 - orb->eccen*orb->eccen) * orb->sta_p, eccen + orb->cta_p);
+    orb.sta_p = sin(ta_p);
+    orb.cta_p = cos(ta_p);
+    double ea_p = atan2(sqrt(1 - orb.eccen*orb.eccen) * orb.sta_p, eccen + orb.cta_p);
     double ma_p = ea_p - eccen * sin(ea_p);
-    orb->t_p = ma_p * orb->period / (2*M_PI);
-    return;
+    orb.t_p = ma_p * orb.period / (2*M_PI);
+    return orb;
 }
 
 

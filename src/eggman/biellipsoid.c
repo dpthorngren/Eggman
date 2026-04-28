@@ -1,33 +1,43 @@
 #include <math.h>
+#include <stdio.h>
 
 // 3-vector macros
-#define ASSIGN(arr, a, b, c) arr[0] = a; arr[1] = b; arr[2] = c;
-#define LENGTH(arr) sqrt(arr[0]*arr[0] + arr[1]*arr[1] + arr[2]*arr[2])
-#define SCALE(arr, coeff) arr[0] /= coeff; arr[1] /= coeff; arr[2] /= coeff;
-#define DOT3(a, b) a[0]*b[0] + a[1]*b[1] + a[2]*b[2]
+#define LENGTH(arr) sqrt(arr.x*arr.x + arr.y*arr.y + arr.z*arr.z)
+#define RESCALE(arr, coeff) arr.x /= coeff; arr.y /= coeff; arr.z /= coeff;
+#define DOT3(a, b) a.x*b.x + a.y*b.y + a.z*b.z
 #define MATMUL(mat, vec, out) \
-out[0] = mat[0]*vec[0] + mat[1]*vec[1] + mat[2]*vec[2];\
-out[1] = mat[3]*vec[0] + mat[4]*vec[1] + mat[5]*vec[2];\
-out[2] = mat[6]*vec[0] + mat[7]*vec[1] + mat[8]*vec[2];
+out.x = mat.xx*vec.x + mat.xy*vec.y + mat.xz*vec.z;\
+out.y = mat.yx*vec.x + mat.yy*vec.y + mat.yz*vec.z;\
+out.z = mat.zx*vec.x + mat.zy*vec.y + mat.zz*vec.z;
 #define CROSS(a, b, out) \
-out[0] = a[1]*b[2] - b[1]*a[2]; \
-out[1] = a[2]*b[0] - b[2]*a[0]; \
-out[2] = a[0]*b[1] - b[0]*a[1];
-#define PRINT(vec) printf("%f, %f, %f\n", vec[0], vec[1], vec[2]);
+out.x = a.y*b.z - b.y*a.z; \
+out.y = a.z*b.x - b.z*a.x; \
+out.z = a.x*b.y - b.x*a.y;
+#define WEIGHTED_SUM(w1, w2, v1, v2, out) \
+out.x = w1*v1.x + w2*v2.x; \
+out.y = w1*v1.y + w2*v2.y; \
+out.z = w1*v1.z + w2*v2.z;
+#define PRINT(vec) printf("%f, %f, %f\n", vec.x, vec.y, vec.z);
 
 
 typedef struct{
-    double position[3];
-    // Rotation matrix of the biellipsoid (forward vector is first column (rot[::3])
-    double rot[9];
-    // Basis vectors 1 and 2 for the bounding ellipsoids f and b
-    double f1[3];
-    double f2[3];
-    double b1[3];
-    double b2[3];
-    // View-axis-aligned bounding box relative to position
-    double bounds[4];
-} Biellipsoid;
+    double x;
+    double y;
+    double z;
+} Vec3;
+
+
+typedef struct{
+    double xx;
+    double xy;
+    double xz;
+    double yx;
+    double yy;
+    double yz;
+    double zx;
+    double zy;
+    double zz;
+} Mat3;
 
 
 typedef struct{
@@ -36,13 +46,31 @@ typedef struct{
 } Bounds;
 
 
-void init_biellipsoid(Biellipsoid* f, double x, double y, double z, double theta, double phi, double gamma, double r_forward, double r_back, double r_up, double r_side){
-    double plane[3];
+typedef struct{
+    Vec3 position;
+    double radii[4];
+    // Rotation matrix from ellipsoid space to view space
+    // Forward vector (view space) is the first column rot[::3]
+    // View vector (ellipsoid space) is minus the last column -rot[2::3]
+    Mat3 rot;
+    // Plane of the limb for the forward (backward) ellipsoid
+    Vec3 f_limb;
+    Vec3 b_limb;
+    // x offset of the intersection of limb ellipse and break plane
+    Vec3 break_offset;
+    // Basis vectors 1 and 2 for the bounding ellipsoids f and b
+    Vec3 f1;
+    Vec3 f2;
+    Vec3 b1;
+    Vec3 b2;
+    // View-axis-aligned bounding box relative to position
+    Bounds xbounds;
+    Bounds ybounds;
+} Biellipsoid;
+
+Biellipsoid create_biellipsoid(double x, double y, double z, double theta, double phi, double gamma, double r_forward, double r_back, double r_up, double r_side){
     double l;
     double ct, st, cp, sp, cg, sg;
-    double temp[3];
-
-    ASSIGN(f->position, x, y, z);
 
     // Setup the rotation matrox (from ellipsoid-aligned to view frame)
     theta = theta * M_PI / 180;
@@ -54,126 +82,156 @@ void init_biellipsoid(Biellipsoid* f, double x, double y, double z, double theta
     sp = sin(phi);
     cg = cos(gamma);
     sg = sin(gamma);
-    f->rot[0] = cp * ct;
-    f->rot[1] = -cp * st * cg + sp*sg;
-    f->rot[2] = cp*st*sg + sp*cg;
-    f->rot[3] = st;
-    f->rot[4] = ct * cg;
-    f->rot[5] = -ct * sg;
-    f->rot[6] = -sp * ct;
-    f->rot[7] = sp*st*cg + cp*sg;
-    f->rot[8] = -sp * st * sg + cp*cg;
+    Mat3 rot = {
+        cp * ct,  -cp * st * cg + sp*sg, cp*st*sg + sp*cg,
+        st,       ct * cg,               -ct * sg,
+        -sp * ct, sp*st*cg + cp*sg,      -sp * st * sg + cp*cg,
+    };
 
-    // Calculate limb vectors
-    ASSIGN(plane, f->rot[2] / r_forward, f->rot[5] / r_up, f->rot[8] / r_side);
-    l = LENGTH(plane);
-    SCALE(plane, l);
-    if (plane[0]*plane[0] + plane[1]*plane[1] < 1e-12){
-        ASSIGN(f->f1, 1.0, 0.0, 0.0);
-        ASSIGN(f->f2, 0.0, 1.0, 0.0);
+    // Calculate limb planes and vectors
+    Vec3 f_limb = (Vec3){-rot.zx/r_forward, -rot.zy/r_up, -rot.zz/r_side};
+    l = LENGTH(f_limb);
+    if (f_limb.z < 0.0){
+        l *= -1.0;
     }
-    else {
-        ASSIGN(f->f1, plane[1], -plane[2], 0.)
-        l = LENGTH(f->f1);
-        SCALE(f->f1, l);
-        CROSS(f->f1, plane, f->f2);
+    RESCALE(f_limb, l);
+
+    Vec3 f1 = {1.0, 0.0, 0.0};
+    Vec3 f2 = {0.0, 1.0, 0.0};
+    if (f_limb.x*f_limb.x + f_limb.y*f_limb.y > 1e-12){
+        f1 = (Vec3){f_limb.y, -f_limb.x, 0.};
+        l = LENGTH(f1);
+        RESCALE(f1, l);
+        CROSS(f1, f_limb, f2);
     }
 
-    ASSIGN(plane, f->rot[2] / r_back, f->rot[5] / r_up, f->rot[8] / r_side);
-    l = LENGTH(plane);
-    SCALE(plane, l);
-    if (plane[0]*plane[0] + plane[1]*plane[1] < 1e-12){
-        ASSIGN(f->b1, 1.0, 0.0, 0.0);
-        ASSIGN(f->b2, 0.0, 1.0, 0.0);
+    Vec3 b_limb = (Vec3){-rot.zx/r_back, -rot.zy/r_up, -rot.zz / r_side};
+    l = LENGTH(b_limb);
+    if (b_limb.z < 0.0){
+        l *= -1.0;
     }
-    else {
-        ASSIGN(f->b1, plane[1], -plane[2], 0.)
-        l = LENGTH(f->b1);
-        SCALE(f->b1, l);
-        CROSS(f->b1, plane, f->b2);
+    RESCALE(b_limb, l);
+
+    Vec3 b1 = {1.0, 0.0, 0.0};
+    Vec3 b2 = {0.0, 1.0, 0.0};
+    if (b_limb.x*b_limb.x + b_limb.y*b_limb.y > 1e-12){
+        b1 = (Vec3){b_limb.y, -b_limb.x, 0.};
+        l = LENGTH(b1);
+        RESCALE(b1, l);
+        CROSS(b1, b_limb, b2);
     }
+
+    // Transform the limb planes into view space
+    Vec3 temp = {f_limb.x/r_forward, f_limb.y/r_up, f_limb.z/r_side};
+    MATMUL(rot, temp, f_limb);
+
+    temp = (Vec3){b_limb.x/r_back, b_limb.y/r_up, b_limb.z/r_side};
+    MATMUL(rot, temp, b_limb);
 
     // Transform the limb vectors into view space
-    ASSIGN(temp, f->f1[0]/r_forward, f->f1[1]/r_up, f->f1[2]/r_back);
-    MATMUL(f->rot, temp, f->f1);
+    temp = (Vec3){f1.x*r_forward, f1.y*r_up, f1.z*r_side};
+    MATMUL(rot, temp, f1);
 
-    ASSIGN(temp, f->f2[0]/r_forward, f->f2[1]/r_up, f->f2[2]/r_back);
-    MATMUL(f->rot, temp, f->f2);
+    temp = (Vec3){f2.x*r_forward, f2.y*r_up, f2.z*r_side};
+    MATMUL(rot, temp, f2);
 
-    ASSIGN(temp, f->b1[0]/r_forward, f->b1[1]/r_up, f->b1[2]/r_back);
-    MATMUL(f->rot, temp, f->b1);
+    temp = (Vec3){b1.x*r_back, b1.y*r_up, b1.z*r_side};
+    MATMUL(rot, temp, b1);
 
-    ASSIGN(temp, f->b2[0]/r_forward, f->b2[1]/r_up, f->b2[2]/r_back);
-    MATMUL(f->rot, temp, f->b2);
+    temp = (Vec3){b2.x*r_back, b2.y*r_up, b2.z*r_side};
+    MATMUL(rot, temp, b2);
+
+    // Get the limb breakpoints
+    double d1 = rot.xx*f1.x + rot.yx*f1.y + rot.zx*f1.z;
+    double d2 = rot.xx*f2.x + rot.yx*f2.y + rot.zx*f2.z;
+    double cbreak = -1./sqrt(1 + d1*d1 / (d2*d2));
+    double sbreak = 1./sqrt(1 + d2*d2 / (d1*d1));
+    Vec3 break_offset;
+    WEIGHTED_SUM(cbreak, sbreak, f1, f2, break_offset);
+    if (break_offset.x < 0){
+        RESCALE(break_offset, -1.);
+    }
 
     // Get the bounds
-    f->bounds[0] = fabs(sqrt(f->f1[0]*f->f1[0] + f->f2[0]*f->f2[0]));
-    f->bounds[1] = -f->bounds[0];
-    f->bounds[2] = fabs(sqrt(f->b1[0]*f->f1[0] + f->b2[0]*f->b2[0]));
-    f->bounds[3] = -f->bounds[2];
-    return;
+    Bounds xbounds, ybounds;
+    double f_width = sqrt(f1.x*f1.x + f2.x*f2.x);
+    double b_width = sqrt(b1.x*b1.x + b2.x*b2.x);
+    if (rot.xx > 0){
+        xbounds = (Bounds){x - b_width, x + f_width};
+    }
+    else {
+        xbounds = (Bounds){x - f_width, x + b_width};
+    }
+    f_width = sqrt(f1.y*f1.y + f2.y*f2.y);
+    b_width = sqrt(b1.y*b1.y + b2.y*b2.y);
+    if (rot.yy > 0){
+        ybounds = (Bounds){y - b_width, y + f_width};
+    }
+    else {
+        ybounds = (Bounds){y - f_width, y + b_width};
+    }
+    Biellipsoid result = {x, y, z, r_forward, r_back, r_up, r_side, rot, f_limb, b_limb, break_offset, f1, f2, b1, b2, xbounds, ybounds};
+    return result;
 }
 
-Bounds get_ybounds(Biellipsoid* bell, double x){
-    int i = 0;
-    double xf1[3];
-    double xf2[3];
-    double xb1[3];
-    double xb2[3];
+Bounds get_ylimits(Biellipsoid* bell, double x){
+    Vec3 e1;
+    Vec3 e2;
+    Bounds ybounds = {0., 0.};
+    Vec3 forward = {bell->rot.xx, bell->rot.yx, bell->rot.zx};
 
-    double xwidth2 = bell->f1[0]*bell->f1[0] + bell->f2[0]*bell->f2[0];
+    x -= bell->position.x;
+    double xwidth2 = bell->f1.x*bell->f1.x + bell->f2.x*bell->f2.x;
+
     // Quadratic equation discriminant
-    double disc = bell->f1[0] * bell->f1[0];
-    disc = disc*disc - disc * x*x + disc * bell->f2[0] * bell->f2[0];
-    double B = (x * bell->f2[0] + sqrt(disc)) / xwidth2;
-    double A = (x - bell->f2[0] * B) / bell->f1[0];
-    for(int i = 0; i < 3; i++){
-        xf1[i] = A * bell->f1[i] + B * bell->f2[i];
+    double disc = bell->f1.x * bell->f1.x;
+    disc = disc*disc - disc * x*x + disc * bell->f2.x * bell->f2.x;
+    disc = sqrt(disc);
+
+    // First and second forward ellipse intersections
+    double st = (x * bell->f2.x + disc) / xwidth2;
+    double ct = (x - bell->f2.x * st) / bell->f1.x;
+    WEIGHTED_SUM(ct, st, bell->f1, bell->f2, e1);
+    st = (x * bell->f2.x - disc) / xwidth2;
+    ct = (x - bell->f2.x * st) / bell->f1.x;
+    WEIGHTED_SUM(ct, st, bell->f1, bell->f2, e2);
+
+    if (DOT3(e1, forward) >= 0){
+        if (e1.y < ybounds.min)
+            ybounds.min = e1.y;
+        else if (e1.y > ybounds.max)
+            ybounds.max = e1.y;
     }
-    B = (x * bell->f2[0] - sqrt(disc)) / xwidth2;
-    A = (x - bell->f2[0] * B) / bell->f1[0];
-    for(int i = 0; i < 3; i++){
-        xf2[i] = A * bell->f1[i] + B * bell->f2[i];
+    if (DOT3(e2, forward) >= 0){
+        if (e2.y < ybounds.min)
+            ybounds.min = e2.y;
+        else if (e2.y > ybounds.max)
+            ybounds.max = e2.y;
     }
-    B = (x * bell->f2[0] - sqrt(disc)) / xwidth2;
-    A = (x - bell->f2[0] * B) / bell->f1[0];
-    for(int i = 0; i < 3; i++){
-        xb1[i] = A * bell->f1[i] + B * bell->f2[i];
-    }
-    B = (x * bell->f2[0] + sqrt(disc)) / xwidth2;
-    A = (x - bell->f2[0] * B) / bell->f1[0];
-    for(int i = 0; i < 3; i++){
-        xb2[i] = A * bell->f1[i] + B * bell->f2[i];
-    }
+
+    // First and second backward ellipse intersections
+    disc = bell->b1.x * bell->b1.x;
+    disc = disc*disc - disc * x*x + disc * bell->b2.x * bell->b2.x;
+    disc = sqrt(disc);
+    st = (x * bell->b2.x + disc) / xwidth2;
+    ct = (x - bell->b2.x * st) / bell->b1.x;
+    WEIGHTED_SUM(ct, st, bell->f1, bell->f2, e1);
+    st = (x * bell->b2.x - disc) / xwidth2;
+    ct = (x - bell->b2.x * st) / bell->b1.x;
+    WEIGHTED_SUM(ct, st, bell->b1, bell->b2, e1);
 
     // Select bounds based on their location
-    double ymin=0.;
-    double ymax=0;
-    double forward[3] = {bell->rot[0], bell->rot[3], bell->rot[5]};
-    if (DOT3(xf1, forward) >= 0){
-        if (xf1[1] < ymin)
-            ymin = xf1[1];
-        else if (xf1[1] > ymax)
-            ymax = xf1[1];
+    if (DOT3(e1, forward) < 0){
+        if (e1.y < ybounds.min)
+            ybounds.min = e1.y;
+        else if (e1.y > ybounds.max)
+            ybounds.max = e1.y;
     }
-    if (DOT3(xf2, forward) >= 0){
-        if (xf2[1] < ymin)
-            ymin = xf2[1];
-        else if (xf2[1] > ymax)
-            ymax = xf2[1];
+    if (DOT3(e2, forward) < 0){
+        if (e2.y < ybounds.min)
+            ybounds.min = e2.y;
+        else if (e2.y > ybounds.max)
+            ybounds.max = e2.y;
     }
-    if (DOT3(xb1, forward) >= 0){
-        if (xb1[1] < ymin)
-            ymin = xb1[1];
-        else if (xb1[1] > ymax)
-            ymax = xb1[1];
-    }
-    if (DOT3(xb2, forward) >= 0){
-        if (xb2[1] < ymin)
-            ymin = xb2[1];
-        else if (xb2[1] > ymax)
-            ymax = xb2[1];
-    }
-    Bounds b = {ymin, ymax};
-    return b;
+    return ybounds;
 }

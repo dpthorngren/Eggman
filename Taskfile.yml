@@ -36,3 +36,9 @@ tasks:
     cmds:
       - pytest --cov=eggman  --cov-report='term' --cov-report="html"
 
+
+  experiment:
+    deps: [lint, devbuild]
+    desc: "Run pytest with coverage"
+    cmds:
+      - python experiment.py
