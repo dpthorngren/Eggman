@@ -107,6 +107,9 @@ def test_biellipsoid():
     bounds = eggman._biellipsoid_ylimits(-.5, 0, 0, 0, 1., 1., 1., 1.)
     assert bounds[0] == approx(-np.sqrt(1 - .25), 1e-12)
     assert bounds[1] == approx(np.sqrt(1 - .25), 1e-12)
+    bounds = eggman._biellipsoid_ylimits(.5, 0, 0, 0, 1., 1., 1., 1.)
+    assert bounds[0] == approx(-np.sqrt(1 - .25), 1e-12)
+    assert bounds[1] == approx(np.sqrt(1 - .25), 1e-12)
     # Simple Ellipses
     bounds = eggman._biellipsoid_ylimits(0., 90., 0, 0, 1., 2., 2., 1.)
     assert bounds == approx([-2., 1.])
@@ -115,7 +118,7 @@ def test_biellipsoid():
 
     bounds = eggman._biellipsoid_ylimits(0., 90., 0, 0, 1., 2., 1., 1.)
     assert bounds == approx([-2., 1.])
-    bounds = eggman._biellipsoid_ylimits(-.2, 90., 0, 0, 1., 2., 1., 1.)
+    bounds = eggman._biellipsoid_ylimits(-.2, 90., 0, 0, 1., 2., 1., 1. )
     assert bounds[0] == approx(-2 * np.sqrt(1 - .2*.2), 1e-12)
     assert bounds[1] == approx(np.sqrt(1 - .2*.2), 1e-12)
 

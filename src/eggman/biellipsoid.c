@@ -175,27 +175,29 @@ Biellipsoid create_biellipsoid(double x, double y, double z, double theta, doubl
 }
 
 Bounds get_ylimits(Biellipsoid* bell, double x){
-    Vec3 e1;
-    Vec3 e2;
-    Bounds ybounds = {0., 0.};
+    double st, ct;
+    Vec3 e1, e2;
     Vec3 forward = {bell->rot.xx, bell->rot.yx, bell->rot.zx};
+    Bounds ybounds = {0., 0.};
 
+    if ((x <= bell->xbounds.min) || (x >= bell->xbounds.max)){
+        return ybounds;
+    }
     x -= bell->position.x;
+
     double xwidth2 = bell->f1.x*bell->f1.x + bell->f2.x*bell->f2.x;
-
-    // Quadratic equation discriminant
-    double disc = bell->f1.x * bell->f1.x;
-    disc = disc*disc - disc * x*x + disc * bell->f2.x * bell->f2.x;
+    int aligned = bell->f1.x*bell->f1.x < xwidth2*1e-12;
+    double disc = (x*x) * (bell->f2.x*bell->f2.x) - xwidth2 * (x*x - bell->f1.x * bell->f1.x);
     disc = sqrt(disc);
-
     // First and second forward ellipse intersections
-    double st = (x * bell->f2.x + disc) / xwidth2;
-    double ct = (x - bell->f2.x * st) / bell->f1.x;
+    st = aligned? x / bell->f2.x: (x * bell->f2.x + disc) / xwidth2;
+    ct = aligned? sqrt(1 - st*st): (x - bell->f2.x * st) / bell->f1.x;
     WEIGHTED_SUM(ct, st, bell->f1, bell->f2, e1);
-    st = (x * bell->f2.x - disc) / xwidth2;
-    ct = (x - bell->f2.x * st) / bell->f1.x;
+    st = aligned? x / bell->f2.x: (x * bell->f2.x - disc) / xwidth2;
+    ct = aligned? -sqrt(1 - st*st): (x - bell->f2.x * st) / bell->f1.x;
     WEIGHTED_SUM(ct, st, bell->f1, bell->f2, e2);
 
+    // Select bounds ased on their location
     if (DOT3(e1, forward) >= 0){
         if (e1.y < ybounds.min)
             ybounds.min = e1.y;
@@ -210,15 +212,16 @@ Bounds get_ylimits(Biellipsoid* bell, double x){
     }
 
     // First and second backward ellipse intersections
-    disc = bell->b1.x * bell->b1.x;
-    disc = disc*disc - disc * x*x + disc * bell->b2.x * bell->b2.x;
+    xwidth2 = bell->b1.x*bell->b1.x + bell->b2.x*bell->b2.x;
+    aligned = bell->b1.x*bell->b1.x < xwidth2*1e-12;
+    disc = (x*x) * (bell->b2.x*bell->b2.x) - xwidth2 * (x*x - bell->b1.x * bell->b1.x);
     disc = sqrt(disc);
-    st = (x * bell->b2.x + disc) / xwidth2;
-    ct = (x - bell->b2.x * st) / bell->b1.x;
-    WEIGHTED_SUM(ct, st, bell->f1, bell->f2, e1);
-    st = (x * bell->b2.x - disc) / xwidth2;
-    ct = (x - bell->b2.x * st) / bell->b1.x;
+    st = aligned? x / bell->b2.x: (x * bell->b2.x + disc) / xwidth2;
+    ct = aligned? sqrt(1 - st*st): (x - bell->b2.x * st) / bell->b1.x;
     WEIGHTED_SUM(ct, st, bell->b1, bell->b2, e1);
+    st = aligned? x / bell->b2.x: (x * bell->b2.x - disc) / xwidth2;
+    ct = aligned? -sqrt(1 - st*st): (x - bell->b2.x * st) / bell->b1.x;
+    WEIGHTED_SUM(ct, st, bell->b1, bell->b2, e2);
 
     // Select bounds based on their location
     if (DOT3(e1, forward) < 0){
@@ -233,5 +236,7 @@ Bounds get_ylimits(Biellipsoid* bell, double x){
         else if (e2.y > ybounds.max)
             ybounds.max = e2.y;
     }
+    ybounds.min += bell->position.y;
+    ybounds.max += bell->position.y;
     return ybounds;
 }
