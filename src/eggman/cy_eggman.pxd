@@ -3,15 +3,9 @@ from libc cimport math
 from libc.math cimport M_PI as pi, NAN as nan
 
 
-cdef extern from "orbit.c":
+cdef extern from "eggman.h":
     ctypedef struct Orbit:
         pass
-    Orbit create_orbit(double period, double semimajor, double eccen, double inclination, double lon_periapse)
-    double solve_kepler(double mean_anomaly, double eccen)
-    void get_position(Orbit* orb, double t, double* x, double* y, double* z)
-
-
-cdef extern from "biellipsoid.c":
     ctypedef struct Mat3:
         double xx
         double xy
@@ -42,7 +36,16 @@ cdef extern from "biellipsoid.c":
         Vec3 b2
         Bounds xbounds
         Bounds ybounds
-    Biellipsoid create_biellipsoid(double x, double y, double z, double theta, double phi, double gamma, double r_forward, double r_back, double r_up, double r_side)
+
+
+cdef extern from "orbit.c":
+    Orbit create_orbit(double period, double semimajor, double eccen, double inclination, double lon_periapse)
+    double solve_kepler(double mean_anomaly, double eccen)
+    Vec3 get_position(Orbit* orb, double t)
+
+
+cdef extern from "biellipsoid.c":
+    Biellipsoid create_biellipsoid(Vec3 position, double theta, double phi, double gamma, double r_forward, double r_back, double r_up, double r_side)
     Bounds get_bounds(Biellipsoid* bell, int axis)
     Bounds get_ylimits(Biellipsoid* bell, double x)
 

@@ -1,19 +1,4 @@
-#include <math.h>
-
-
-typedef struct{
-    double period;
-    double semimajor;
-    double eccen;
-    // Sin and cosine of the inclination
-    double s_inc;
-    double c_inc;
-    // Sin and cosine of the true anomaly at periapse
-    double sta_p;
-    double cta_p;
-    // Time of periapse passage
-    double t_p;
-} Orbit;
+#include "eggman.h"
 
 
 Orbit create_orbit(double period, double semimajor, double eccen, double inclination, double lon_periapse){
@@ -76,7 +61,7 @@ double solve_kepler(double mean_anomaly, double eccen){
 }
 
 
-void get_position(Orbit* orb, double t, double* x, double* y, double* z){
+Vec3 get_position(Orbit* orb, double t){
     // Solve Kepler's equation in the rotated and inclined frame, relative to inferior conjunction
     double ma = 2*M_PI * (t - orb->t_p) / orb->period;
     double ea = solve_kepler(ma, orb->eccen);
@@ -87,8 +72,6 @@ void get_position(Orbit* orb, double t, double* x, double* y, double* z){
     double x_inc = x_rot * orb->cta_p + y_rot * orb->sta_p;
     double y_inc = x_rot * -orb->sta_p + y_rot * orb->cta_p;
     // Transform back to the view frame (x = right, y = up, z = towards observer) centered on star
-    *x = x_inc;
-    *y = y_inc * orb->c_inc;
-    *z = y_inc * orb->s_inc;
-    return;
+    Vec3 result = {x_inc, y_inc * orb->c_inc, y_inc * orb->s_inc};
+    return result;
 }
