@@ -35,7 +35,13 @@ def plot_biellipse(bell, res=200):
     # Limb Break point
     pos = bell['position']
     off = bell['break_offset']
-    plt.plot([pos[0] - off[0], pos[0] + off[0]], [pos[1] - off[1], pos[1] + off[1]], 'o', color="orange", zorder=20)
+    plt.plot(
+        [pos[0] - off[0], pos[0] + off[0]],
+        [pos[1] - off[1], pos[1] + off[1]],
+        'o',
+        color="orange",
+        zorder=20,
+    )
 
 
 def position_masks(bell, positions):
@@ -58,9 +64,9 @@ def biellipse_outline(bell, res=200) -> np.ndarray:
     e_backward = np.cos(t) * np.array(bell['b1']) + np.sin(t) * np.array(bell['b2'])
     mask = e_backward @ forward > 0
     e_backward = e_backward[~mask]
-    result = np.row_stack([e_forward, e_backward])
+    result = np.vstack([e_forward, e_backward])
     result = sorted(result, key=lambda x: np.arctan2(x[1], x[0]))
-    result = np.row_stack([result, result[0]])
+    result = np.vstack([result, result[0]])
     return result.T + np.array(bell['position'])[:, None]
 
 
@@ -91,7 +97,7 @@ def biellipsoid_meridians(bell, axis=0, res=200):
         raise ValueError(f"Axis must be 0, 1, or 2, not {axis}.")
     u = u[np.dot(u, forward) > 0]
     v = v[np.dot(v, forward) < 0]
-    result = np.row_stack([u, v])
+    result = np.vstack([u, v])
     result = sorted(result, key=lambda x: np.arctan2(x[1], x[0]))
-    result = np.row_stack([result, result[0]])
+    result = np.vstack([result, result[0]])
     return np.array(result).T

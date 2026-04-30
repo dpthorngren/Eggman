@@ -1,39 +1,40 @@
 #ifndef EGGMAN_H
 #define EGGMAN_H
+#include <gsl/gsl_errno.h>
+#include <gsl/gsl_integration.h>
+#include <gsl/gsl_math.h>
 #include <math.h>
 #include <stdio.h>
-#include <math.h>
-#include <gsl/gsl_math.h>
-#include <gsl/gsl_integration.h>
-#include <gsl/gsl_errno.h>
 
-// 3-vector macros
-#define LENGTH(arr) sqrt(arr.x*arr.x + arr.y*arr.y + arr.z*arr.z)
-#define RESCALE(arr, coeff) arr.x /= coeff; arr.y /= coeff; arr.z /= coeff;
-#define DOT3(a, b) a.x*b.x + a.y*b.y + a.z*b.z
-#define MATMUL(mat, vec, out) \
-out.x = mat.xx*vec.x + mat.xy*vec.y + mat.xz*vec.z;\
-out.y = mat.yx*vec.x + mat.yy*vec.y + mat.yz*vec.z;\
-out.z = mat.zx*vec.x + mat.zy*vec.y + mat.zz*vec.z;
-#define CROSS(a, b, out) \
-out.x = a.y*b.z - b.y*a.z; \
-out.y = a.z*b.x - b.z*a.x; \
-out.z = a.x*b.y - b.x*a.y;
-#define WEIGHTED_SUM(w1, w2, v1, v2, out) \
-out.x = w1*v1.x + w2*v2.x; \
-out.y = w1*v1.y + w2*v2.y; \
-out.z = w1*v1.z + w2*v2.z;
+
+// Linear algebra structs and macros
+#define LENGTH(arr) sqrt(arr.x *arr.x + arr.y * arr.y + arr.z * arr.z)
+#define RESCALE(arr, coeff)                                                                        \
+    arr.x /= coeff;                                                                                \
+    arr.y /= coeff;                                                                                \
+    arr.z /= coeff;
+#define DOT3(a, b) a.x *b.x + a.y *b.y + a.z *b.z
+#define MATMUL(mat, vec, out)                                                                      \
+    out.x = mat.xx * vec.x + mat.xy * vec.y + mat.xz * vec.z;                                      \
+    out.y = mat.yx * vec.x + mat.yy * vec.y + mat.yz * vec.z;                                      \
+    out.z = mat.zx * vec.x + mat.zy * vec.y + mat.zz * vec.z;
+#define CROSS(a, b, out)                                                                           \
+    out.x = a.y * b.z - b.y * a.z;                                                                 \
+    out.y = a.z * b.x - b.z * a.x;                                                                 \
+    out.z = a.x * b.y - b.x * a.y;
+#define WEIGHTED_SUM(w1, w2, v1, v2, out)                                                          \
+    out.x = w1 * v1.x + w2 * v2.x;                                                                 \
+    out.y = w1 * v1.y + w2 * v2.y;                                                                 \
+    out.z = w1 * v1.z + w2 * v2.z;
 #define PRINT(vec) printf("%f, %f, %f\n", vec.x, vec.y, vec.z);
 
-
-typedef struct{
+typedef struct {
     double x;
     double y;
     double z;
 } Vec3;
 
-
-typedef struct{
+typedef struct {
     double xx;
     double xy;
     double xz;
@@ -45,14 +46,14 @@ typedef struct{
     double zz;
 } Mat3;
 
-
-typedef struct{
+typedef struct {
     double min;
     double max;
 } Bounds;
 
 
-typedef struct{
+// Biellipsoid struct and functions
+typedef struct {
     Vec3 position;
     double radii[4];
     // Rotation matrix from ellipsoid space to view space
@@ -74,8 +75,15 @@ typedef struct{
     Bounds ybounds;
 } Biellipsoid;
 
+Biellipsoid create_biellipsoid(
+    Vec3 position, double theta, double phi, double gamma, double r_forward, double r_back,
+    double r_up, double r_side
+);
+Bounds get_ylimits(Biellipsoid *bell, double x);
 
-typedef struct{
+
+// Orbit struct and functions
+typedef struct {
     double period;
     double semimajor;
     double eccen;
@@ -89,14 +97,9 @@ typedef struct{
     double t_p;
 } Orbit;
 
-
-// Biellipsoid Functions
-Biellipsoid create_biellipsoid(Vec3 position, double theta, double phi, double gamma, double r_forward, double r_back, double r_up, double r_side);
-Bounds get_ylimits(Biellipsoid* bell, double x);
-
-
-// Orbit Functions
-Orbit create_orbit(double period, double semimajor, double eccen, double inclination, double lon_periapse);
+Orbit create_orbit(
+    double period, double semimajor, double eccen, double inclination, double lon_periapse
+);
 double solve_kepler(double mean_anomaly, double eccen);
-Vec3 get_position(Orbit* orb, double t);
+Vec3 get_position(Orbit *orb, double t);
 #endif

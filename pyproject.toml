@@ -11,7 +11,7 @@ ignore="E501"
 [tool.yapf]
 based_on_style = "google"
 split_before_first_argument = true
-column_limit = 120
+column_limit = 100
 blank_line_before_nested_class_or_def = true
 coalesce_brackets = true
 arithmetic_precedence_indication = true

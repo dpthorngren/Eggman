@@ -1,7 +1,8 @@
 #include "eggman.h"
 
-
-Orbit create_orbit(double period, double semimajor, double eccen, double inclination, double lon_periapse){
+Orbit create_orbit(
+    double period, double semimajor, double eccen, double inclination, double lon_periapse
+) {
     /*Notation:
         t: time...
         ta: true anomaly...
@@ -21,37 +22,37 @@ Orbit create_orbit(double period, double semimajor, double eccen, double inclina
     orb.semimajor = semimajor;
     orb.eccen = eccen;
     // Precompute inclination sin and cosine
-    inclination *= M_PI/180.;
+    inclination *= M_PI / 180.;
     orb.s_inc = sin(inclination);
     orb.c_inc = cos(inclination);
     // Precompute periapse data
-    double ta_p = (lon_periapse-90.)*M_PI/180.;
+    double ta_p = (lon_periapse - 90.) * M_PI / 180.;
     orb.sta_p = sin(ta_p);
     orb.cta_p = cos(ta_p);
-    double ea_p = atan2(sqrt(1 - orb.eccen*orb.eccen) * orb.sta_p, eccen + orb.cta_p);
+    double ea_p = atan2(sqrt(1 - orb.eccen * orb.eccen) * orb.sta_p, eccen + orb.cta_p);
     double ma_p = ea_p - eccen * sin(ea_p);
-    orb.t_p = ma_p * orb.period / (2*M_PI);
+    orb.t_p = ma_p * orb.period / (2 * M_PI);
     return orb;
 }
 
 
-double solve_kepler(double mean_anomaly, double eccen){
+double solve_kepler(double mean_anomaly, double eccen) {
     double e_anom = mean_anomaly;
     double e_new = mean_anomaly;
     int i = 0;
-    if(eccen > 0.95){
+    if (eccen > 0.95) {
         // Direct iteration
-        for(i=0; i < 50; i++){
+        for (i = 0; i < 50; i++) {
             e_new = mean_anomaly + eccen * sin(e_anom);
-            if(fabs(e_new - e_anom) < 1e-12)
+            if (fabs(e_new - e_anom) < 1e-12)
                 break;
             e_anom = e_new;
         }
     }
-    if (eccen > 0.){
+    if (eccen > 0.) {
         // Newton-Raphson
-        for(i=0; i < 50; i++){
-            e_new -= (e_anom - eccen*sin(e_anom) - mean_anomaly) / (1 - eccen * cos(e_anom));
+        for (i = 0; i < 50; i++) {
+            e_new -= (e_anom - eccen * sin(e_anom) - mean_anomaly) / (1 - eccen * cos(e_anom));
             if (fabs(e_new - e_anom) < 1e-12)
                 break;
             e_anom = e_new;
@@ -61,12 +62,12 @@ double solve_kepler(double mean_anomaly, double eccen){
 }
 
 
-Vec3 get_position(Orbit* orb, double t){
+Vec3 get_position(Orbit *orb, double t) {
     // Solve Kepler's equation in the rotated and inclined frame, relative to inferior conjunction
-    double ma = 2*M_PI * (t - orb->t_p) / orb->period;
+    double ma = 2 * M_PI * (t - orb->t_p) / orb->period;
     double ea = solve_kepler(ma, orb->eccen);
     // Position in the rotated frame where lon_periapse = 0, inclination = 0
-    double x_rot = orb->semimajor * sqrt(1 - orb->eccen*orb->eccen) * sin(ea);
+    double x_rot = orb->semimajor * sqrt(1 - orb->eccen * orb->eccen) * sin(ea);
     double y_rot = orb->semimajor * (cos(ea) - orb->eccen);
     // Transform back to frame where lon_periapse != 0 (still inclination = 0)
     double x_inc = x_rot * orb->cta_p + y_rot * orb->sta_p;
