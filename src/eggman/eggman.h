@@ -102,4 +102,16 @@ Orbit create_orbit(
 );
 double solve_kepler(double mean_anomaly, double eccen);
 Vec3 get_position(Orbit *orb, double t);
+
+
+// Light source struct and functions
+typedef struct {
+    int source_type;
+    double limb_params[4];
+    double normalization;
+} LightSource;
+
+double get_source_brightness(LightSource *source, double x, double y);
+LightSource create_light_source(int type, double limb_params[4]);
+
 #endif

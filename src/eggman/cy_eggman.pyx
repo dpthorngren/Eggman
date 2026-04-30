@@ -31,3 +31,13 @@ cpdef (double, double, double) orbit_to_position(double t, double period, double
     cdef Orbit orb = create_orbit(period, semimajor, eccen, inclination, lon_periapse)
     cdef Vec3 position = get_position(&orb, t)
     return position.x, position.y, position.z
+
+
+cpdef double get_brightness(int source_type, list[double] limb_params, double x, double y):
+    assert source_type in [0, 1]
+    assert len(limb_params) == [2, 4][source_type]
+    if source_type == 0:
+        limb_params += [0., 0.]
+    cdef double[4] lp = [limb_params[0], limb_params[1], limb_params[2], limb_params[3]]
+    cdef LightSource source = create_light_source(source_type, lp)
+    return get_source_brightness(&source, x, y)

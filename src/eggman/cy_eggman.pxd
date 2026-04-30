@@ -36,14 +36,21 @@ cdef extern from "eggman.h":
         Vec3 b2
         Bounds xbounds
         Bounds ybounds
+    ctypedef struct LightSource:
+        int source_type
+        double limb_params[4]
 
 
+# Orbit functions and wrappers
 cdef extern from "orbit.c":
     Orbit create_orbit(double period, double semimajor, double eccen, double inclination, double lon_periapse)
     double solve_kepler(double mean_anomaly, double eccen)
     Vec3 get_position(Orbit* orb, double t)
 
+cpdef (double, double, double) orbit_to_position(double t, double period, double semimajor, double eccen, double inclination, double lon_periapse) noexcept
 
+
+# Biellipsoid functions and wrappers
 cdef extern from "biellipsoid.c":
     Biellipsoid create_biellipsoid(Vec3 position, double theta, double phi, double gamma, double r_forward, double r_back, double r_up, double r_side)
     Bounds get_bounds(Biellipsoid* bell, int axis)
@@ -51,6 +58,12 @@ cdef extern from "biellipsoid.c":
 
 cpdef dict biellipsoid_dump(double theta, double phi, double gamma, double r_forward, double r_back, double r_up, double r_side)
 
-cpdef (double, double, double) orbit_to_position(double t, double period, double semimajor, double eccen, double inclination, double lon_periapse) noexcept
-
 cpdef (double, double) _biellipsoid_ylimits(double x, double theta, double phi, double gamma, double r_forward, double r_back, double r_up, double r_side)
+
+
+# Light source functions and wrappers
+cdef extern from "light_source.c":
+    LightSource create_light_source(int source_type, double limb_params[4])
+    double get_source_brightness(LightSource* source, double x, double y)
+
+cpdef double get_brightness(int source_type, list[double] limb_params, double x, double y)
