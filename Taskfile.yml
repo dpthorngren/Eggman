@@ -13,32 +13,30 @@ tasks:
       - src/eggman/*.pyx
       - src/eggman/*.pxd
       - src/eggman/[a-z]*.c
+      - src/eggman/[a-z]*.h
     generates:
       - src/eggman/*.so
       - src/eggman/cy_*.c
     cmds:
       - rm -rf build eggman.egg-info src/eggman/*.so
       - pip uninstall eggman --yes
-      - mkdir -p htmlcov/
-      - pip install -e .[develop]
-      - mv src/eggman/*.html htmlcov
+      - pip install --no-build-isolation -e .[develop]
 
   lint:
     desc: "Run cython linter"
     run: once
     cmds:
-      # - flake8 $(git ls-tree -r main --name-only | grep '.*py$') --count --show-source --statistics
+      - flake8 $(git ls-tree -r HEAD --name-only | grep '.*py$') --count --show-source --statistics
       - cython-lint .
 
   test:
     deps: [lint, devbuild]
-    desc: "Run pytest with coverage"
+    desc: "Run pytest."
     cmds:
-      - pytest --cov=eggman  --cov-report='term' --cov-report="html"
-
+      - pytest -x
 
   experiment:
     deps: [lint, devbuild]
-    desc: "Run pytest with coverage"
+    desc: "Run experiments file, bypassing pytest."
     cmds:
       - python experiment.py

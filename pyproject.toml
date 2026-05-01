@@ -15,6 +15,3 @@ column_limit = 100
 blank_line_before_nested_class_or_def = true
 coalesce_brackets = true
 arithmetic_precedence_indication = true
-
-[tool.coverage.run]
-plugins = ["Cython.Coverage"]

@@ -124,7 +124,7 @@ void transit2d_integral(
 
         r_side = (g.xe > 0) ? r_back : r_forward;
         nearest = nearest_point(g.xe, g.ye, r_side, (r_up > 0) ? r_up : r_side);
-        if (nearest.z >= 1) {
+        if ((r_up > 0) && (nearest.z >= 1)) {
             outputs[i] = 1.0;
             continue;
         }
