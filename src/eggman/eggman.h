@@ -3,11 +3,13 @@
 #include <gsl/gsl_errno.h>
 #include <gsl/gsl_integration.h>
 #include <gsl/gsl_math.h>
+#include <gsl/gsl_min.h>
 #include <math.h>
 #include <stdio.h>
 
 
 // Linear algebra structs and macros
+#define SIGN(x) ((x < 0.) ? -1. : ((x > 0.) ? 1. : 0.))
 #define LENGTH(arr) sqrt(arr.x *arr.x + arr.y * arr.y + arr.z * arr.z)
 #define RESCALE(arr, coeff)                                                                        \
     arr.x /= coeff;                                                                                \
@@ -113,5 +115,28 @@ typedef struct {
 
 double get_source_brightness(LightSource *source, double x, double y);
 LightSource create_light_source(int type, double limb_params[4]);
+
+// Integration structs and functions
+typedef struct {
+    // The star and orbiting planet:
+    LightSource emitter;
+    double xe;
+    double ye;
+    double r_forward;
+    double r_back;
+    double r_up;
+    // Used for the inner (y) integral only:
+    double x;
+    gsl_integration_workspace *work;
+    gsl_function *integrand;
+} Transit2dIntegralParams;
+
+Vec3 nearest_point(double xe, double ye, double a, double b);
+double transit2d_integrand(double y, void *params);
+double transit2d_inner_integral(double x, void *params);
+void transit2d_integral(
+    double *times, double *out_depths, int n, Orbit *orb, LightSource *emitter, double r_forward,
+    double r_back, double r_up
+);
 
 #endif

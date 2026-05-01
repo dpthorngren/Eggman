@@ -1,6 +1,35 @@
 import numpy as np
 
 
+cpdef object transit2d(double rMorning, double rEvening, double rPole, double[::1] t, double t0, double period, double semimajor, double inclination, str limbType, object limb, double eccen=0., double lonPeriapse=90.):
+    '''Wrapper for the c function transit2d_integral.'''
+    # Setup Orbit
+    cdef Orbit orb = create_orbit(period, semimajor, eccen, inclination, lonPeriapse)
+
+    # Setup star information
+    cdef int limb_code = -1
+    cdef double[:] limb_params = np.zeros(4)
+    limbType = limbType.lower().strip()
+    if limbType == "quadratic":
+        assert len(limb) == 2, "Error: Quadratic limb darkening takes exactly two parameters."
+        limb_code = 0
+        for i in range(2):
+            limb_params[i] = limb[i]
+    elif limbType == "nonlinear":
+        assert len(limb) == 4, "Error: Nonlinear limb darkening takes exactly two parameters."
+        limb_code = 1
+        for i in range(4):
+            limb_params[i] = limb[i]
+    else:
+        raise ValueError("limbType not recognized, must be one of quadratic, nonlinear.")
+    cdef LightSource emitter = create_light_source(limb_code, &(limb_params[0]))
+
+    results = np.full((len(t),), np.nan)
+    cdef double[:] results_view = results
+    transit2d_integral(&(t[0]), &(results_view[0]), len(t), &orb, &emitter, rMorning, rEvening, rPole)
+    return results
+
+
 cpdef dict biellipsoid_dump(double theta, double phi, double gamma, double r_forward, double r_back, double r_up, double r_side):
     '''Wrapper for the c function init_biellipsoid for visualization and testing purposes.'''
     cdef Vec3 position = Vec3(0., 0., 0.)
