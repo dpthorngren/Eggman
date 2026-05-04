@@ -1,12 +1,8 @@
 import numpy as np
 
 
-cpdef object transit2d(double rMorning, double rEvening, double rPole, double[::1] t, double t0, double period, double semimajor, double inclination, str limbType, object limb, double eccen=0., double lonPeriapse=90.):
-    '''Wrapper for the c function transit2d_integral.'''
-    # Setup Orbit
-    cdef Orbit orb = create_orbit(period, semimajor, eccen, inclination, lonPeriapse)
-
-    # Setup star information
+cdef LightSource light_source(str limbType, object limb):
+    '''Wrapper for the c function create_source, adjusted to take Python arguments.'''
     cdef int limb_code = -1
     cdef double[:] limb_params = np.zeros(4)
     limbType = limbType.lower().strip()
@@ -23,10 +19,30 @@ cpdef object transit2d(double rMorning, double rEvening, double rPole, double[::
     else:
         raise ValueError("limbType not recognized, must be one of quadratic, nonlinear.")
     cdef LightSource emitter = create_light_source(limb_code, &(limb_params[0]))
+    return emitter
+
+
+cpdef object transit2d(double rMorning, double rEvening, double rPole, double[::1] t, double t0, double period, double semimajor, double inclination, str limbType, object limb, double eccen=0., double lonPeriapse=90.):
+    '''Wrapper for the c function transit2d_integral.'''
+    cdef Orbit orb = create_orbit(period, semimajor, eccen, inclination, lonPeriapse)
+    cdef LightSource emitter = light_source(limbType, limb)
 
     results = np.full((len(t),), np.nan)
     cdef double[:] results_view = results
     transit2d_integral(&(t[0]), &(results_view[0]), len(t), &orb, &emitter, rMorning, rEvening, rPole)
+    return results
+
+
+cpdef object transit3d(double r_forward, double r_back, double r_pole, double r_side, double theta, double phi, double gamma, double[::1] t, double t0, double period, double semimajor, double inclination, str limb_type, object limb, double eccen=0, double lon_periapse=90):
+    '''Wrapper for the c function transit3d_integral'''
+    cdef Orbit orb = create_orbit(period, semimajor, eccen, inclination, lon_periapse)
+    cdef LightSource emitter = light_source(limb_type, limb)
+    assert (r_forward > 0) and (r_back > 0) and (r_side > 0), "Radii must be positive."
+    assert r_pole > 0, "This function doesn't support catwoman-style transit emulation, use transit2d instead."
+
+    results = np.full((len(t),), np.nan)
+    cdef double[:] results_view = results
+    transit3d_integral(&(t[0]), &(results_view[0]), len(t), &orb, &emitter, theta, phi, gamma, r_forward, r_back, r_pole, r_side)
     return results
 
 

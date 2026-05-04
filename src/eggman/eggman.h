@@ -15,7 +15,7 @@
     arr.x /= coeff;                                                                                \
     arr.y /= coeff;                                                                                \
     arr.z /= coeff;
-#define DOT3(a, b) a.x *b.x + a.y *b.y + a.z *b.z
+#define DOT3(a, b) (a.x *b.x + a.y *b.y + a.z *b.z)
 #define MATMUL(mat, vec, out)                                                                      \
     out.x = mat.xx * vec.x + mat.xy * vec.y + mat.xz * vec.z;                                      \
     out.y = mat.yx * vec.x + mat.yy * vec.y + mat.yz * vec.z;                                      \
@@ -28,6 +28,8 @@
     out.x = w1 * v1.x + w2 * v2.x;                                                                 \
     out.y = w1 * v1.y + w2 * v2.y;                                                                 \
     out.z = w1 * v1.z + w2 * v2.z;
+#define BIELLIPSE_DIR(bell, pos)                                                                   \
+    (pos.x * bell->rot.xx + pos.y * bell->rot.yx + pos.z * bell->rot.zx)
 #define PRINT(vec) printf("%f, %f, %f\n", vec.x, vec.y, vec.z);
 
 typedef struct {
@@ -81,7 +83,9 @@ Biellipsoid create_biellipsoid(
     Vec3 position, double theta, double phi, double gamma, double r_forward, double r_back,
     double r_up, double r_side
 );
+void set_position(Biellipsoid *bell, Vec3 position);
 Bounds get_ylimits(Biellipsoid *bell, double x);
+Vec3 nearest_point_3d(Biellipsoid *bell);
 
 
 // Orbit struct and functions
@@ -116,7 +120,7 @@ typedef struct {
 double get_source_brightness(LightSource *source, double x, double y);
 LightSource create_light_source(int type, double limb_params[4]);
 
-// Integration structs and functions
+// 2-d integration structs and functions
 typedef struct {
     // The star and orbiting planet:
     LightSource emitter;
@@ -131,12 +135,30 @@ typedef struct {
     gsl_function *integrand;
 } Transit2dIntegralParams;
 
-Vec3 nearest_point(double xe, double ye, double a, double b);
+Vec3 nearest_point2d(double xe, double ye, double a, double b);
 double transit2d_integrand(double y, void *params);
 double transit2d_inner_integral(double x, void *params);
 void transit2d_integral(
     double *times, double *out_depths, int n, Orbit *orb, LightSource *emitter, double r_forward,
     double r_back, double r_up
+);
+
+// 3-d integration structs and functions
+typedef struct {
+    // The star and orbiting planet:
+    LightSource emitter;
+    Biellipsoid bell;
+    // Used for the inner (y) integral only:
+    double x;
+    gsl_integration_workspace *work;
+    gsl_function *integrand;
+} Transit3dIntegralParams;
+
+double transit3d_integrand(double y, void *params);
+double transit3d_inner_integral(double x, void *params);
+void transit3d_integral(
+    double *times, double *outputs, int n, Orbit *orb, LightSource *emitter, double theta,
+    double phi, double gamma, double r_forward, double r_back, double r_up, double r_side
 );
 
 #endif

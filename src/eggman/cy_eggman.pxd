@@ -68,8 +68,14 @@ cdef extern from "light_source.c":
 
 cpdef double get_brightness(int source_type, list[double] limb_params, double x, double y)
 
-# Integration functions and wrappers
-cdef extern from "integrals.c":
+# 2-d Integration function and wrapper
+cdef extern from "transit2d.c":
     void transit2d_integral(double *times, double *out_depths, int n, Orbit *orb, LightSource* emitter, double r_forward, double r_back, double r_up)
 
 cpdef object transit2d(double rMorning, double rEvening, double rPole, double[::1] t, double t0, double period, double semimajor, double inclination, str limbType, object limb, double eccen=?, double lonPeriapse=?)
+
+# 3-d Integration function and wrapper
+cdef extern from "transit3d.c":
+    void transit3d_integral(double *times, double *outputs, int n, Orbit *orb, LightSource *emitter, double theta, double phi, double gamma, double r_forward, double r_back, double r_up, double r_side)
+
+cpdef object transit3d(double r_forward, double r_back, double rPole, double rSide, double theta, double phi, double gamma, double[::1] t, double t0, double period, double semimajor, double inclination, str limbType, object limb, double eccen=?, double lon_periapse=?)

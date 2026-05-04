@@ -4,7 +4,7 @@ from pytest import approx
 import eggman
 
 
-def testGrazing():
+def test_t2d_grazing():
     # Grazing transits can cause numerical issues, let's double-check that doesn't happen.
     # Grazing on ingress
     baseArgs = {
@@ -46,7 +46,7 @@ def testGrazing():
     assert eggman.asymmetricTransit(.1, .09, .1 - 1e-12, **dict(baseArgs)) == 1.
 
 
-def testIsTransiting():
+def test_t2d_is_transiting():
     # Ensure we correctly can tell transit from non-transit
     baseArgs = {
         't': np.array([0.]),
@@ -84,7 +84,7 @@ def testIsTransiting():
         1.1, 1.1, 1.1, **dict(baseArgs, t=np.array([2.49]), eccen=0.1, semimajor=1.)) == 1.
 
 
-def testAsymmetricAnalytic():
+def test_t2d_analytic():
     # Test cases where the transit depth is known analytically
     baseArgs = {
         't': np.array([0.]),
@@ -114,7 +114,7 @@ def testAsymmetricAnalytic():
         1 - (.01*.02 + .01*.02) / 2., abs=1e-7)
 
 
-def testAsymmetricNumerical():
+def test_t2d_numerical():
     baseArgs = {
         't': np.array([0.001, .01]),
         't0': 0.,

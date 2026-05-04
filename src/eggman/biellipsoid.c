@@ -85,26 +85,31 @@ Biellipsoid create_biellipsoid(
     if (break_offset.x < 0) {
         RESCALE(break_offset, -1.);
     }
-
-    // Get the bounds
-    Bounds xbounds, ybounds;
-    double f_width = sqrt(f1.x * f1.x + f2.x * f2.x);
-    double b_width = sqrt(b1.x * b1.x + b2.x * b2.x);
-    if (rot.xx > 0) {
-        xbounds = (Bounds){position.x - b_width, position.x + f_width};
-    } else {
-        xbounds = (Bounds){position.x - f_width, position.x + b_width};
-    }
-    f_width = sqrt(f1.y * f1.y + f2.y * f2.y);
-    b_width = sqrt(b1.y * b1.y + b2.y * b2.y);
-    if (rot.yy > 0) {
-        ybounds = (Bounds){position.y - b_width, position.y + f_width};
-    } else {
-        ybounds = (Bounds){position.y - f_width, position.y + b_width};
-    }
-    Biellipsoid result = {position,     r_forward, r_back, r_up, r_side, rot,     f_limb, b_limb,
-                          break_offset, f1,        f2,     b1,   b2,     xbounds, ybounds};
+    Biellipsoid result = {0.,     0.,     0.,           r_forward, r_back, r_up, r_side, rot,
+                          f_limb, b_limb, break_offset, f1,        f2,     b1,   b2};
+    set_position(&result, position);
     return result;
+}
+
+
+void set_position(Biellipsoid *bell, Vec3 position) {
+    // Sets the position and updates the bounding box for the biellipsoid
+    bell->position = position;
+    double f_width = sqrt(bell->f1.x * bell->f1.x + bell->f2.x * bell->f2.x);
+    double b_width = sqrt(bell->b1.x * bell->b1.x + bell->b2.x * bell->b2.x);
+    if (bell->rot.xx > 0) {
+        bell->xbounds = (Bounds){position.x - b_width, position.x + f_width};
+    } else {
+        bell->xbounds = (Bounds){position.x - f_width, position.x + b_width};
+    }
+    f_width = sqrt(bell->f1.y * bell->f1.y + bell->f2.y * bell->f2.y);
+    b_width = sqrt(bell->b1.y * bell->b1.y + bell->b2.y * bell->b2.y);
+    if (bell->rot.yy > 0) {
+        bell->ybounds = (Bounds){position.y - b_width, position.y + f_width};
+    } else {
+        bell->ybounds = (Bounds){position.y - f_width, position.y + b_width};
+    }
+    return;
 }
 
 
@@ -173,4 +178,70 @@ Bounds get_ylimits(Biellipsoid *bell, double x) {
     ybounds.min += bell->position.y;
     ybounds.max += bell->position.y;
     return ybounds;
+}
+
+
+Vec3 nearest_point_3d(Biellipsoid *bell) {
+    // Returns the x, y, and squared dist of the nearest point to the origin on the
+    // biellipsoid, unless it contains the origin, in which case returns [0, 0, -1]
+    Vec3 e1, e2;
+
+    // Which ellipsoid is relevant (forward or back?)
+    Vec3 zero = {0., 0., 0.};
+    if (BIELLIPSE_DIR(bell, zero) >= 0.) {
+        e1 = bell->f1;
+        e2 = bell->f2;
+    } else {
+        e1 = bell->b1;
+        e2 = bell->b2;
+    }
+
+    // Inverse matrix to transform to circle space, check if point is inside
+    double det = e1.x*e2.y - e2.x*e1.y;
+    double u = (-e2.y*bell->position.x + e2.x*bell->position.y)/det;
+    double v = (e1.y*bell->position.x - e1.x*bell->position.y)/det;
+    if (u * u + v * v < 1.) {
+        // Origin is inside ellipse
+        return (Vec3){0., 0., -1};
+    }
+
+    // Is e2 on the near or far side of the ellipse from the origin?
+    double sign = -DOT3(e2, bell->position);
+    sign = SIGN(sign);
+
+    // Search in cos(theta), sin(theta) space,
+    double ct, st, x, y, d;
+    // Bound with 1,0 to -1,0 pick branch from whichever of 0,1 0,-1 is larger.
+    double ct0 = 1.0;
+    double st0 = 0.;
+    x = bell->position.x + e1.x * ct0;
+    y = bell->position.y + e1.y * ct0;
+    double d0 = x * x + y * y;
+
+    double ct1 = -1.0;
+    double st1 = 0.;
+    x = bell->position.x + e1.x * ct1;
+    y = bell->position.y + e1.y * ct1;
+    double d1 = x * x + y * y;
+    d = d1;
+
+    // Midpoint method
+    int i;
+    for (i = 0; i < 64; i++) {
+        ct = (ct0 + ct1) / 2.;
+        st = sign * sqrt(1 - ct * ct);
+        x = bell->position.x + e1.x * ct + e2.x * st;
+        y = bell->position.y + e1.y * ct + e2.y * st;
+        d = x * x + y * y;
+        if (d1 < d0) {
+            ct0 = ct;
+            st0 = st;
+            d0 = d;
+        } else {
+            ct1 = ct;
+            st1 = st;
+            d1 = d;
+        }
+    }
+    return (Vec3){x, y, d};
 }

@@ -1,7 +1,7 @@
 #include "eggman.h"
 
 
-Vec3 nearest_point(double xe, double ye, double a, double b) {
+Vec3 nearest_point2d(double xe, double ye, double a, double b) {
     // Returns the x, y, and squared dist of the nearest point to the origin on the
     // ellipse, unless it contains the origin, in which case returns [0, 0, -1]
     int i;
@@ -64,7 +64,7 @@ double transit2d_inner_integral(double x, void *params) {
         return 0.;
     }
 
-    code = gsl_integration_qag(g->integrand, y0, y1, 1e-7, 1e-7, 100, 1, g->work, &result, &err);
+    code = gsl_integration_qag(g->integrand, y0, y1, 1e-7, 1e-5, 100, 1, g->work, &result, &err);
     if (code != 0) {
         return NAN;
     }
@@ -123,18 +123,18 @@ void transit2d_integral(
         }
 
         r_side = (g.xe > 0) ? r_back : r_forward;
-        nearest = nearest_point(g.xe, g.ye, r_side, (r_up > 0) ? r_up : r_side);
+        nearest = nearest_point2d(g.xe, g.ye, r_side, (r_up > 0) ? r_up : r_side);
         if ((r_up > 0) && (nearest.z >= 1)) {
             outputs[i] = 1.0;
             continue;
         }
 
         code = gsl_integration_qag(
-            &integOuter, x_min, nearest.x, 1e-7, 1e-7, 100, 1, workspaceOuter, &result, &err
+            &integOuter, x_min, nearest.x, 1e-7, 1e-5, 100, 1, workspaceOuter, &result, &err
         );
         outputs[i] = (code != 0) ? NAN : 1 - result;
         code = gsl_integration_qag(
-            &integOuter, nearest.x, x_max, 1e-7, 1e-7, 100, 1, workspaceOuter, &result, &err
+            &integOuter, nearest.x, x_max, 1e-7, 1e-5, 100, 1, workspaceOuter, &result, &err
         );
         outputs[i] = (code != 0) ? NAN : outputs[i] - result;
     }

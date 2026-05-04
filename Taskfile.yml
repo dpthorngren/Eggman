@@ -26,7 +26,7 @@ tasks:
     desc: "Run cython linter"
     run: once
     cmds:
-      - flake8 $(git ls-tree -r HEAD --name-only | grep '.*py$') --count --show-source --statistics
+      - flake8 ./*.py ./src/eggman/*.py --count --show-source --statistics # $(git ls-tree -r HEAD --name-only | grep '.*py$') --count --show-source --statistics
       - cython-lint .
 
   test:
