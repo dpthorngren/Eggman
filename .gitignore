@@ -1,13 +1,16 @@
 # Directories not version-controlled
+cpp_build/
 projects/
 old/
 plots
 data
 scratch/
-src/eggman/cy_*.c
+src/eggman/cy_*.cpp
 src/eggman/*.html
+experiment.py
 *.ipynb
 .task
+.clangd
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

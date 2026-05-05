@@ -1,0 +1,49 @@
+#ifndef BIELLIPSOID_HPP
+#define BIELLIPSOID_HPP
+
+#include "ellipse.hpp"
+#include "math_utils.hpp"
+
+/* Describes a biellipsoid -- two ellipsoids smoothly and continuously joined along the yz plane,
+ * then rotated and shifted. Member functions provide bounds and limits related to integrating
+ * across them.  All members are public for simplicity, but mutation should be done via the
+ * setters or outputs may be incorrect.
+ */
+class Biellipsoid {
+  public:
+    Vec3 position;
+    double r_forward;
+    double r_back;
+    double r_up;
+    double r_side;
+    // Rotation matrix from ellipsoid space to view space
+    // Forward vector (view space) is the first column rot[::3]
+    // View vector (ellipsoid space) is minus the last column -rot[2::3]
+    Mat3 rot;
+    Ellipse f_limb; // The ellipse defining the forward portion of the limb
+    Ellipse b_limb; // The ellipse defining the backwards portion of the limb
+
+    Biellipsoid();
+    Biellipsoid(double r_forward, double r_backward, double r_up, double r_side);
+    void set_rotation(double theta, double phi, double gamma);
+    // TODO: Rotation following orbit function
+    // void set_rotation(double theta, double phi, double gamma);
+    void set_position(Vec3 new_position);
+    void set_radii(double r_forward, double r_back, double r_up, double r_side);
+    void update_derived(); // Updates f_limb and b_limb when radii or rot change.
+
+    // Derived info
+    Vec3 forward_vector();
+    // Checks if loc is on the forward side of the biellipsoid or the back
+    bool is_forward(Vec3 loc);
+    Bounds x_bounds();
+    Bounds y_bounds();
+    // Determines the y range occupied by the biellipsoid for this x value (0, 0 if none)
+    Bounds slice_ylimits(double x);
+    // Returns whether the line through x, y intersects the biellipsoid
+    bool line_intersects(double x, double y);
+    // Finds the nearest point on/in the biellipse to the line through x, y
+    Vec3 nearest_to_line(double x, double y);
+};
+
+#endif

@@ -1,4 +1,5 @@
 import numpy as np
+from eggman.cy_eggman import _solve_kepler
 from pytest import approx
 
 import eggman
@@ -8,16 +9,16 @@ def test_kepler():
     '''Tests that eggman._solve_kepler successfully solves Kepler's equation.'''
     # Known values
     for eccen in np.random.rand(100):
-        assert eggman._solve_kepler(0, eccen) == approx(0., 1e-12)
-        assert eggman._solve_kepler(np.pi, eccen) == approx(np.pi, 1e-12)
+        assert _solve_kepler(0, eccen) == approx(0., 1e-12)
+        assert _solve_kepler(np.pi, eccen) == approx(np.pi, 1e-12)
 
     # Check that other solutions actually solve the equation
     for ma in np.random.rand(100) * 50 - 10:
-        assert eggman._solve_kepler(ma, 0) == approx(ma, 1e-12)
+        assert _solve_kepler(ma, 0) == approx(ma, 1e-12)
         for eccen in np.random.rand(1000):
             if eccen == 1:
                 continue
-            ea = eggman._solve_kepler(ma, eccen)
+            ea = _solve_kepler(ma, eccen)
             assert ea - eccen * np.sin(ea) == approx(ma, 1e-12)
 
 

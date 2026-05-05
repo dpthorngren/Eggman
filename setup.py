@@ -4,7 +4,8 @@ from setuptools import Extension, setup
 ext = Extension(
     "eggman.cy_eggman",
     ["src/eggman/cy_eggman.pyx"],
-    libraries=["gsl", "gslcblas"],
+    libraries=["gsl"],
+    include_dirs=["src/include/", "src/cpp_source/"],
 )
 
 directives = {

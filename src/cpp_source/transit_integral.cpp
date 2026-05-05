@@ -1,20 +1,20 @@
-#include "eggman.h"
+#include "transit_integral.hpp"
 
 
-double transit3d_integrand(double y, void *params) {
-    Transit3dIntegralParams *g = (Transit3dIntegralParams *)params;
-    return get_source_brightness(&g->emitter, g->x, y);
+double transit_integrand(double y, void *params) {
+    TransitIntegralParams *g = (TransitIntegralParams *)params;
+    return g->emitter.get_brightness(g->x, y);
 }
 
 
-double transit3d_inner_integral(double x, void *params) {
+double transit_inner_integral(double x, void *params) {
     int code;
     double result, err;
-    Transit3dIntegralParams *g = (Transit3dIntegralParams *)params;
+    TransitIntegralParams *g = (TransitIntegralParams *)params;
     g->x = x;
 
     // Get y bounds and check for no overlap between planet and star (at this x)
-    Bounds ylim = get_ylimits(&g->bell, x);
+    Bounds ylim = g->bell.slice_ylimits(x);
     if (ylim.min >= ylim.max) {
         return 0.;
     }
@@ -26,7 +26,7 @@ double transit3d_inner_integral(double x, void *params) {
 }
 
 
-void transit3d_integral(
+void transit_integral(
     double *times, double *outputs, int n, Orbit *orb, LightSource *emitter, double theta,
     double phi, double gamma, double r_forward, double r_back, double r_up, double r_side
 ) {
@@ -34,10 +34,11 @@ void transit3d_integral(
     int code = 0;
     Vec3 position = {0., 0., 0.};
     Vec3 nearest;
-    Biellipsoid bell =
-        create_biellipsoid(position, theta, phi, gamma, r_forward, r_back, r_up, r_side);
+    Biellipsoid bell = Biellipsoid(r_forward, r_back, r_up, r_side);
+    bell.set_rotation(theta, phi, gamma);
     double result, err;
-    double x_min, x_mid, x_max;
+    Bounds x_lim, y_lim;
+    double x_min, x_max;
 
     // Do not crash the program due to lack of precision
     gsl_set_error_handler_off();
@@ -45,38 +46,40 @@ void transit3d_integral(
     // Prepare the inner (y) integral variables
     gsl_integration_workspace *workspaceInner = gsl_integration_workspace_alloc(100);
     gsl_function integInner;
-    Transit3dIntegralParams g = {*emitter, bell, 0., workspaceInner, &integInner};
-    integInner.function = &transit3d_integrand;
+    TransitIntegralParams g = {*emitter, bell, 0., workspaceInner, &integInner};
+    integInner.function = &transit_integrand;
     integInner.params = &g;
     g.integrand = &integInner;
 
     // Now prepare the outer (x) integral variables
     gsl_integration_workspace *workspaceOuter = gsl_integration_workspace_alloc(100);
     gsl_function integOuter;
-    integOuter.function = &transit3d_inner_integral;
+    integOuter.function = &transit_inner_integral;
     integOuter.params = &g;
 
     for (i = 0; i < n; i++) {
-        position = get_position(orb, times[i]);
+        position = orb->get_position(times[i]);
         if (position.z < 0) {
             outputs[i] = 1.0;
             continue;
         }
         // TODO: Reorient the biellipsoid rather than just repositioning it.
-        set_position(&g.bell, position);
+        g.bell.set_position(position);
 
         // Get the integration bounds
-        x_min = fmax(g.bell.xbounds.min, -1.);
-        x_max = fmin(g.bell.xbounds.max, 1.);
+        x_lim = g.bell.x_bounds();
+        y_lim = g.bell.x_bounds();
+        x_min = fmax(x_lim.min, -1.);
+        x_max = fmin(x_lim.max, 1.);
 
         // Quick bounding-box check to skip most non-transits
-        if ((x_min >= x_max) || (g.bell.ybounds.min > 1.) || (g.bell.ybounds.max < -1)) {
+        if ((x_min >= x_max) || (y_lim.min > 1.) || (y_lim.max < -1)) {
             outputs[i] = 1.0;
             continue;
         }
 
         // Split the integral around the nearest point to help integrator find non-zero areas
-        nearest = nearest_point_3d(&g.bell);
+        nearest = g.bell.nearest_to_line(0., 0.);
         if (nearest.z > 1.) {
             outputs[i] = 1.0;
             continue;

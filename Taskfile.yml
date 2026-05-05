@@ -12,8 +12,8 @@ tasks:
     sources:
       - src/eggman/*.pyx
       - src/eggman/*.pxd
-      - src/eggman/[a-z]*.c
-      - src/eggman/[a-z]*.h
+      - src/cpp_source/[a-z_]*.cpp
+      - src/include/[a-z_]*.hpp
     generates:
       - src/eggman/*.so
       - src/eggman/cy_*.c

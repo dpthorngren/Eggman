@@ -1,0 +1,26 @@
+#ifndef TRANSIT_INTEGRAL_HPP
+#define TRANSIT_INTEGRAL_HPP
+
+#include "biellipsoid.hpp"
+#include "light_source.hpp"
+#include "orbit.hpp"
+#include <gsl/gsl_errno.h>
+#include <gsl/gsl_integration.h>
+
+typedef struct {
+    LightSource emitter; // The star being transited
+    Biellipsoid bell;    // The planet doing the transiting
+    double x;            // The x to evaluate the inner integral at (for this step)
+    // GSL integration working variables
+    gsl_integration_workspace *work;
+    gsl_function *integrand;
+} TransitIntegralParams;
+
+double transit_integrand(double y, void *params);
+double transit_inner_integral(double x, void *params);
+void transit_integral(
+    double *times, double *outputs, int n, Orbit *orb, LightSource *emitter, double theta,
+    double phi, double gamma, double r_forward, double r_back, double r_up, double r_side
+);
+
+#endif
