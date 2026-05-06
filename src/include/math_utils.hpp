@@ -48,4 +48,18 @@ typedef struct {
     double max;
 } Bounds;
 
+inline void matmul3x3(Mat3 &a, Mat3 &b, Mat3 &out) {
+    out.xx = a.xx * b.xx + a.xy * b.yx + a.xz * b.zx;
+    out.xy = a.xx * b.xy + a.xy * b.yy + a.xz * b.zy;
+    out.xz = a.xx * b.xz + a.xy * b.yz + a.xz * b.zz;
+
+    out.yx = a.yx * b.xx + a.yy * b.yx + a.yz * b.zx;
+    out.yy = a.yx * b.xy + a.yy * b.yy + a.yz * b.zy;
+    out.yz = a.yx * b.xz + a.yy * b.yz + a.yz * b.zz;
+
+    out.zx = a.zx * b.xx + a.zy * b.yx + a.zz * b.zx;
+    out.zy = a.zx * b.xy + a.zy * b.yy + a.zz * b.zy;
+    out.zz = a.zx * b.xz + a.zy * b.yz + a.zz * b.zz;
+}
+
 #endif

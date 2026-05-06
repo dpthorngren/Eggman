@@ -30,7 +30,7 @@ void Biellipsoid::set_radii(double r_forward, double r_back, double r_up, double
     update_derived();
 }
 
-void Biellipsoid::set_rotation(double theta, double phi, double gamma) {
+void Biellipsoid::set_rotation(double theta, double phi, double gamma, double ci) {
     // Setup the rotation matrix (from ellipsoid-aligned to view frame)
     theta = theta * M_PI / 180;
     phi = phi * M_PI / 180;
@@ -45,6 +45,20 @@ void Biellipsoid::set_rotation(double theta, double phi, double gamma) {
         cp * ct,  -cp * st * cg + sp * sg, cp * st * sg + sp * cg,  st, ct * cg, -ct * sg,
         -sp * ct, sp * st * cg + cp * sg,  -sp * st * sg + cp * cg,
     };
+    if (fabs(ci) <= 1.) {
+        double rad = LENGTH(position);
+        double si;
+        Mat3 orbit_rot;
+        Mat3 result;
+        if (rad >= 0) {
+            st = position.x / rad;
+            ct = SIGN(position.z) * sqrt(1 - st * st);
+            si = sqrt(1 - ci * ci);
+            orbit_rot = (Mat3){ct, 0, st, -st * ci, si, ct * ci, -st * si, -ci, ct * si};
+            matmul3x3(orbit_rot, rot, result);
+            rot = result;
+        }
+    }
     update_derived();
 }
 

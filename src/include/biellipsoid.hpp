@@ -16,20 +16,19 @@ class Biellipsoid {
     double r_back;
     double r_up;
     double r_side;
-    // Rotation matrix from ellipsoid space to view space
-    // Forward vector (view space) is the first column rot[::3]
-    // View vector (ellipsoid space) is minus the last column -rot[2::3]
+    // Rotation matrix from ellipsoid space to view space.
+    // Forward vector (view space) is the first column rot[::3].
+    // View vector (ellipsoid space) is minus the last column -rot[2::3].
     Mat3 rot;
     Ellipse f_limb; // The ellipse defining the forward portion of the limb
     Ellipse b_limb; // The ellipse defining the backwards portion of the limb
 
     Biellipsoid();
     Biellipsoid(double r_forward, double r_backward, double r_up, double r_side);
-    void set_rotation(double theta, double phi, double gamma);
-    // TODO: Rotation following orbit function
-    // void set_rotation(double theta, double phi, double gamma);
-    void set_position(Vec3 new_position);
     void set_radii(double r_forward, double r_back, double r_up, double r_side);
+    void set_position(Vec3 new_position);
+    // Rotate around z, y, and x; then if ci (cos(inclination)) is given, align with orbit
+    void set_rotation(double theta, double phi, double gamma, double ci = -2.);
     void update_derived(); // Updates f_limb and b_limb when radii or rot change.
 
     // Derived info

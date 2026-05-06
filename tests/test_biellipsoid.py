@@ -2,6 +2,7 @@ import numpy as np
 from pytest import approx
 
 from eggman.cy_eggman import _biellipsoid_slice_ylimits, biellipsoid_dump
+from eggman.utils import _decompose_position_
 
 
 def test_biellipsoid_rotation():
@@ -23,6 +24,47 @@ def test_biellipsoid_rotation():
         bell = biellipsoid_dump(0., 0., 0., angles[0], angles[1], angles[2], 1., 1., 1., 1.)
         rot = np.array(bell['rot']).reshape(3, 3)
         assert rot.T @ rot == approx(np.eye(3))
+
+
+def test_biellipsoid_orbit_rotation():
+    # Valid rotation matrix must have R @ R.T == I
+    for angles in 179. * np.random.rand(100, 3) - 90.:
+        pos = np.random.rand(3)
+        ci = _decompose_position_(*pos)[3]
+        bell = biellipsoid_dump(*pos, *angles, 1., 1., 1., 1., ci)
+        rot = np.array(bell['rot']).reshape(3, 3)
+        assert rot.T @ rot == approx(np.eye(3))
+    # Check that rotations go in the right direction
+    pos = [1.5, 0., 0.]
+    angles = [0., 0., 0.]
+    bell = biellipsoid_dump(*pos, *angles, 1., 1., 1., 2., 0.)
+    assert bell['x_bounds'] == approx(dict(min=-0.5, max=3.5))
+    assert bell['y_bounds'] == approx(dict(min=-1, max=1))
+    pos = [-1.5, 0., 0.]
+    bell = biellipsoid_dump(*pos, *angles, 1., 1., 1., 2., 1.)
+    assert bell['x_bounds'] == approx(dict(min=-3.5, max=.5))
+    assert bell['y_bounds'] == approx(dict(min=-1, max=1))
+    # Check that rotations combine properly
+    pos = [1.5, 0., 0.]
+    angles = [0., 0., 0.]
+    bell = biellipsoid_dump(*pos, *angles, 1., 1., 1., 2., 0.)
+    assert bell['x_bounds'] == approx(dict(min=-0.5, max=3.5))
+    assert bell['y_bounds'] == approx(dict(min=-1, max=1))
+    pos = [0., 0., 3.]
+    angles = [0., 180., 0.]
+    bell = biellipsoid_dump(*pos, *angles, 1., 1., 1., 2., 0.)
+    rot = np.array(bell['rot']).reshape(3, 3)
+    assert rot == approx(np.diag([-1, 1, -1]))
+    # Check that the correct axis points towards the origin
+    # for pos in np.random.rand(100, 3):
+    #     pos /= np.linalg.norm(pos)
+    #     angles = [0., 0., 0.]
+    #     ci = _decompose_position_(*pos)[3]
+    #     bell = biellipsoid_dump(*pos, *angles, 1., 1., 1., 1., ci)
+    #     rot = bell['rot'].reshape(3, 3)
+    #     print(rot)
+    #     print(pos)
+    #     assert rot[:, 2] == approx(pos, 1e-12)
 
 
 def test_biellipsoid_bounds():

@@ -8,50 +8,45 @@ def plot_biellipse(bell, res=200):
     _, ax = plt.subplots(figsize=(12, 8))
 
     # Principle axes
+    x, y, _ = bell["position"]
     axes = eggman.utils.biellipsoid_axes(bell)
     for i in range(4):
         color = ['red', 'green', 'blue', "orange"][i]
-        ax.plot([0, axes[0, i]], [0, axes[1, i]], zorder=100, color=color, alpha=.3)
+        ax.plot([x, x + axes[0, i]], [y, y + axes[1, i]], zorder=1, color=color, alpha=.3)
 
     # Limb outline
     xyz = biellipse_outline(bell, res)
     forward, _ = position_masks(bell, xyz)
     for mask, color in zip([forward, ~forward], ['red', 'green']):
-        x = np.ma.masked_where(~mask, xyz[0])
-        y = np.ma.masked_where(~mask, xyz[1])
+        x = np.ma.masked_where(mask, xyz[0])
+        y = np.ma.masked_where(mask, xyz[1])
         ax.plot(x, y, color=color, zorder=10)
 
     # Meridians and equator
     for i in range(3):
         xyz = biellipsoid_meridians(bell, i, res)
         _, visible = position_masks(bell, xyz)
-        x = np.ma.masked_where(~visible, xyz[0])
-        y = np.ma.masked_where(~visible, xyz[1])
-        ax.plot(x, y, ':', color='black', zorder=10, alpha=.1)
+        # x = np.ma.masked_where(~visible, xyz[0])
+        # y = np.ma.masked_where(~visible, xyz[1])
+        # ax.plot(x, y, ':', color='black', zorder=10, alpha=.1)
         x = np.ma.masked_where(visible, xyz[0])
         y = np.ma.masked_where(visible, xyz[1])
-        ax.plot(x, y, color='black', zorder=10)
-
-    # Limb Break point
-    pos = bell['position']
-    off = bell['break_offset']
-    plt.plot(
-        [pos[0] - off[0], pos[0] + off[0]],
-        [pos[1] - off[1], pos[1] + off[1]],
-        'o',
-        color="orange",
-        zorder=20,
-    )
+        ax.plot(x, y, color='black', zorder=10, alpha=.5)
 
 
 def position_masks(bell, positions):
     '''For positions on the biellipsoid surface, returns whether they are visible
     and whether they are on the front or back half of the biellipse.'''
+    positions = positions - bell['position'][:, None]
     dir_forward = np.array(bell['rot'][::3])
     forward = dir_forward.dot(positions) * dir_forward.dot([0., 0., -1]) >= 0.
     visible = np.zeros_like(forward)
-    visible[forward] = (np.dot(bell['f_limb'], positions) <= 0.)[forward]
-    visible[~forward] = (np.dot(bell['b_limb'], positions) <= 0.)[~forward]
+    f_limb = np.cross(bell['f1'], bell['f2'])
+    f_limb /= np.linalg.norm(f_limb) * np.sign(f_limb[2])
+    b_limb = np.cross(bell['b1'], bell['b2'])
+    b_limb /= np.linalg.norm(b_limb) * np.sign(b_limb[2])
+    visible[forward] = (np.dot(f_limb, positions) <= 0.)[forward]
+    visible[~forward] = (np.dot(b_limb, positions) <= 0.)[~forward]
     return forward, visible
 
 
@@ -86,7 +81,7 @@ def biellipsoid_meridians(bell, axis=0, res=200):
     t = np.linspace(0, 2 * np.pi, res)[:, None]
     if axis == 0:
         v = np.cos(t) * axes[:, 2] + np.sin(t) * axes[:, 3]
-        return v.T
+        return v.T + bell['position'][:, None]
     elif axis == 1:
         u = np.cos(t) * axes[:, 0] + np.sin(t) * axes[:, 3]
         v = np.cos(t) * axes[:, 1] + np.sin(t) * axes[:, 3]
@@ -100,4 +95,17 @@ def biellipsoid_meridians(bell, axis=0, res=200):
     result = np.vstack([u, v])
     result = sorted(result, key=lambda x: np.arctan2(x[1], x[0]))
     result = np.vstack([result, result[0]])
-    return np.array(result).T
+    return np.array(result).T + bell['position'][:, None]
+
+
+def _decompose_position_(x, y, z):
+    '''Determines radius, sin and cosine of the azimuthal angle, and sin and cosine of
+    the inclination angle consistent with the given position. These are only orbital
+    elements if the orbit is circular. There are multiple solutions if z=0, assumes
+    i=90 in that case. Used mainly for creating valid test cases.'''
+    rad = np.sqrt(x*x + y*y + z*z)
+    st = x / rad
+    ct = np.sign(z) * np.sqrt(1 - st*st)
+    ci = z / (rad*ct) if ct != 0 else 0.
+    si = np.sqrt(1 - ci*ci)
+    return rad, ct, st, ci, si

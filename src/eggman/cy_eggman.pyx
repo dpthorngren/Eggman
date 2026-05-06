@@ -20,12 +20,12 @@ cpdef (double, double, double) orbit_to_position(double t, double period, double
     return position.x, position.y, position.z
 
 
-cpdef dict biellipsoid_dump(double x, double y, double z, double theta, double phi, double gamma, double r_forward, double r_back, double r_up, double r_side):
+cpdef dict biellipsoid_dump(double x, double y, double z, double theta, double phi, double gamma, double r_forward, double r_back, double r_up, double r_side, double ci=-2):
     '''Creates a biellipsoid and returns its contents for visualization and testing purposes.'''
     cdef Biellipsoid bell = Biellipsoid(r_forward, r_back, r_up, r_side)
     cdef Vec3 position = Vec3(x, y, z)
     bell.set_position(position)
-    bell.set_rotation(theta, phi, gamma)
+    bell.set_rotation(theta, phi, gamma, ci)
     return dict(
         position=_struct_to_arr_(bell.position),
         radii=np.array([bell.r_forward, bell.r_back, bell.r_up, bell.r_side]),
@@ -39,10 +39,10 @@ cpdef dict biellipsoid_dump(double x, double y, double z, double theta, double p
     )
 
 
-cpdef (double, double) _biellipsoid_slice_ylimits(double x, double theta, double phi, double gamma, double r_forward, double r_back, double r_up, double r_side):
+cpdef (double, double) _biellipsoid_slice_ylimits(double x, double theta, double phi, double gamma, double r_forward, double r_back, double r_up, double r_side, double ci=-2):
     '''Creates a biellipsoid and returns the results of slice_ylimits at the given x.'''
     cdef Biellipsoid bell = Biellipsoid(r_forward, r_back, r_up, r_side)
-    bell.set_rotation(theta, phi, gamma)
+    bell.set_rotation(theta, phi, gamma, ci)
     cdef Bounds b = bell.slice_ylimits(x)
     return b.min, b.max
 

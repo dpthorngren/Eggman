@@ -16,7 +16,7 @@ tasks:
       - src/include/[a-z_]*.hpp
     generates:
       - src/eggman/*.so
-      - src/eggman/cy_*.c
+      - src/eggman/cy_*.cpp
     cmds:
       - rm -rf build eggman.egg-info src/eggman/*.so
       - pip uninstall eggman --yes

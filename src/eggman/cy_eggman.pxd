@@ -58,7 +58,7 @@ cdef extern from "biellipsoid.cpp":
 
         Biellipsoid()
         Biellipsoid(double r_forward, double r_backward, double r_up, double r_side)
-        void set_rotation(double theta, double phi, double gamma)
+        void set_rotation(double theta, double phi, double gamma, double ci)
         void set_position(Vec3 new_position)
         void set_radii(double r_forward, double r_back, double r_up, double r_side)
         void update_derived()
@@ -69,9 +69,9 @@ cdef extern from "biellipsoid.cpp":
         Bounds slice_ylimits(double x)
 
 
-cpdef dict biellipsoid_dump(double x, double y, double z, double theta, double phi, double gamma, double r_forward, double r_back, double r_up, double r_side)
+cpdef dict biellipsoid_dump(double x, double y, double z, double theta, double phi, double gamma, double r_forward, double r_back, double r_up, double r_side, double ci=?)
 
-cpdef (double, double) _biellipsoid_slice_ylimits(double x, double theta, double phi, double gamma, double r_forward, double r_back, double r_up, double r_side)
+cpdef (double, double) _biellipsoid_slice_ylimits(double x, double theta, double phi, double gamma, double r_forward, double r_back, double r_up, double r_side, double ci=?)
 
 
 # ===== Light source functions and wrappers =====
