@@ -115,29 +115,25 @@ void Biellipsoid::update_derived() {
 
 Bounds Biellipsoid::slice_ylimits(double x) {
     Vec3 lower, upper;
-    Bounds result = x_bounds();
-    if ((x < result.min) || (x > result.max)) {
-        return {0., 0.};
-    }
-    result = (Bounds){0., 0.};
+    Bounds result = {0., 0.};
     x -= position.x;
 
     f_limb.get_ybounds(x, &lower, &upper);
-    if (is_forward(lower)) {
+    if (is_forward_local(lower)) {
         result.min = fmin(result.min, lower.y);
         result.max = fmax(result.max, lower.y);
     }
-    if (is_forward(upper)) {
+    if (is_forward_local(upper)) {
         result.min = fmin(result.min, upper.y);
         result.max = fmax(result.max, upper.y);
     }
 
     b_limb.get_ybounds(x, &lower, &upper);
-    if (!is_forward(lower)) {
+    if (!is_forward_local(lower)) {
         result.min = fmin(result.min, lower.y);
         result.max = fmax(result.max, lower.y);
     }
-    if (!is_forward(upper)) {
+    if (!is_forward_local(upper)) {
         result.min = fmin(result.min, upper.y);
         result.max = fmax(result.max, upper.y);
     }
@@ -166,6 +162,10 @@ Vec3 Biellipsoid::nearest_to_line(double x, double y) {
 inline bool Biellipsoid::is_forward(Vec3 loc) {
     return ((loc.x - position.x) * rot.xx + (loc.y - position.y) * rot.yx +
             (loc.z - position.z) * rot.zx) >= 0;
+}
+
+inline bool Biellipsoid::is_forward_local(Vec3 loc) {
+    return (loc.x * rot.xx + loc.y * rot.yx + loc.z * rot.zx) >= 0;
 }
 
 Bounds Biellipsoid::x_bounds() {

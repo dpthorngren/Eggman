@@ -1,4 +1,5 @@
 #include "ellipse.hpp"
+#include "math_utils.hpp"
 #include <cmath>
 
 Ellipse::Ellipse() {
@@ -16,22 +17,18 @@ Ellipse::Ellipse(Vec3 e1, Vec3 e2) {
 }
 
 void Ellipse::get_ybounds(double x, Vec3 *out_min, Vec3 *out_max) {
-    // First and second forward ellipse intersections
+    x = CLAMP(x, -x_size, x_size);
     double disc = (x * x) * (e2.x * e2.x) - (x_size * x_size) * (x * x - e1.x * e1.x);
-    // If the discriminant is negative, there are no intersections.
-    if (disc < 0) {
-        *out_min = {0., 0., 0.};
-        *out_max = {0., 0., 0.};
-        return;
-    }
-    disc = sqrt(disc);
+    // If the discriminant is negative return the boundary instead
+    disc = disc > 0. ? sqrt(disc) : 0.;
 
     // Check for the axis-aligned case where the normal formula would cause a divide by zero
     bool aligned = fabs(e1.x) < x_size * 1e-6;
     // First intersection
+    double st, ct;
     Vec3 p1, p2;
-    double st = aligned ? x / e2.x : (x * e2.x + disc) / (x_size * x_size);
-    double ct = aligned ? sqrt(1 - st * st) : (x - e2.x * st) / e1.x;
+    st = aligned ? x / e2.x : (x * e2.x + disc) / (x_size * x_size);
+    ct = aligned ? sqrt(1 - st * st) : (x - e2.x * st) / e1.x;
     WEIGHTED_SUM(ct, st, e1, e2, p1);
     // Second intersection
     st = aligned ? x / e2.x : (x * e2.x - disc) / (x_size * x_size);

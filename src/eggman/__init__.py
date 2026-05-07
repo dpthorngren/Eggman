@@ -1,7 +1,7 @@
-from . import utils
-from .cy_eggman import orbit_to_position, transit
+# from . import utils
+from .cy_eggman import BiellipsoidWrap, LightSourceWrap, OrbitWrap, transit
 
 # Backwards compatibility
 # asymmetricTransit = transit2d
 
-__all__ = ["utils", "orbit_to_position", "transit"]
+__all__ = ["OrbitWrap", "transit", "BiellipsoidWrap", "LightSourceWrap"]

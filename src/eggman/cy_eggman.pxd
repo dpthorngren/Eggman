@@ -22,7 +22,8 @@ cdef extern from "math_utils.hpp":
         double min
         double max
 
-# ===== Orbit functions and wrappers =====
+
+# ===== Orbit class and wrapper =====
 cdef extern from "orbit.cpp":
     double solve_kepler(double mean_anomaly, double eccen)
     cdef cppclass Orbit:
@@ -33,10 +34,14 @@ cdef extern from "orbit.cpp":
         double get_semimajor()
         double get_eccen()
 
-cpdef _solve_kepler(double mean_anomaly, double eccen) except+
-cpdef (double, double, double) orbit_to_position(double t, double period, double semimajor, double eccen, double inclination, double lon_periapse) except+
 
-# ===== Biellipsoid functions and wrappers =====
+cdef class OrbitWrap:
+    cdef Orbit orb
+    # All wrapper functions are implemented in Python, so aren't declared here.
+    # For use from Cython, use the C++ class directly
+
+
+# ===== Biellipsoid class and wrapper =====
 cdef extern from "ellipse.cpp":
     cdef cppclass Ellipse:
         Vec3 e1
@@ -69,12 +74,13 @@ cdef extern from "biellipsoid.cpp":
         Bounds slice_ylimits(double x)
 
 
-cpdef dict biellipsoid_dump(double x, double y, double z, double theta, double phi, double gamma, double r_forward, double r_back, double r_up, double r_side, double ci=?)
+cdef class BiellipsoidWrap:
+    cdef Biellipsoid bell
+    # All wrapper functions are implemented in Python, so aren't declared here.
+    # For use from Cython, use the C++ class directly
 
-cpdef (double, double) _biellipsoid_slice_ylimits(double x, double theta, double phi, double gamma, double r_forward, double r_back, double r_up, double r_side, double ci=?)
 
-
-# ===== Light source functions and wrappers =====
+# ===== Light Source class and wrapper =====
 cdef extern from "light_source.cpp":
     cdef cppclass LightSource:
         int source_type
@@ -84,7 +90,12 @@ cdef extern from "light_source.cpp":
         LightSource(int type, double limb0, double limb1, double limb2, double limb3)
         double get_brightness(double x, double y)
 
-cpdef double _get_brightness(str limb_type, list[double] limb_params, double x, double y)
+
+cdef class LightSourceWrap:
+    cdef LightSource source
+    # All wrapper functions are implemented in Python, so aren't declared here.
+    # For use from Cython, use the C++ class directly
+
 
 # ===== Transit integration function and wrapper =====
 cdef extern from "transit_integral.cpp":

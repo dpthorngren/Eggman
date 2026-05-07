@@ -35,9 +35,10 @@ class Biellipsoid {
     Vec3 forward_vector();
     // Checks if loc is on the forward side of the biellipsoid or the back
     bool is_forward(Vec3 loc);
+    bool is_forward_local(Vec3 loc);
     Bounds x_bounds();
     Bounds y_bounds();
-    // Determines the y range occupied by the biellipsoid for this x value (0, 0 if none)
+    // Determines the y range occupied by the biellipsoid for this x value (min=max outside range)
     Bounds slice_ylimits(double x);
     // Returns whether the line through x, y intersects the biellipsoid
     bool line_intersects(double x, double y);

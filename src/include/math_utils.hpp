@@ -3,6 +3,7 @@
 
 // Linear algebra structs and macros
 #define SIGN(x) ((x < 0.) ? -1. : ((x > 0.) ? 1. : 0.))
+#define CLAMP(x, xmin, xmax) (fmax(fmin(x, xmax), xmin));
 #define LENGTH(arr) sqrt(arr.x *arr.x + arr.y * arr.y + arr.z * arr.z)
 #define RESCALE(arr, coeff)                                                                        \
     arr.x /= coeff;                                                                                \
