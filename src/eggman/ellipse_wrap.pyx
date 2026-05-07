@@ -46,3 +46,36 @@ cdef class EllipseWrap:
     def nearest_to_line(self, xt, yt):
         cdef Vec3 result = self.ell.nearest_to_line(xt, yt)
         return np.array([result.x, result.y, result.z])
+
+    def outline(self, res=200, dir=None, method="angles"):
+        # TODO: Set start/end points at break plane
+        if method == "angles":
+            tmin = 0
+            tmax = 2*np.pi
+            t = np.linspace(tmin, tmax, res)[:, None]
+            xyz = self.e1 * np.cos(t) + self.e2*np.sin(t)
+        elif method == "ybounds":
+            x = np.linspace(-self.x_size, self.x_size, res)
+            ylow = []
+            yhigh = []
+            for xi in x:
+                y = self.get_ybounds(xi)
+                ylow.append(y[0])
+                yhigh.append(y[1])
+            xyz = np.vstack([yhigh, ylow[-1::-1]])
+        else:
+            raise ValueError(f"Unrecognized method {method}, must be 'angles' or 'ybounds'")
+        if dir is not None:
+            return xyz[xyz.dot(dir) >= 0]
+        return xyz
+
+    def plot_outline(self, res=200, origin=(0., 0.), dir=None, method="angles"):
+        from matplotlib import pyplot as plt
+
+        xyz = self.outline(res, dir, method=method)
+        plt.plot(xyz[:, 0] + origin[0], xyz[:, 1] + origin[1])
+
+    def plot_vectors(self, origin=(0., 0.)):
+        from matplotlib import pyplot as plt
+        plt.plot([origin[0], origin[0] + self.e1[0]], [origin[1], origin[1] + self.e1[1]])
+        plt.plot([origin[0], origin[0] + self.e2[0]], [origin[1], origin[1] + self.e2[1]])
