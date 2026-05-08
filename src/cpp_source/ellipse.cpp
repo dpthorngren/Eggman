@@ -53,42 +53,48 @@ bool Ellipse::line_intersects(double x, double y) {
     return u * u + v * v < 1.;
 }
 
-Vec3 Ellipse::nearest_to_line(double xt, double yt) {
-    if (line_intersects(xt, yt)) {
-        return {xt, yt, 0.0};
+Vec3 Ellipse::plane_intersection(Vec3 normal) {
+    // Get the limb breakpoints
+    double d1 = DOT3(normal, e1);
+    double d2 = DOT3(normal, e2);
+    double cbreak = -1. / sqrt(1 + d1 * d1 / (d2 * d2));
+    double sbreak = 1. / sqrt(1 + d2 * d2 / (d1 * d1));
+    Vec3 break_offset;
+    WEIGHTED_SUM(cbreak, sbreak, e1, e2, break_offset);
+    if (break_offset.x < 0) {
+        RESCALE(break_offset, -1.);
     }
-    // Is e2 on the near or far side of the ellipse from the point?
-    Vec3 pos = {xt, yt, 0.};
-    double sign = DOT3(e2, pos);
-    sign = SIGN(sign);
+    return break_offset;
+}
 
-    // Search in cos(theta), sin(theta) space,
-    double ct, st, x, y, d, ct0, ct1, d0, d1;
-    // Bound with 1,0 to -1,0 pick branch from whichever of 0,1 0,-1 is larger.
-    ct0 = 1.0;
-    x = e1.x * ct0 - xt;
-    y = e1.y * ct0 - yt;
-    d0 = x * x + y * y;
 
-    ct1 = -1.0;
-    x = e1.x * ct1 - xt;
-    y = e1.y * ct1 - yt;
-    d1 = x * x + y * y;
-
-    // Midpoint method
-    for (int i = 0; i < 64; i++) {
-        ct = (ct0 + ct1) / 2.;
-        st = sign * sqrt(1 - ct * ct);
-        x = e1.x * ct + e2.x * st - xt;
-        y = e1.y * ct + e2.y * st - yt;
-        d = x * x + y * y;
-        if (d1 < d0) {
-            ct0 = ct;
-            d0 = d;
-        } else {
-            ct1 = ct;
-            d1 = d;
-        }
+Vec3 Ellipse::nearest_to_line(double x0, double y0) {
+    if (line_intersects(x0, y0)) {
+        return {x0, y0, 0.0};
     }
-    return (Vec3){x, y, d};
+
+    // Initial guess
+    double det = e1.x * e2.y - e2.x * e1.y;
+    double u = (e2.y * x0 - e1.y * y0) / det;
+    double v = (-e2.x * x0 + e1.x * y0) / det;
+    double t = atan2(v, u);
+
+    // Newton's method in t to find the point where the normal vector points to (x0, y0)
+    double ct, st, x, y, dxdt, dydt;
+    double dldt, d2ldt2;
+
+    for (int i = 0; i < 16; i++) {
+        ct = cos(t);
+        st = sin(t);
+        x = e1.x * ct + e2.x * st;
+        y = e1.y * ct + e2.y * st;
+        dxdt = -e1.x * st + e2.x * ct;
+        dydt = -e1.y * st + e2.y * ct;
+
+        dldt = -x0 * y + y0 * x;
+        d2ldt2 = -x0 * dydt + y0 * dxdt;
+
+        t -= CLAMP(dldt / d2ldt2, -.2, .2);
+    }
+    return (Vec3){x, y, 0.};
 }

@@ -47,12 +47,8 @@ def test_circle():
         assert ell.x_size == approx(1.5)
         assert ell.y_size == approx(1.5)
         ell = EllipseWrap.create_from_rot_radii(0.9, 0.9, rot)
-        # TODO: Known to be broken!
-        # for x, y in np.random.rand(50, 2):
-        #     expect = x*x + y*y < .9**2
-        #     print(x, y, expect, end=" ")
-        #     assert ell.line_intersects(x, y) == expect
-        #     expect = (x,y) if expect else .9*np.array([x, y]) / np.sqrt(x*x+y*y)
-        #     print(expect)
-        #     print(np.arctan2(y, x))
-        #     assert ell.nearest_to_line(x, y)[:2] == approx(expect)
+        for x, y in np.random.rand(200, 2):
+            expect = x*x + y*y < .9**2
+            assert ell.line_intersects(x, y) == expect
+            expect = (x,y) if expect else .9*np.array([x, y]) / np.sqrt(x*x+y*y)
+            assert ell.nearest_to_line(x, y)[:2] == approx(expect, abs=1e-6)

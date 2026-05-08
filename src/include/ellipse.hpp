@@ -21,8 +21,9 @@ class Ellipse {
     void get_ybounds(double x, Vec3 *out_min, Vec3 *out_max);
     // Returns whether the line through x, y in view space intersects the ellipse
     bool line_intersects(double x, double y);
-    // Finds the nearest point on/in the ellipse to the line through x, y
-    Vec3 nearest_to_line(double xt, double yt);
+    Vec3 plane_intersection(Vec3 normal);
+    // Finds the nearest point on/in the ellipse to the line through x0, y0
+    Vec3 nearest_to_line(double x0, double y0);
 };
 
 #endif
