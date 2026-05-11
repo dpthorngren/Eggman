@@ -25,6 +25,11 @@
 #define BIELLIPSE_DIR(bell, pos)                                                                   \
     (pos.x * bell->rot.xx + pos.y * bell->rot.yx + pos.z * bell->rot.zx)
 #define PRINT(vec) printf("%f, %f, %f\n", vec.x, vec.y, vec.z);
+#define PRINTMAT(mat)                                                                              \
+    printf(                                                                                        \
+        "[(%6f, %6f, %6f)\n (%6f, %6f, %6f)\n (%6f, %6f, %6f)]\n", mat.xx, mat.xy, mat.xz, mat.yx, \
+        mat.yy, mat.yz, mat.zx, mat.zy, mat.zz                                                     \
+    );
 
 typedef struct {
     double x;

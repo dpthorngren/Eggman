@@ -69,13 +69,14 @@ cdef class EllipseWrap:
             return xyz[xyz.dot(dir) >= 0]
         return xyz
 
-    def plot_outline(self, res=200, origin=(0., 0.), dir=None, method="angles"):
+    def plot_outline(self, res=200, origin=(0., 0.), dir=None, method="angles", **args):
         from matplotlib import pyplot as plt
 
         xyz = self.outline(res, dir, method=method)
-        plt.plot(xyz[:, 0] + origin[0], xyz[:, 1] + origin[1])
+        plt.plot(xyz[:, 0] + origin[0], xyz[:, 1] + origin[1], **args)
 
-    def plot_vectors(self, origin=(0., 0.)):
+    def plot_vectors(self, origin=(0., 0.), **args):
         from matplotlib import pyplot as plt
-        plt.plot([origin[0], origin[0] + self.e1[0]], [origin[1], origin[1] + self.e1[1]])
-        plt.plot([origin[0], origin[0] + self.e2[0]], [origin[1], origin[1] + self.e2[1]])
+
+        plt.plot([origin[0], origin[0] + self.e1[0]], [origin[1], origin[1] + self.e1[1]], **args)
+        plt.plot([origin[0], origin[0] + self.e2[0]], [origin[1], origin[1] + self.e2[1]], **args)

@@ -115,7 +115,7 @@ void Biellipsoid::update_derived() {
 
 Bounds Biellipsoid::slice_ylimits(double x) {
     Vec3 lower, upper;
-    Bounds result = {0., 0.};
+    Bounds result = {INFINITY, -INFINITY};
     x -= position.x;
 
     f_limb.get_ybounds(x, &lower, &upper);

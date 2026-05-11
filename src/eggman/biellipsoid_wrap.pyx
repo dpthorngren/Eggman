@@ -52,11 +52,19 @@ cdef class BiellipsoidWrap:
 
     @property
     def limb_forward(self):
-        return np.row_stack([self.bell.f_limb.e1, self.bell.f_limb.e2])
+        cdef Ellipse ell = self.bell.f_limb
+        return EllipseWrap(
+            np.array([ell.e1.x, ell.e1.y, ell.e1.z]),
+            np.array([ell.e2.x, ell.e2.y, ell.e2.z]),
+        )
 
     @property
     def limb_back(self):
-        return np.row_stack([self.bell.b_limb.e1, self.bell.b_limb.e2])
+        cdef Ellipse ell = self.bell.b_limb
+        return EllipseWrap(
+            np.array([ell.e1.x, ell.e1.y, ell.e1.z]),
+            np.array([ell.e2.x, ell.e2.y, ell.e2.z]),
+        )
 
     def __init__(self, double x, double y, double z, double theta, double phi, double gamma,
                  double r_forward, double r_back, double r_up, double r_side, double ci=-2):
@@ -87,7 +95,7 @@ cdef class BiellipsoidWrap:
         '''Get the principle axes from a biellipsoid, for visualization and testing purposes.'''
         forward = self.rot @ np.diag([self.r_forward, self.r_up, self.r_side])
         back = self.rot @ np.diag([-self.r_back, self.r_up, self.r_side])
-        return np.row_stack([forward[:, 0], back])
+        return np.hstack([forward[:, :1], back])
 
     def meridians(self, axis=0, res=200):
         '''Get the positions of the equator and 90-degree meridians on the biellipsoid.'''
@@ -112,32 +120,47 @@ cdef class BiellipsoidWrap:
         result = np.vstack([result, result[0]])
         return np.array(result).T + self.position[:, None]
 
-    def outline(self, res=200):
-        '''Get an outline of the biellipsoid at the requested resolution.'''
-        assert res > 4 and res % 2 == 0, "Resolution must be even and at least 4."
-        xmin, xmax = self.x_bounds()
-        x = np.linspace(xmin, xmax, 1 + (res//2))
-        ymin = []
-        ymax = []
-        for xi in x:
-            bounds = self.slice_ylimits(xi)
-            ymin.append(bounds[0])
-            ymax.append(bounds[1])
-        # TODO: fix?
-        # x = np.concatenate([x, x[-1:1:-1]]).T
-        # y = np.concatenate([ymax, ymin[-1:1:-1]]).T
-        return x, ymin, ymax
+    def outline(self, res=200, debug=False):
+        '''Get an outline of the biellipsoid at the requested resolution. The debug flag
+        switches the outline calculation from one based on angle to one based on x to test
+        integrator inputs.'''
+        if debug:
+            xmin, xmax = self.x_bounds()
+            x = np.linspace(xmin, xmax, res)
+            ymin = []
+            ymax = []
+            for xi in x:
+                bounds = self.slice_ylimits(xi)
+                ymin.append(bounds[0])
+                ymax.append(bounds[1])
+            x = np.concatenate([x, x[-1:1:-1]]).T
+            y = np.concatenate([ymax, ymin[-1:1:-1]]).T
+            return x, y
+        else:
+            xyz1 = self.limb_forward.outline(res, dir=self.forward, method="angles")
+            xyz2 = self.limb_back.outline(res, dir=-self.forward, method="angles")
+            result = np.vstack([xyz1, xyz2])
+            result = sorted(result, key=lambda x: np.arctan2(x[1], x[0]))
+            result = np.vstack([result, result[0]])
+            return np.array(result).T + self.position[:, None]
 
-    def plot_axes(self):
+    def plot_ellipses(self, res=200, method="angles", f_args=dict(), b_args=dict()):
+        '''Similar to plot_outline, but plots each ellipse that makes up the bieelipsoid's limb
+        separately (including on the other ellipse's side), for debugging visualization purposes.'''
+        origin = (self.bell.position.x, self.bell.position.y)
+        self.limb_forward.plot_outline(res, origin, dir=self.forward, method=method, **f_args)
+        self.limb_back.plot_outline(res, origin, dir=-self.forward, method=method, **b_args)
+
+    def plot_axes(self, colors=None, **args):
         from matplotlib import pyplot as plt
         x0, y0, _ = self.position
         axes = self.principal_axes()
+        if colors is None:
+            colors = ['red', 'green', 'blue', "orange"]
         for i in range(4):
-            color = ['red', 'green', 'blue', "orange"][i]
-            plt.plot([x0, x0 + axes[i, 0]], [y0, y0 + axes[i, 1]], zorder=1, color=color, alpha=.3)
+            plt.plot([x0, x0 + axes[0, i]], [y0, y0 + axes[1, i]], zorder=1, color=colors[i], alpha=.3, **args)
 
-    def plot_outline(self, res=200):
+    def plot_outline(self, res=200, **args):
         from matplotlib import pyplot as plt
-        x, y = self.outline(res)
-
-        plt.plot(x, y)
+        x, y, _ = self.outline(res)
+        plt.plot(x, y, **args)
