@@ -14,6 +14,10 @@ cdef class OrbitWrap:
     def eccen(self) -> double:
         return self.orb.get_eccen()
 
+    @property
+    def cos_inc(self) -> double:
+        return self.orb.get_eccen()
+
     def __init__(self, double period, double t0, double semimajor, double eccen=0,
                  double inclination=90, double lon_periapse=90):
         self.orb = Orbit(period, t0, semimajor, eccen, inclination, lon_periapse)

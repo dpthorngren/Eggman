@@ -103,8 +103,8 @@ cdef class BiellipsoidWrap:
         forward = axes[:, 0]
         t = np.linspace(0, 2 * np.pi, res)[:, None]
         if axis == 0:
+            u = np.cos(t) * axes[:, 2] + np.sin(t) * axes[:, 3]
             v = np.cos(t) * axes[:, 2] + np.sin(t) * axes[:, 3]
-            return v.T + self.position[:, None]
         elif axis == 1:
             u = np.cos(t) * axes[:, 0] + np.sin(t) * axes[:, 3]
             v = np.cos(t) * axes[:, 1] + np.sin(t) * axes[:, 3]
@@ -113,18 +113,15 @@ cdef class BiellipsoidWrap:
             v = np.cos(t) * axes[:, 1] + np.sin(t) * axes[:, 2]
         else:
             raise ValueError(f"Axis must be 0, 1, or 2, not {axis}.")
-        u = u[np.dot(u, forward) > 0]
-        v = v[np.dot(v, forward) < 0]
+        u = u[u.dot(forward) > 0]
+        v = v[v.dot(forward) <= 0]
         result = np.vstack([u, v])
-        result = sorted(result, key=lambda x: np.arctan2(x[1], x[0]))
         result = np.vstack([result, result[0]])
-        return np.array(result).T + self.position[:, None]
+        result = np.array(sorted(result, key=lambda x: np.arctan2(x[1], x[0])))
+        return result.T + self.position[:, None]
 
-    def outline(self, res=200, debug=False):
-        '''Get an outline of the biellipsoid at the requested resolution. The debug flag
-        switches the outline calculation from one based on angle to one based on x to test
-        integrator inputs.'''
-        if debug:
+    def outline(self, res=200, yrange=False):
+        if yrange:
             xmin, xmax = self.x_bounds()
             x = np.linspace(xmin, xmax, res)
             ymin = []
@@ -133,9 +130,7 @@ cdef class BiellipsoidWrap:
                 bounds = self.slice_ylimits(xi)
                 ymin.append(bounds[0])
                 ymax.append(bounds[1])
-            x = np.concatenate([x, x[-1:1:-1]]).T
-            y = np.concatenate([ymax, ymin[-1:1:-1]]).T
-            return x, y
+            return x, np.array(ymin), np.array(ymax)
         else:
             xyz1 = self.limb_forward.outline(res, dir=self.forward, method="angles")
             xyz2 = self.limb_back.outline(res, dir=-self.forward, method="angles")
@@ -145,7 +140,7 @@ cdef class BiellipsoidWrap:
             return np.array(result).T + self.position[:, None]
 
     def plot_ellipses(self, res=200, method="angles", f_args=dict(), b_args=dict()):
-        '''Similar to plot_outline, but plots each ellipse that makes up the bieelipsoid's limb
+        '''Similar to plot_outline, but plots each ellipse that makes up the bielipsoid's limb
         separately (including on the other ellipse's side), for debugging visualization purposes.'''
         origin = (self.bell.position.x, self.bell.position.y)
         self.limb_forward.plot_outline(res, origin, dir=self.forward, method=method, **f_args)
@@ -164,3 +159,16 @@ cdef class BiellipsoidWrap:
         from matplotlib import pyplot as plt
         x, y, _ = self.outline(res)
         plt.plot(x, y, **args)
+
+    def plot_area(self, res=200, **args):
+        from matplotlib import pyplot as plt
+        x, ymin, ymax = self.outline(res, True)
+        plt.fill_between(x, ymin, ymax, **args)
+
+    def plot_meridians(self, res=200, eq_args=dict(), prime_args=dict(), front_args=dict()):
+        from matplotlib import pyplot as plt
+
+        for i, args in enumerate([prime_args, eq_args, front_args]):
+            if args is not None:
+                merid = self.meridians(i, res)
+                plt.plot(merid[0], merid[1], **args)
