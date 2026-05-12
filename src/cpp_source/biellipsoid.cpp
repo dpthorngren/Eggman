@@ -154,11 +154,14 @@ bool Biellipsoid::line_intersects(double x, double y) {
 }
 
 Vec3 Biellipsoid::nearest_to_line(double x, double y) {
+    Vec3 result;
     if (is_forward((Vec3){x, y, position.z})) {
-        return f_limb.nearest_to_line(x - position.x, y - position.y);
+        result = f_limb.nearest_to_line(x - position.x, y - position.y);
     } else {
-        return b_limb.nearest_to_line(x - position.x, y - position.y);
+        result = b_limb.nearest_to_line(x - position.x, y - position.y);
     }
+    result.x += position.x;
+    return result;
 }
 
 inline bool Biellipsoid::is_forward(Vec3 loc) {

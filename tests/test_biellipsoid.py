@@ -73,6 +73,13 @@ def test_biellipsoid_orbit_rotation():
     angles = [0., 180., 0.]
     bell = BiellipsoidWrap(*pos, *angles, 1., 1., 1., 2., 0.)
     assert bell.rot == approx(np.diag([-1, 1, -1]))
+    # Verify no rotation at orbital origin (0, 0, 1)
+    pos = [0., 0., 2.]
+    angles = [0., 0., 0.]
+    bell = BiellipsoidWrap(*pos, *angles, 1., 1., 1., 2., -2)
+    assert bell.rot == approx(np.eye(3))
+    bell = BiellipsoidWrap(*pos, *angles, 1., 1., 1., 2., 0.)
+    assert bell.rot == approx(np.eye(3))
     # Compare with rotation matrix helper
     bell = BiellipsoidWrap(3., 0., 3., 30., 10., 0., 3., 2., 1., 1.5, 0.)
     expect = rotation_matrix(10, 1) @ rotation_matrix(30, 2) @ rotation_matrix(45., 1)

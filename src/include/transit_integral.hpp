@@ -20,7 +20,8 @@ double transit_integrand(double y, void *params);
 double transit_inner_integral(double x, void *params);
 void transit_integral(
     double *times, double *outputs, int n, Orbit *orb, LightSource *emitter, double theta,
-    double phi, double gamma, double r_forward, double r_back, double r_up, double r_side
+    double phi, double gamma, double r_forward, double r_back, double r_up, double r_side,
+    bool rotate_with_orbit
 );
 
 #endif

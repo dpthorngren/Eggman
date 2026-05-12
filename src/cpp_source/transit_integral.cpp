@@ -28,7 +28,8 @@ double transit_inner_integral(double x, void *params) {
 
 void transit_integral(
     double *times, double *outputs, int n, Orbit *orb, LightSource *emitter, double theta,
-    double phi, double gamma, double r_forward, double r_back, double r_up, double r_side
+    double phi, double gamma, double r_forward, double r_back, double r_up, double r_side,
+    bool rotate_with_orbit
 ) {
     int i;
     int code = 0;
@@ -63,8 +64,10 @@ void transit_integral(
             outputs[i] = 1.0;
             continue;
         }
-        // TODO: Reorient the biellipsoid rather than just repositioning it.
         g.bell.set_position(position);
+        if (rotate_with_orbit) {
+            g.bell.set_rotation(theta, phi, gamma, orb->get_cos_inc());
+        }
 
         // Get the integration bounds
         x_lim = g.bell.x_bounds();

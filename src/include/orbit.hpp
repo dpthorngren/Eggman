@@ -30,6 +30,7 @@ class Orbit {
     double get_period();
     double get_semimajor();
     double get_eccen();
+    double get_cos_inc();
 };
 
 #endif

@@ -78,3 +78,4 @@ Vec3 Orbit::get_position(double t) {
 double Orbit::get_period() { return period; }
 double Orbit::get_semimajor() { return semimajor; }
 double Orbit::get_eccen() { return eccen; }
+double Orbit::get_cos_inc() { return c_inc; }

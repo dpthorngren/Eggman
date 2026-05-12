@@ -17,14 +17,15 @@ def test_transit_grazing():
         'semimajor': 10.,
         'inclination': 90.,
         'limb_type': 'quadratic',
-        'limb': [.3, .2]
+        'limb': [.3, .2],
+        'rotate_with_orbit': False,
     }
 
     # Check for errors on grazing transits
     assert eggman.transit(.1 + 1e-3, .11, .1, .1, **dict(baseArgs)) < 1.
     assert eggman.transit(.1 + 1e-9, .1, .09, .09, **dict(baseArgs)) < 1.
 
-    # Check for errors on barely non-grazing trants
+    # Check for errors on barely non-grazing transits
     assert eggman.transit(.1 - 1e-3, .11, .1, .1, **dict(baseArgs)) == 1.
     assert eggman.transit(.1 - 1e-12, .1, .09, .09, **dict(baseArgs)) == 1.
 
@@ -61,7 +62,8 @@ def test_transit_is_transiting():
         'limb_type': 'quadratic',
         'limb': [.3, .2],
         'eccen': 0,
-        'lon_periapse': 90.
+        'lon_periapse': 90.,
+        'rotate_with_orbit': False,
     }
     # Non-transiting
     assert eggman.transit(.1, .1, .1, .1, **dict(baseArgs, t=np.array([5.]))) == 1.
@@ -100,7 +102,8 @@ def test_transit_analytic():
         'semimajor': 10.,
         'inclination': 89.,
         'limb_type': 'quadratic',
-        'limb': [0., 0.]
+        'limb': [0., 0.],
+        'rotate_with_orbit': False,
     }
     assert eggman.transit(.1, .1, .1, .1, **baseArgs) == approx(1 - .1*.1, abs=1e-7)
     assert eggman.transit(.12, .19, .15, .15, **baseArgs) == approx(
