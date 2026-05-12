@@ -2,6 +2,7 @@ import numpy as np
 from pytest import approx
 
 from eggman.cy_eggman import BiellipsoidWrap
+from eggman.utils import rotation_matrix
 
 
 def _decompose_position_(x, y, z):
@@ -10,9 +11,10 @@ def _decompose_position_(x, y, z):
     elements if the orbit is circular. There are multiple solutions if z=0, assumes
     i=90 in that case. Used for creating valid test cases.'''
     rad = np.sqrt(x*x + y*y + z*z)
-    st = x / rad
+    st = x / rad if rad > 0 else 0.
     ct = np.sign(z) * np.sqrt(1 - st*st)
-    ci = z / (rad*ct) if ct != 0 else 0.
+    rad = np.sqrt(y*y + z*z)
+    ci = np.sign(ct) * y / rad if rad > 0 else 0.
     si = np.sqrt(1 - ci*ci)
     return rad, ct, st, ci, si
 
@@ -35,6 +37,13 @@ def test_biellipsoid_rotation():
     for angles in 179. * np.random.rand(100, 3) - 90.:
         bell = BiellipsoidWrap(0., 0., 0., angles[0], angles[1], angles[2], 1., 1., 1., 1.)
         assert bell.rot.T @ bell.rot == approx(np.eye(3))
+    # Compare with rotation matrix helper
+    bell = BiellipsoidWrap(3., 5., -2., 30., 10., 0., 3., 2., 1., 1.5)
+    expect = rotation_matrix(10, 1) @ rotation_matrix(30, 2)
+    assert bell.rot == approx(expect, abs=1e-12)
+    bell = BiellipsoidWrap(3., 5., -2., 105., 67.3, 13.2, 3., 2., 1., 1.5)
+    expect = rotation_matrix(67.3, 1) @ rotation_matrix(105, 2) @ rotation_matrix(13.2, 0)
+    assert bell.rot == approx(expect, abs=1e-12)
 
 
 def test_biellipsoid_orbit_rotation():
@@ -64,15 +73,18 @@ def test_biellipsoid_orbit_rotation():
     angles = [0., 180., 0.]
     bell = BiellipsoidWrap(*pos, *angles, 1., 1., 1., 2., 0.)
     assert bell.rot == approx(np.diag([-1, 1, -1]))
+    # Compare with rotation matrix helper
+    bell = BiellipsoidWrap(3., 0., 3., 30., 10., 0., 3., 2., 1., 1.5, 0.)
+    expect = rotation_matrix(10, 1) @ rotation_matrix(30, 2) @ rotation_matrix(45., 1)
+    assert bell.rot == approx(expect, abs=1e-12)
     # Check that the correct axis points towards the origin
-    # TODO: Fix
-    # for pos in np.random.rand(100, 3):
-    #     pos /= np.linalg.norm(pos)
-    #     angles = [0., 0., 0.]
-    #     ci = _decompose_position_(*pos)[3]
-    #     bell = BiellipsoidWrap(*pos, *angles, 1., 1., 1., 1., ci)
-    #     assert bell.up.dot(pos) == approx(0, abs=1e-12)
-    #     assert bell.side == approx(pos, 1e-12)
+    for pos in np.random.rand(100, 3) * 2 - 1:
+        pos /= np.linalg.norm(pos)
+        angles = [0., 0., 0.]
+        ci = _decompose_position_(*pos)[3]
+        bell = BiellipsoidWrap(*pos, *angles, 1., 1., 1., 1., ci)
+        assert bell.side == approx(pos, 1e-12)
+        assert bell.up.dot(pos) == approx(0, abs=1e-12)
 
 
 def test_biellipsoid_bounds():

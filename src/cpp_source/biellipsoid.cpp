@@ -1,4 +1,5 @@
 #include "biellipsoid.hpp"
+#include "math_utils.hpp"
 #include <cmath>
 
 Biellipsoid::Biellipsoid() {
@@ -51,11 +52,12 @@ void Biellipsoid::set_rotation(double theta, double phi, double gamma, double ci
         Mat3 orbit_rot;
         Mat3 result;
         if (rad >= 0) {
+            // TODO: Wrong sign if not 0 < i < pi/2
             st = position.x / rad;
             ct = SIGN(position.z) * sqrt(1 - st * st);
             si = sqrt(1 - ci * ci);
             orbit_rot = (Mat3){ct, 0, st, -st * ci, si, ct * ci, -st * si, -ci, ct * si};
-            matmul3x3(orbit_rot, rot, result);
+            matmul3x3(rot, orbit_rot, result);
             rot = result;
         }
     }
