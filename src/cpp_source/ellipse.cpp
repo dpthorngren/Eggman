@@ -48,8 +48,8 @@ void Ellipse::get_ybounds(double x, Vec3 *out_min, Vec3 *out_max) {
 bool Ellipse::line_intersects(double x, double y) {
     // Inverse matrix to transform to circle space, check if point is inside
     double det = e1.x * e2.y - e2.x * e1.y;
-    double u = (e2.y * x - e1.y * y) / det;
-    double v = (-e2.x * x + e1.x * y) / det;
+    double u = (e2.y * x - e2.x * y) / det;
+    double v = (-e1.y * x + e1.x * y) / det;
     return u * u + v * v < 1.;
 }
 
@@ -75,15 +75,15 @@ Vec3 Ellipse::nearest_to_line(double x0, double y0) {
 
     // Initial guess
     double det = e1.x * e2.y - e2.x * e1.y;
-    double u = (e2.y * x0 - e1.y * y0) / det;
-    double v = (-e2.x * x0 + e1.x * y0) / det;
+    double u = (e2.y * x0 - e2.x * y0) / det;
+    double v = (-e1.y * x0 + e1.x * y0) / det;
     double t = atan2(v, u);
 
-    // Newton's method in t to find the point where the normal vector points to (x0, y0)
+    // Newton's method to find zero of l = dot(dr/dt, (r0-r))
     double ct, st, x, y, dxdt, dydt;
-    double dldt, d2ldt2;
+    double l, dldt;
 
-    for (int i = 0; i < 16; i++) {
+    for (int i = 0; i < 32; i++) {
         ct = cos(t);
         st = sin(t);
         x = e1.x * ct + e2.x * st;
@@ -91,10 +91,9 @@ Vec3 Ellipse::nearest_to_line(double x0, double y0) {
         dxdt = -e1.x * st + e2.x * ct;
         dydt = -e1.y * st + e2.y * ct;
 
-        dldt = -x0 * y + y0 * x;
-        d2ldt2 = -x0 * dydt + y0 * dxdt;
-
-        t -= CLAMP(dldt / d2ldt2, -.2, .2);
+        l = (x0 - x) * dxdt + (y0 - y) * dydt;
+        dldt = x * x + y * y - x0 * x - y0 * y - dxdt * dxdt - dydt * dydt;
+        t -= CLAMP(l / dldt, -.2, .2);
     }
     return (Vec3){x, y, 0.};
 }
