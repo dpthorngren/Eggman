@@ -23,10 +23,12 @@ def test_transit_grazing():
 
     # Check for errors on grazing transits
     assert eggman.transit(.1 + 1e-3, .11, .1, .1, **dict(baseArgs)) < 1.
+    assert eggman.transit(.1 + 1e-3, .09, -1, .1, **dict(baseArgs)) < 1.
     assert eggman.transit(.1 + 1e-9, .1, .09, .09, **dict(baseArgs)) < 1.
 
     # Check for errors on barely non-grazing transits
     assert eggman.transit(.1 - 1e-3, .11, .1, .1, **dict(baseArgs)) == 1.
+    assert eggman.transit(.1 - 1e-3, .11, -1, .1, **dict(baseArgs)) == 1.
     assert eggman.transit(.1 - 1e-12, .1, .09, .09, **dict(baseArgs)) == 1.
 
     # Grazing on egress
@@ -38,12 +40,14 @@ def test_transit_grazing():
     baseArgs['inclination'] = 90. - abs(baseArgs['t'][0]) * 180 / np.pi
     baseArgs['t'] = np.array([0.])
     assert eggman.transit(.11, .1, .1 + 1e-3, .1, **dict(baseArgs)) < 1.
+    assert eggman.transit(.1 + 1e-3, .1 - 1e-3, -1., .1, **dict(baseArgs)) < 1.
     # TODO: Would like to pass these, but they don't actually violate my <1 PPM precision target.
     # assert eggman.transit(.09, .1, .1 + 1e-6, .1, **dict(baseArgs)) < 1.
     # assert eggman.transit(.1, .09, .1 + 1e-6, .1, **dict(baseArgs)) < 1.
 
     # Barely non-grazing on top (true grazing transit)
     assert eggman.transit(.11, .1, .1 - 1e-3, .1, **dict(baseArgs)) == 1.
+    assert eggman.transit(.1 - 1e-3, .1 - 1e-3, -1, .1, **dict(baseArgs)) == 1.
     assert eggman.transit(.09, .1, .1 - 1e-6, .1, **dict(baseArgs)) == 1.
     assert eggman.transit(.1, .09, .1 - 1e-12, .1, **dict(baseArgs)) == 1.
 
@@ -106,6 +110,7 @@ def test_transit_analytic():
         'rotate_with_orbit': False,
     }
     assert eggman.transit(.1, .1, .1, .1, **baseArgs) == approx(1 - .1*.1, abs=1e-7)
+    assert eggman.transit(.1, .2, -1, .1, **baseArgs) == approx(1 - (.1*.1 + .2*.2) / 2., abs=1e-7)
     assert eggman.transit(.12, .19, .15, .15, **baseArgs) == approx(
         1 - (.12*.15 + .19*.15) / 2., abs=1e-7)
     assert eggman.transit(.01, .01, .02, .02, **baseArgs) == approx(
@@ -114,6 +119,7 @@ def test_transit_analytic():
     baseArgs['eccen'] = 0.05
     baseArgs['lon_periapse'] = 35.
     assert eggman.transit(.1, .1, .1, .1, **baseArgs) == approx(1 - .1*.1, abs=1e-7)
+    assert eggman.transit(.1, .2, -1, .1, **baseArgs) == approx(1 - (.1*.1 + .2*.2) / 2., abs=1e-7)
     assert eggman.transit(.12, .19, .15, .15, **baseArgs) == approx(
         1 - (.12*.15 + .19*.15) / 2., abs=1e-7)
     assert eggman.transit(.01, .01, .02, .02, **baseArgs) == approx(

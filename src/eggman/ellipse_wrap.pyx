@@ -27,8 +27,8 @@ cdef class EllipseWrap:
         assert a > 0 and b > 0
         assert type(rot) is np.ndarray and rot.shape == (3, 3)
         assert np.all(rot.T @ rot - np.eye(3) < 1e-9), "Invalid rotation matrix."
-        e1 = (rot @ np.row_stack([a, 0, 0])).flat
-        e2 = (rot @ np.row_stack([0, b, 0])).flat
+        e1 = (rot @ np.vstack([a, 0, 0])).flat
+        e2 = (rot @ np.vstack([0, b, 0])).flat
         return EllipseWrap(e1, e2)
 
     def get_ybounds(self, double x):

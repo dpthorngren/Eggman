@@ -31,15 +31,24 @@ void transit_integral(
     double phi, double gamma, double r_forward, double r_back, double r_up, double r_side,
     bool rotate_with_orbit
 ) {
-    int i;
     int code = 0;
     Vec3 position = {0., 0., 0.};
-    Vec3 nearest;
-    Biellipsoid bell = Biellipsoid(r_forward, r_back, r_up, r_side);
-    bell.set_rotation(theta, phi, gamma);
+    Vec3 split_point;
     double result, err;
     Bounds x_lim, y_lim;
-    double x_min, x_max;
+    double x_min, x_max, x;
+    double st = sin(theta);
+    double ct = cos(theta);
+    bool discontinuous_pole = false;
+
+    if (r_up < 0) {
+        r_up = r_back;
+        discontinuous_pole = true;
+    }
+    Biellipsoid bell = Biellipsoid(r_forward, r_back, r_up, r_side);
+    if (!(discontinuous_pole || rotate_with_orbit)) {
+        bell.set_rotation(theta, phi, gamma);
+    }
 
     // Do not crash the program due to lack of precision
     gsl_set_error_handler_off();
@@ -58,41 +67,59 @@ void transit_integral(
     integOuter.function = &transit_inner_integral;
     integOuter.params = &g;
 
-    for (i = 0; i < n; i++) {
+    for (int i = 0; i < n; i++) {
         position = orb->get_position(times[i]);
         if (position.z < 0) {
             outputs[i] = 1.0;
             continue;
         }
         g.bell.set_position(position);
-        if (rotate_with_orbit) {
-            g.bell.set_rotation(theta, phi, gamma, orb->get_cos_inc());
+
+        // Rotate and get planet bounding box
+        if (discontinuous_pole) {
+            x = ct * g.bell.position.x + st * g.bell.position.y;
+            g.bell.position.y = -st * g.bell.position.x + ct * g.bell.position.y;
+            g.bell.position.x = x;
+            x_lim = (Bounds){x - r_back, x + r_forward};
+            y_lim = (Bounds){g.bell.position.y - fmax(r_back, r_forward),
+                             g.bell.position.y + fmax(r_back, r_forward)};
+        } else {
+            if (rotate_with_orbit) {
+                g.bell.set_rotation(theta, phi, gamma, orb->get_cos_inc());
+            }
+            x_lim = g.bell.x_bounds();
+            y_lim = g.bell.y_bounds();
         }
 
-        // Get the integration bounds
-        x_lim = g.bell.x_bounds();
-        y_lim = g.bell.x_bounds();
+        // Quick bounding-box check to skip most non-transits
         x_min = fmax(x_lim.min, -1.);
         x_max = fmin(x_lim.max, 1.);
-
-        // Quick bounding-box check to skip most non-transits
         if ((x_min >= x_max) || (y_lim.min > 1.) || (y_lim.max < -1)) {
             outputs[i] = 1.0;
             continue;
         }
 
-        // Split the integral around the nearest point to help integrator find non-zero areas
-        nearest = g.bell.nearest_to_line(0., 0.);
-        if (nearest.z > 1.) {
-            outputs[i] = 1.0;
-            continue;
+        if (discontinuous_pole) {
+            // Split the integral around the middle of the planet to allow for a discontinuous pole
+            split_point = g.bell.position;
+            g.bell.set_radii(r_forward, r_back, r_back, r_side);
+        } else {
+            // Split the integral around the nearest point to help integrator find non-zero areas
+            split_point = g.bell.nearest_to_line(0., 0.);
+            if (split_point.z > 1.) {
+                outputs[i] = 1.0;
+                continue;
+            }
         }
         code = gsl_integration_qag(
-            &integOuter, x_min, nearest.x, 1e-7, 1e-5, 100, 1, workspaceOuter, &result, &err
+            &integOuter, x_min, split_point.x, 1e-7, 1e-5, 100, 1, workspaceOuter, &result, &err
         );
         outputs[i] = (code != 0) ? NAN : 1 - result;
+        if (discontinuous_pole) {
+            g.bell.set_radii(r_forward, r_back, r_forward, r_side);
+        }
         code = gsl_integration_qag(
-            &integOuter, nearest.x, x_max, 1e-7, 1e-5, 100, 1, workspaceOuter, &result, &err
+            &integOuter, split_point.x, x_max, 1e-7, 1e-5, 100, 1, workspaceOuter, &result, &err
         );
         outputs[i] = (code != 0) ? NAN : outputs[i] - result;
     }

@@ -65,14 +65,14 @@ def test_ellipses():
         assert np.linalg.norm(ell.e1) == approx(r1, rel=1e-9)
         assert np.linalg.norm(ell.e2) == approx(r2, rel=1e-9)
         # Check reverse transform
-        assert rot.T @ np.row_stack(ell.e1) == approx([r1, 0., 0.])
-        assert rot.T @ np.row_stack(ell.e2) == approx([0., r2, 0.])
+        assert rot.T @ np.vstack(ell.e1) == approx([r1, 0., 0.])
+        assert rot.T @ np.vstack(ell.e2) == approx([0., r2, 0.])
         # Area is conserved under rotation
         area = 2 * np.pi * np.linalg.norm(ell.e1) * np.linalg.norm(ell.e2)
         assert area == approx(2 * np.pi * r1 * r2, rel=1e-9)
         # Line intersection and nearest-point check
         for x, y in 6 * np.random.rand(200, 2) - 3:
-            xp, yp, zp = np.ravel(rot.T @ np.row_stack([x, y, 0.]))
+            xp, yp, zp = np.ravel(rot.T @ np.vstack([x, y, 0.]))
             assert zp == 0.
             assert xp**2 + yp**2 == approx(x**2 + y**2, 1e-12)
             dist = (xp / r1)**2 + (yp / r2)**2
@@ -83,7 +83,7 @@ def test_ellipses():
             else:
                 # Point should be on the ellipse boundary
                 assert nearest[2] == approx(0., rel=1e-12)
-                nearestp = np.ravel(rot.T @ np.row_stack(nearest))
+                nearestp = np.ravel(rot.T @ np.vstack(nearest))
                 assert nearestp[2] == approx(0., rel=1e-12)
                 dist = (nearestp[0] / r1)**2 + (nearestp[1] / r2)**2
                 assert dist == approx(1, rel=1e-12)
