@@ -1,6 +1,6 @@
 import numpy as np
 
-from .cy_eggman import BiellipsoidWrap, OrbitWrap
+from .cy_eggman import BiellipsoidWrap, LightSourceWrap, OrbitWrap
 
 
 def rotation_matrix(angle, axis, degrees=True):
@@ -28,12 +28,15 @@ def plot_transit(
         period,
         semimajor,
         inclination,
+        limb_type,
+        limb,
         eccen=0,
         lon_periapse=0,
         rotate_with_orbit=True,
         outline_args=dict(),
         area_args=dict(),
         meridian_args=dict(),
+        source_args=dict(),
 ):
     from matplotlib import pyplot as plt
     _, ax = plt.subplots(figsize=(12, 8))
@@ -49,7 +52,6 @@ def plot_transit(
     # bell.plot_meridians()
 
     # TODO: Better source plotting
-    x = np.linspace(-1, 1, 200)
-    y = np.sqrt(1 - x**2)
-    zorder = -100 if z > 0 else 100
-    plt.fill_between(x, -y, y, zorder=zorder, color="silver")
+    source = LightSourceWrap(limb_type, limb)
+    source_args.setdefault('zorder', -100 if z > 0 else 100)
+    source.plot_brightness(pcm_args=source_args)
