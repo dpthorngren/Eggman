@@ -79,6 +79,10 @@ cdef class BiellipsoidWrap:
         cdef Vec3 position = Vec3(x, y, z)
         self.bell.set_position(position)
 
+    def is_visible(self, double x, double y, double z):
+        cdef Vec3 loc = Vec3(x, y, z)
+        return self.bell.is_visible(loc)
+
     def x_bounds(self):
         cdef Bounds b = self.bell.x_bounds()
         return np.array([b.min, b.max])
@@ -195,10 +199,14 @@ cdef class BiellipsoidWrap:
         x, ymin, ymax = self.outline(res, True)
         plt.fill_between(x, ymin, ymax, **args)
 
-    def plot_meridians(self, res=200, eq_args=dict(), prime_args=dict(), front_args=dict()):
+    def plot_meridians(self, res=200, eq_args=dict(), prime_args=dict(), front_args=dict(), visible_only=True):
         from matplotlib import pyplot as plt
 
         for i, args in enumerate([prime_args, eq_args, front_args]):
             if args is not None:
                 merid = self.meridians(i, res)
+                if visible_only:
+                    mask = np.array([not self.is_visible(i[0], i[1], i[2]+1e-6) for i in merid.T])
+                    mask = np.vstack([mask]*3)
+                    merid = np.ma.masked_where(mask, merid)
                 plt.plot(merid[0], merid[1], **args)

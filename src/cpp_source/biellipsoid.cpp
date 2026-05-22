@@ -173,6 +173,22 @@ inline bool Biellipsoid::is_forward_local(Vec3 loc) {
     return (loc.x * rot.xx + loc.y * rot.yx + loc.z * rot.zx) >= 0;
 }
 
+bool Biellipsoid::is_visible(Vec3 loc) {
+    // In this niche world-aligned-but-scaled frame, planet is a unit sphere at the origin
+    // but the view vector is (0, 0, -1)
+    Vec3 loc_sph = world_to_sphere(loc);
+    MATMUL(rot, loc_sph, loc);
+    // Thus the visibilty test is simple: is the point behind a unit sphere at the origin?
+    double xysq = loc.x * loc.x + loc.y * loc.y;
+    if (xysq >= 1) {
+        return true;
+    }
+    if (loc.z < 0) {
+        return false;
+    }
+    return (xysq + loc.z * loc.z) > 1;
+}
+
 Bounds Biellipsoid::x_bounds() {
     if (rot.xx > 0) {
         return {position.x - b_limb.x_size, position.x + f_limb.x_size};

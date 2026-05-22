@@ -33,9 +33,8 @@ def plot_transit(
         eccen=0,
         lon_periapse=0,
         rotate_with_orbit=True,
-        outline_args=dict(),
         area_args=dict(),
-        meridian_args=dict(),
+        meridian_args=dict(visible_only=True),
         source_args=dict(),
 ):
     from matplotlib import pyplot as plt
@@ -45,13 +44,14 @@ def plot_transit(
     assert (r_forward > 0) and (r_back > 0) and (r_side > 0), "Radii must be positive."
     ci = orb.cos_inc if rotate_with_orbit else -2.
     x, y, z = orb.get_position(t)
-    bell = BiellipsoidWrap(x, y, z, theta, phi, gamma, r_forward, r_back, r_pole, r_side, ci)
-    print(bell.position)
-    # bell.plot_outline()
-    bell.plot_area(**area_args)
-    # bell.plot_meridians()
 
-    # TODO: Better source plotting
+    # Draw the planet
+    # TODO: Handle catwoman emulation
+    bell = BiellipsoidWrap(x, y, z, theta, phi, gamma, r_forward, r_back, r_pole, r_side, ci)
+    bell.plot_area(**area_args)
+    bell.plot_meridians(**meridian_args)
+
+    # Draw the parent star
     source = LightSourceWrap(limb_type, limb)
     source_args.setdefault('zorder', -100 if z > 0 else 100)
     source.plot_brightness(pcm_args=source_args)

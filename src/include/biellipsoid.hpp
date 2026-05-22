@@ -32,12 +32,13 @@ class Biellipsoid {
     void update_derived(); // Updates f_limb and b_limb when radii or rot change.
 
     // Derived info
-    Vec3 forward_vector();
+    Bounds x_bounds();
+    Bounds y_bounds();
     // Checks if loc is on the forward side of the biellipsoid or the back
     bool is_forward(Vec3 loc);
     bool is_forward_local(Vec3 loc);
-    Bounds x_bounds();
-    Bounds y_bounds();
+    // Checks if loc is not behind / inside the biellipsoid
+    bool is_visible(Vec3 loc);
     // Determines the y range occupied by the biellipsoid for this x value (min=max outside range)
     Bounds slice_ylimits(double x);
     // Returns whether the line through x, y intersects the biellipsoid

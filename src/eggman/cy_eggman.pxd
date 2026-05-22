@@ -33,6 +33,7 @@ cdef extern from "orbit.cpp":
         double get_period()
         double get_semimajor()
         double get_eccen()
+        double get_cos_inc()
 
 
 cdef class OrbitWrap:
@@ -78,6 +79,7 @@ cdef extern from "biellipsoid.cpp":
         void update_derived()
         Vec3 forward_vector()
         bint is_forward(Vec3 loc)
+        bint is_visible(Vec3 loc)
         Bounds x_bounds()
         Bounds y_bounds()
         Bounds slice_ylimits(double x)

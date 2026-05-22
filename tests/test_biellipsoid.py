@@ -134,6 +134,21 @@ def test_transforms():
             assert bell.aligned_to_sphere(bell.world_to_aligned(loc)) == approx(loc_sphere)
 
 
+def test_biellipsoid_point_visible():
+    bell = BiellipsoidWrap(0., 0., 0., 30., 1.5, 0, 1.33, 1.33, 1.33, 1.33)
+    assert not bell.is_visible(0, 0, 0)
+    assert not bell.is_visible(0., 0., -10.0)
+    assert bell.is_visible(1., 1., 0.)
+    assert not bell.is_visible(0.7, 0.7, 0)
+    assert bell.is_visible(0., 0., 10.0)
+    bell = BiellipsoidWrap(5., 3., 0., 30., 1.5, 0, .15, .1, .1, .1)
+    assert not bell.is_visible(5, 3, 0)
+    assert not bell.is_visible(5., 3., -10.0)
+    assert not bell.is_visible(5.02, 2.98, 0.)
+    assert not bell.is_visible(5.07, 3.07, 0)
+    assert bell.is_visible(5., 3., 10.0)
+
+
 def test_biellipsoid_slice_ylimits():
     # Check that the ylimits for a given x are correctly calculated
     # Circle

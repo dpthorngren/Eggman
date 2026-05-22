@@ -16,7 +16,7 @@ cdef class OrbitWrap:
 
     @property
     def cos_inc(self) -> double:
-        return self.orb.get_eccen()
+        return self.orb.get_cos_inc()
 
     def __init__(self, double period, double t0, double semimajor, double eccen=0,
                  double inclination=90, double lon_periapse=90):
