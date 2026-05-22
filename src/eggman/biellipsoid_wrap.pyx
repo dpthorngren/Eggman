@@ -91,6 +91,36 @@ cdef class BiellipsoidWrap:
         cdef Bounds b = self.bell.slice_ylimits(x)
         return np.array([b.min, b.max])
 
+    def world_to_aligned(self, loc):
+        cdef Vec3 v = Vec3(loc[0], loc[1], loc[2])
+        v = self.bell.world_to_aligned(v)
+        return np.array([v.x, v.y, v.z])
+
+    def world_to_sphere(self, loc):
+        cdef Vec3 v = Vec3(loc[0], loc[1], loc[2])
+        v = self.bell.world_to_sphere(v)
+        return np.array([v.x, v.y, v.z])
+
+    def aligned_to_world(self, loc):
+        cdef Vec3 v = Vec3(loc[0], loc[1], loc[2])
+        v = self.bell.aligned_to_world(v)
+        return np.array([v.x, v.y, v.z])
+
+    def aligned_to_sphere(self, loc):
+        cdef Vec3 v = Vec3(loc[0], loc[1], loc[2])
+        v = self.bell.aligned_to_sphere(v)
+        return np.array([v.x, v.y, v.z])
+
+    def sphere_to_world(self, loc):
+        cdef Vec3 v = Vec3(loc[0], loc[1], loc[2])
+        v = self.bell.sphere_to_world(v)
+        return np.array([v.x, v.y, v.z])
+
+    def sphere_to_aligned(self, loc):
+        cdef Vec3 v = Vec3(loc[0], loc[1], loc[2])
+        v = self.bell.sphere_to_aligned(v)
+        return np.array([v.x, v.y, v.z])
+
     def principal_axes(self):
         '''Get the principle axes from a biellipsoid, for visualization and testing purposes.'''
         forward = self.rot @ np.diag([self.r_forward, self.r_up, self.r_side])

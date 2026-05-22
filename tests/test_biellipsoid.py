@@ -108,6 +108,32 @@ def test_biellipsoid_bounds():
     assert ymax == approx(1.0)
 
 
+def test_transforms():
+    for i in range(20):
+        angles = 179. * np.random.rand(3) - 90.
+        radii = 1.5 * np.random.rand(4) + .5
+        position = 10 * np.random.rand(3) - 5.
+        bell = BiellipsoidWrap(*position, *angles, *radii)
+        # Check origin transforms first
+        assert bell.world_to_sphere(position) == approx([0., 0., 0.])
+        assert bell.world_to_aligned(position) == approx([0., 0., 0.])
+        assert bell.sphere_to_world([0., 0., 0.]) == approx(position)
+        assert bell.aligned_to_world([0., 0., 0.]) == approx(position)
+        assert bell.sphere_to_aligned([0., 0., 0.]) == approx([0., 0., 0.])
+        assert bell.aligned_to_sphere([0., 0., 0.]) == approx([0., 0., 0.])
+        # Check unit vectors
+        for v, r in zip(np.eye(3), bell.rot):
+            assert bell.world_to_aligned(position + v) == approx(r)
+        # Check random points
+        for i in range(20):
+            loc = 10 * np.random.rand(3) - 5.
+            assert bell.aligned_to_world(loc) == approx(bell.rot @ loc + position)
+            loc_sphere = bell.world_to_sphere(loc)
+            assert bell.sphere_to_world(loc_sphere) == approx(loc)
+            assert bell.aligned_to_world(bell.sphere_to_aligned(loc_sphere)) == approx(loc)
+            assert bell.aligned_to_sphere(bell.world_to_aligned(loc)) == approx(loc_sphere)
+
+
 def test_biellipsoid_slice_ylimits():
     # Check that the ylimits for a given x are correctly calculated
     # Circle

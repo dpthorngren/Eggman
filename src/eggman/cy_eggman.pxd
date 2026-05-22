@@ -81,6 +81,12 @@ cdef extern from "biellipsoid.cpp":
         Bounds x_bounds()
         Bounds y_bounds()
         Bounds slice_ylimits(double x)
+        Vec3 world_to_aligned(Vec3 loc)
+        Vec3 world_to_sphere(Vec3 loc)
+        Vec3 aligned_to_world(Vec3 loc)
+        Vec3 aligned_to_sphere(Vec3 loc)
+        Vec3 sphere_to_world(Vec3 loc)
+        Vec3 sphere_to_aligned(Vec3 loc)
 
 
 cdef class BiellipsoidWrap:

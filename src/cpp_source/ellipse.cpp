@@ -50,7 +50,7 @@ bool Ellipse::line_intersects(double x, double y) {
     double det = e1.x * e2.y - e2.x * e1.y;
     double u = (e2.y * x - e2.x * y) / det;
     double v = (-e1.y * x + e1.x * y) / det;
-    return u * u + v * v < 1.;
+    return u * u + v * v <= 1.;
 }
 
 Vec3 Ellipse::plane_intersection(Vec3 normal) {

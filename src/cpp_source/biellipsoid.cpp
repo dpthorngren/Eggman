@@ -188,3 +188,59 @@ Bounds Biellipsoid::y_bounds() {
         return {position.y - f_limb.y_size, position.y + b_limb.y_size};
     }
 }
+
+inline Vec3 Biellipsoid::world_to_aligned(Vec3 loc) {
+    Vec3 result;
+    loc.x -= position.x;
+    loc.y -= position.y;
+    loc.z -= position.z;
+    MATMUL_T(rot, loc, result);
+    return result;
+}
+
+inline Vec3 Biellipsoid::world_to_sphere(Vec3 loc) {
+    Vec3 result;
+    loc.x -= position.x;
+    loc.y -= position.y;
+    loc.z -= position.z;
+    MATMUL_T(rot, loc, result);
+    result.x /= (result.x < 0 ? r_back : r_forward);
+    result.y /= r_up;
+    result.z /= r_side;
+    return result;
+}
+
+inline Vec3 Biellipsoid::aligned_to_world(Vec3 loc) {
+    Vec3 result;
+    MATMUL(rot, loc, result);
+    result.x += position.x;
+    result.y += position.y;
+    result.z += position.z;
+    return result;
+}
+
+inline Vec3 Biellipsoid::aligned_to_sphere(Vec3 loc) {
+    loc.x /= (loc.x < 0 ? r_back : r_forward);
+    loc.y /= r_up;
+    loc.z /= r_side;
+    return loc;
+}
+
+inline Vec3 Biellipsoid::sphere_to_world(Vec3 loc) {
+    Vec3 result;
+    loc.x *= (loc.x < 0 ? r_back : r_forward);
+    loc.y *= r_up;
+    loc.z *= r_side;
+    MATMUL(rot, loc, result);
+    result.x += position.x;
+    result.y += position.y;
+    result.z += position.z;
+    return result;
+}
+
+inline Vec3 Biellipsoid::sphere_to_aligned(Vec3 loc) {
+    loc.x *= (loc.x < 0 ? r_back : r_forward);
+    loc.y *= r_up;
+    loc.z *= r_side;
+    return loc;
+}

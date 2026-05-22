@@ -44,6 +44,14 @@ class Biellipsoid {
     bool line_intersects(double x, double y);
     // Finds the nearest point on/in the biellipse to the line through x, y
     Vec3 nearest_to_line(double x, double y);
+
+    // Coordinate transforms
+    Vec3 world_to_aligned(Vec3 loc);
+    Vec3 world_to_sphere(Vec3 loc);
+    Vec3 aligned_to_world(Vec3 loc);
+    Vec3 aligned_to_sphere(Vec3 loc);
+    Vec3 sphere_to_world(Vec3 loc);
+    Vec3 sphere_to_aligned(Vec3 loc);
 };
 
 #endif
