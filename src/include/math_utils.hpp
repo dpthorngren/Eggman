@@ -14,7 +14,7 @@
     out.x = mat.xx * vec.x + mat.xy * vec.y + mat.xz * vec.z;                                      \
     out.y = mat.yx * vec.x + mat.yy * vec.y + mat.yz * vec.z;                                      \
     out.z = mat.zx * vec.x + mat.zy * vec.y + mat.zz * vec.z;
-#define MATMUL_T(mat, vec, out)                                                                      \
+#define MATMUL_T(mat, vec, out)                                                                    \
     out.x = mat.xx * vec.x + mat.yx * vec.y + mat.zx * vec.z;                                      \
     out.y = mat.xy * vec.x + mat.yy * vec.y + mat.zy * vec.z;                                      \
     out.z = mat.xz * vec.x + mat.yz * vec.y + mat.zz * vec.z;

@@ -41,7 +41,9 @@ cdef class EllipseWrap:
         ])
 
     def line_intersects(self, x, y):
-        return self.ell.line_intersects(x, y)
+        cdef Vec3 result
+        hit = self.ell.line_intersects(x, y, &result)
+        return hit, np.array([result.x, result.y, result.z])
 
     def nearest_to_line(self, xt, yt):
         cdef Vec3 result = self.ell.nearest_to_line(xt, yt)

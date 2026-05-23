@@ -146,11 +146,71 @@ Bounds Biellipsoid::slice_ylimits(double x) {
 }
 
 bool Biellipsoid::line_intersects(double x, double y) {
-    if (is_forward((Vec3){x, y, position.z})) {
-        return f_limb.line_intersects(x - position.x, y - position.y);
-    } else {
-        return b_limb.line_intersects(x - position.x, y - position.y);
+    bool hit;
+    Vec3 loc;
+    x -= position.x;
+    y -= position.y;
+    hit = f_limb.line_intersects(x, y, &loc);
+    if (hit && is_forward_local(loc)) {
+        return true;
     }
+    hit = b_limb.line_intersects(x, y, &loc);
+    if (hit && (!is_forward_local(loc))) {
+        return true;
+    }
+    return false;
+}
+
+Vec3 Biellipsoid::line_project(double x, double y) {
+    x -= position.x;
+    y -= position.y;
+    Vec3 hit;
+    // Line origin in forward sphere-space: (x, y, 0) in world-space
+    Vec3 p0 = {
+        (rot.xx * x + rot.yx * y) / r_forward, (rot.xy * x + rot.yy * y) / r_up,
+        (rot.xz * x + rot.yz * y) / r_side
+    };
+    // Find the forward near-point in forward sphere-space
+    // Direction of the line in forward sphere-space
+    Vec3 u = {rot.zx / r_forward, rot.zy / r_up, rot.zz / r_side};
+    double len = LENGTH(u);
+    RESCALE(u, len);
+    double det, offset;
+    offset = u.x * p0.x + u.y * p0.y + u.z * p0.z;
+    len = LENGTH(p0);
+    det = offset * offset - len * len + 1;
+    if (det > 0) {
+        offset = sqrt(det) - offset;
+        hit = (Vec3){
+            (p0.x + offset * u.x) * r_forward, (p0.y + offset * u.y) * r_up,
+            (p0.z + offset * u.z) * r_side
+        };
+        if (hit.x > 0) {
+            return aligned_to_world(hit);
+        }
+    }
+
+    // Find the backward near-point in backward sphere-space
+    p0.x = p0.x * r_forward / r_back;
+    u = {rot.zx / r_back, rot.zy / r_up, rot.zz / r_side};
+    len = LENGTH(u);
+    RESCALE(u, len);
+    offset = u.x * p0.x + u.y * p0.y + u.z * p0.z;
+    len = LENGTH(p0);
+    det = offset * offset - len * len + 1;
+    if (det < 0) {
+        // No intersections
+        return (Vec3){NAN, NAN, NAN};
+    }
+    offset = sqrt(det) - offset;
+    hit = {
+        (p0.x + offset * u.x) * r_back, (p0.y + offset * u.y) * r_up, (p0.z + offset * u.z) * r_side
+    };
+    if (hit.x > 0) {
+        // No intersections
+        return (Vec3){NAN, NAN, NAN};
+    }
+    return aligned_to_world(hit);
 }
 
 Vec3 Biellipsoid::nearest_to_line(double x, double y) {

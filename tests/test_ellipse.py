@@ -49,7 +49,10 @@ def test_circles():
         ell = EllipseWrap.create_from_rot_radii(0.9, 0.9, rot)
         for x, y in np.random.rand(200, 2):
             expect = x*x + y*y < .9**2
-            assert ell.line_intersects(x, y) == expect
+            hit, intersect = ell.line_intersects(x, y)
+            if expect:
+                assert hit
+                assert intersect[:2] == approx([x, y], 1e-9)
             expect = (x, y) if expect else .9 * np.array([x, y]) / np.sqrt(x*x + y*y)
             assert ell.nearest_to_line(x, y)[:2] == approx(expect, abs=1e-6)
 
@@ -76,10 +79,12 @@ def test_ellipses():
             assert zp == 0.
             assert xp**2 + yp**2 == approx(x**2 + y**2, 1e-12)
             dist = (xp / r1)**2 + (yp / r2)**2
-            assert ell.line_intersects(x, y) == (dist < 1)
+            hit, intersect = ell.line_intersects(x, y)
             nearest = ell.nearest_to_line(x, y)
             if dist < 1:
+                assert hit
                 assert nearest == approx([x, y, 0.], 1e-9)
+                assert intersect == approx([x, y, 0.], 1e-9)
             else:
                 # Point should be on the ellipse boundary
                 assert nearest[2] == approx(0., rel=1e-12)

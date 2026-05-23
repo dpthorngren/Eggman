@@ -52,7 +52,7 @@ cdef extern from "ellipse.cpp":
         Ellipse()
         Ellipse(Vec3 e1, Vec3 e2)
         void get_ybounds(double x, Vec3 *out_min, Vec3 *out_max)
-        bint line_intersects(double x, double y)
+        bint line_intersects(double x, double y, Vec3* out)
         Vec3 nearest_to_line(double xt, double yt)
 
 
@@ -83,6 +83,8 @@ cdef extern from "biellipsoid.cpp":
         Bounds x_bounds()
         Bounds y_bounds()
         Bounds slice_ylimits(double x)
+        bint line_intersects (double x, double y)
+        Vec3 line_project (double x, double y)
         Vec3 world_to_aligned(Vec3 loc)
         Vec3 world_to_sphere(Vec3 loc)
         Vec3 aligned_to_world(Vec3 loc)

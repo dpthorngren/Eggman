@@ -43,6 +43,9 @@ class Biellipsoid {
     Bounds slice_ylimits(double x);
     // Returns whether the line through x, y intersects the biellipsoid
     bool line_intersects(double x, double y);
+    // Finds the intersection of a line through (x, y) with the biellipsoid, choosing point with the
+    // larger z and returning the longitude, sin(latitutde), and cos(incidence angle).
+    Vec3 line_project(double x, double y);
     // Finds the nearest point on/in the biellipse to the line through x, y
     Vec3 nearest_to_line(double x, double y);
 

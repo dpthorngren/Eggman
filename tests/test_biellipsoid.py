@@ -149,6 +149,36 @@ def test_biellipsoid_point_visible():
     assert bell.is_visible(5., 3., 10.0)
 
 
+def test_biellipsoid_intersect():
+    bell = BiellipsoidWrap(0., 0., 0., 0, 0, 0, 1.33, 1.33, 1.33, 1.33)
+    hit = bell.line_project(.5, .5)
+    assert hit[0] == 0.5
+    assert hit[1] == 0.5
+    assert np.linalg.norm(hit / 1.33) == approx(1.0)
+    # Changing the far ellipsoid shouldn't matter
+    bell = BiellipsoidWrap(0., 0., 0., 0, 0, 0, 1.2, 0.5, 1.2, 1.2)
+    hit = bell.line_project(.5, .5)
+    assert hit[0] == 0.5
+    assert hit[1] == 0.5
+    assert np.linalg.norm(hit / 1.2) == approx(1.0)
+    for i in range(100):
+        # TODO: Also randomize positions
+        angles = 179. * np.random.rand(3) - 90. * np.array([0., 0., 0.])
+        radii = 1.5 * np.random.rand(4) + .5
+        bell = BiellipsoidWrap(0., 0., 0., *angles, *radii)
+        for pos in np.random.rand(100, 2) * 4 - 2:
+            hit = bell.line_project(pos[0], pos[1])
+            if bell.line_intersects(pos[0], pos[1]):
+                assert hit[:2] == approx(pos[:2])
+                pos_rot = np.ravel(bell.rot.T @ np.row_stack(hit))
+                pos_rot[0] /= bell.r_forward if pos_rot[0] > 0 else bell.r_back
+                pos_rot[1] /= bell.r_up
+                pos_rot[2] /= bell.r_side
+                assert np.linalg.norm(pos_rot) == approx(1)
+            else:
+                assert np.all(np.isnan(hit))
+
+
 def test_biellipsoid_slice_ylimits():
     # Check that the ylimits for a given x are correctly calculated
     # Circle

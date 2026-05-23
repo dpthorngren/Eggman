@@ -95,6 +95,13 @@ cdef class BiellipsoidWrap:
         cdef Bounds b = self.bell.slice_ylimits(x)
         return np.array([b.min, b.max])
 
+    def line_intersects(self, double x, double y):
+        return self.bell.line_intersects(x, y)
+
+    def line_project(self, double x, double y):
+        cdef Vec3 result = self.bell.line_project(x, y)
+        return np.array([result.x, result.y, result.z])
+
     def world_to_aligned(self, loc):
         cdef Vec3 v = Vec3(loc[0], loc[1], loc[2])
         v = self.bell.world_to_aligned(v)
