@@ -78,9 +78,7 @@ void Biellipsoid::update_derived() {
     e1 = {1.0, 0.0, 0.0};
     e2 = {0.0, 1.0, 0.0};
     if (limb_plane.x * limb_plane.x + limb_plane.y * limb_plane.y > 1e-12) {
-        e1 = (Vec3){limb_plane.y, -limb_plane.x, 0.};
-        l = LENGTH(e1);
-        RESCALE(e1, l);
+        e1 = normalized({limb_plane.y, -limb_plane.x, 0.});
         CROSS(e1, limb_plane, e2);
     }
     // Transform back to the view plane
@@ -101,9 +99,7 @@ void Biellipsoid::update_derived() {
     e1 = {1.0, 0.0, 0.0};
     e2 = {0.0, 1.0, 0.0};
     if (limb_plane.x * limb_plane.x + limb_plane.y * limb_plane.y > 1e-12) {
-        e1 = (Vec3){limb_plane.y, -limb_plane.x, 0.};
-        l = LENGTH(e1);
-        RESCALE(e1, l);
+        e1 = normalized({limb_plane.y, -limb_plane.x, 0.});
         CROSS(e1, limb_plane, e2);
     }
 
@@ -172,10 +168,8 @@ Vec3 Biellipsoid::line_project(double x, double y) {
     };
     // Find the forward near-point in forward sphere-space
     // Direction of the line in forward sphere-space
-    Vec3 u = {rot.zx / r_forward, rot.zy / r_up, rot.zz / r_side};
-    double len = LENGTH(u);
-    RESCALE(u, len);
-    double det, offset;
+    Vec3 u = normalized({rot.zx / r_forward, rot.zy / r_up, rot.zz / r_side});
+    double len, det, offset;
     offset = u.x * p0.x + u.y * p0.y + u.z * p0.z;
     len = LENGTH(p0);
     det = offset * offset - len * len + 1;
@@ -192,9 +186,7 @@ Vec3 Biellipsoid::line_project(double x, double y) {
 
     // Find the backward near-point in backward sphere-space
     p0.x = p0.x * r_forward / r_back;
-    u = {rot.zx / r_back, rot.zy / r_up, rot.zz / r_side};
-    len = LENGTH(u);
-    RESCALE(u, len);
+    u = normalized({rot.zx / r_back, rot.zy / r_up, rot.zz / r_side});
     offset = u.x * p0.x + u.y * p0.y + u.z * p0.z;
     len = LENGTH(p0);
     det = offset * offset - len * len + 1;

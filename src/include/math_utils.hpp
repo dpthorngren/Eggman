@@ -1,6 +1,8 @@
 #ifndef MATHUTILS_HPP
 #define MATHUTILS_HPP
 
+#include <cmath>
+
 // Linear algebra structs and macros
 #define SIGN(x) ((x < 0.) ? -1. : ((x > 0.) ? 1. : 0.))
 #define CLAMP(x, xmin, xmax) (fmax(fmin(x, xmax), xmin));
@@ -70,6 +72,11 @@ inline void matmul3x3(Mat3 &a, Mat3 &b, Mat3 &out) {
     out.zx = a.zx * b.xx + a.zy * b.yx + a.zz * b.zx;
     out.zy = a.zx * b.xy + a.zy * b.yy + a.zz * b.zy;
     out.zz = a.zx * b.xz + a.zy * b.yz + a.zz * b.zz;
+}
+
+inline Vec3 normalized(Vec3 v) {
+    double len = sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
+    return (Vec3){v.x / len, v.y / len, v.z / len};
 }
 
 #endif
