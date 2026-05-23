@@ -162,15 +162,15 @@ def test_biellipsoid_intersect():
     assert hit[1] == 0.5
     assert np.linalg.norm(hit / 1.2) == approx(1.0)
     for i in range(100):
-        # TODO: Also randomize positions
+        loc = 10 * np.random.rand(3) - 5
         angles = 179. * np.random.rand(3) - 90. * np.array([0., 0., 0.])
         radii = 1.5 * np.random.rand(4) + .5
-        bell = BiellipsoidWrap(0., 0., 0., *angles, *radii)
-        for pos in np.random.rand(100, 2) * 4 - 2:
+        bell = BiellipsoidWrap(*loc, *angles, *radii)
+        for pos in np.random.rand(100, 2) * 4 - 2 + loc[:2]:
             hit = bell.line_project(pos[0], pos[1])
             if bell.line_intersects(pos[0], pos[1]):
                 assert hit[:2] == approx(pos[:2])
-                pos_rot = np.ravel(bell.rot.T @ np.row_stack(hit))
+                pos_rot = np.ravel(bell.rot.T @ np.row_stack(hit - loc))
                 pos_rot[0] /= bell.r_forward if pos_rot[0] > 0 else bell.r_back
                 pos_rot[1] /= bell.r_up
                 pos_rot[2] /= bell.r_side
