@@ -103,11 +103,18 @@ cdef class BiellipsoidWrap:
 cdef extern from "light_source.cpp":
     cdef cppclass LightSource:
         int source_type
-        double limb[4]
-        double normalization
+        double source_params[12]
+        int limb_type
+        double limb_params[4]
+        double limb_norm
+
         LightSource()
-        LightSource(int type, double limb0, double limb1, double limb2, double limb3)
-        double get_brightness(double x, double y)
+        LightSource(int source_type, double *source, int limb_type, double *limb_params)
+
+        double get_brightness(double mu, double cos_lat, double lon)
+        double get_brightness_sphere(double x, double y)
+        bint uses_mu()
+        bint uses_latlon()
 
 
 cdef class LightSourceWrap:

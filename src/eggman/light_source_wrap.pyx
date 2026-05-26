@@ -1,39 +1,63 @@
 
 cdef class LightSourceWrap:
-    @property
-    def limb_type(self):
-        return ['quadratic', 'nonlinear'][self.source.source_type]
+    _source_type_names_ = ['none', 'uniform', 'daynightpole']
+    _source_n_params_ = [0, 1, 4]
+    _limb_type_names_ = ['lambertian', 'quadratic', 'nonlinear']
+    _limb_n_params_ = [0, 2, 4]
 
     @property
-    def limb_code(self):
+    def source_type(self):
+        return self._source_type_names_[self.source.source_type]
+
+    @property
+    def source_type_code(self):
         return self.source.source_type
 
     @property
-    def limb_params(self):
-        return np.array([self.source.limb])
+    def source_params(self):
+        return np.array(self.source.source_params)[:self._source_n_params_[self.source_type_code]]
 
     @property
-    def normalization(self):
-        return self.source.normalization
+    def limb_type(self):
+        return self._limb_type_names_[self.source.limb_type]
 
-    def __init__(self, str limb_type, list[double] limb_params):
-        cdef int limb_code = -1
+    @property
+    def limb_type_code(self):
+        return self.source.limb_type
+
+    @property
+    def limb_params(self):
+        return np.array(self.source.limb_params)[:self._limb_n_params_[self.limb_type_code]]
+
+    @property
+    def limb_norm(self):
+        return self.source.limb_norm
+
+    def __init__(self, str source_type, list[double] source_params, str limb_type, list[double] limb_params):
+        source_type = source_type.lower().strip()
+        assert source_type in self._source_type_names_, f"Error: source_type {source_type} not recognized, must be one of {self._source_type_names_}"
+        cdef int source_code = self._source_type_names_.index(source_type)
+        assert len(source_params) == self._source_n_params_[source_code], f"Error: wrong number of source parameters; should be {self._source_n_params_[source_code]}, was {len(source_params)}."
+        cdef double[12] source_params_c = [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.]
+        for i, p in enumerate(source_params):
+            source_params_c[i] = p
+
         limb_type = limb_type.lower().strip()
-        if limb_type == "quadratic":
-            assert len(limb_params) == 2, "Error: Quadratic limb darkening takes exactly two parameters."
-            limb_code = 0
-            limb_params = [limb_params[0], limb_params[1], 0., 0.]
-        elif limb_type == "nonlinear":
-            assert len(limb_params) == 4, "Error: Nonlinear limb darkening takes exactly two parameters."
-            limb_code = 1
-        else:
-            raise ValueError("limb_type not recognized, must be one of quadratic, nonlinear.")
-        self.source = LightSource(limb_code, limb_params[0], limb_params[1], limb_params[2], limb_params[3])
+        assert limb_type in self._limb_type_names_, f"Error: limb_type {limb_type} not recognized, must be one of {self._limb_type_names_}"
+        cdef int limb_code = self._limb_type_names_.index(limb_type)
+        assert len(limb_params) == self._limb_n_params_[limb_code], f"Error: wrong number of limb parameters; should be {self._limb_n_params_[limb_code]}, was {len(limb_params)}."
+        cdef double[4] limb_params_c = [0., 0., 0., 0.]
+        for i, p in enumerate(limb_params):
+            limb_params_c[i] = p
+        self.source = LightSource(source_code, source_params_c, limb_code, limb_params_c)
 
-    def get_brightness(self, x, y):
+    def get_brightness(self, nu, lat, lon):
+        return self.source.get_brightness(nu, lat, lon)
+
+    def get_brightness_sphere(self, x, y):
         types = [float, np.float64, np.float32, np.int32, np.int64, int]
         if type(x) in types and type(y) in types:
-            return self.source.get_brightness(x, y)
+            return self.source.get_brightness_sphere(x, y)
         x = np.atleast_1d(x)
         y = np.atleast_1d(y)
         assert x.ndim == 1 and y.ndim == 1
@@ -48,7 +72,7 @@ cdef class LightSourceWrap:
         cdef int i, j
         for i in range(len(x)):
             for j in range(len(y)):
-                output_view[i, j] = self.source.get_brightness(x_view[i], y_view[j])
+                output_view[i, j] = self.source.get_brightness_sphere(x_view[i], y_view[j])
         return output
 
     def plot_brightness(source, res=400, pcm_args=dict()):
@@ -58,8 +82,8 @@ cdef class LightSourceWrap:
         x = np.linspace(-1, 1, res)
         y = np.linspace(-1, 1, res)
 
-        brightness = source.get_brightness(x, y)
+        brightness = source.get_brightness_sphere(x, y)
         brightness = np.ma.masked_equal(brightness, 0.)
 
         pcm_args.setdefault('cmap', 'autumn')
-        plt.pcolormesh(x, y, brightness, **pcm_args)
+        plt.pcolormesh(x, y, brightness.T, **pcm_args)

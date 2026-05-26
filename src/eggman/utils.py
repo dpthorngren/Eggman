@@ -52,6 +52,6 @@ def plot_transit(
     bell.plot_meridians(**meridian_args)
 
     # Draw the parent star
-    source = LightSourceWrap(limb_type, limb)
+    source = LightSourceWrap("uniform", [1.0], limb_type, limb)
     source_args.setdefault('zorder', -100 if z > 0 else 100)
     source.plot_brightness(pcm_args=source_args)

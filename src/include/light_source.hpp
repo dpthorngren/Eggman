@@ -1,16 +1,39 @@
 #ifndef LIGHT_SOURCE_HPP
 #define LIGHT_SOURCE_HPP
 
+#define MAX_SOURCE_PARAMS 12
+#define MAX_LIMB_PARAMS 4
+
+/* Describes a light source in terms of its emission map and limb darkening.
+ *
+ * Base source type code, number of parameters, and notes:
+ * 0, 0, No emission (also bypasses limb darkening)
+ * 1, 1, Uniform emission at a given constant brightness (L / 4*pi)
+ * 2, 4, Dayside, nightside, and pole brightness, with transition size
+ *
+ * Limb larkening type code, number of parameters, and notes:
+ * 0, 0, Lambertian (appears uniformly bright as mu terms cancel)
+ * 1, 2, Quadratic formula of Mandel & Agol 2002
+ * 2, 4, Non-linear formula of Mandel & Agol 2002
+ */
 class LightSource {
   public:
     int source_type;
-    double limb[4];
-    double normalization;
+    double source_params[MAX_SOURCE_PARAMS];
+    int limb_type;
+    double limb_params[MAX_LIMB_PARAMS];
+    double limb_norm;
 
     LightSource();
-    LightSource(int type, double limb0, double limb1, double limb2, double limb3);
+    LightSource(int source_type, double *source, int limb_type, double *limb_params);
 
-    double get_brightness(double x, double y);
+    double get_brightness(double mu, double cos_lat, double lon);
+    // Wrapper for get_brightness on a unit sphere given x and y coordinates
+    double get_brightness_sphere(double x, double y);
+    // Whether this light source needs the cos angle of incidence to calculate brightness
+    bool uses_mu();
+    // Whether this light source needs lat and lon to calculate brightness
+    bool uses_latlon();
 };
 
 #endif
