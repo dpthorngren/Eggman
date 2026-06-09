@@ -38,7 +38,7 @@ cdef class LightSourceWrap:
         assert source_type in self._source_type_names_, f"Error: source_type {source_type} not recognized, must be one of {self._source_type_names_}"
         cdef int source_code = self._source_type_names_.index(source_type)
         assert len(source_params) == self._source_n_params_[source_code], f"Error: wrong number of source parameters; should be {self._source_n_params_[source_code]}, was {len(source_params)}."
-        cdef double[12] source_params_c = [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.]
+        cdef double[MAX_SOURCE_PARAMS] source_params_c = [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.]
         for i, p in enumerate(source_params):
             source_params_c[i] = p
 
@@ -46,7 +46,7 @@ cdef class LightSourceWrap:
         assert limb_type in self._limb_type_names_, f"Error: limb_type {limb_type} not recognized, must be one of {self._limb_type_names_}"
         cdef int limb_code = self._limb_type_names_.index(limb_type)
         assert len(limb_params) == self._limb_n_params_[limb_code], f"Error: wrong number of limb parameters; should be {self._limb_n_params_[limb_code]}, was {len(limb_params)}."
-        cdef double[4] limb_params_c = [0., 0., 0., 0.]
+        cdef double[MAX_LIMB_PARAMS] limb_params_c = [0., 0., 0., 0.]
         for i, p in enumerate(limb_params):
             limb_params_c[i] = p
         self.source = LightSource(source_code, source_params_c, limb_code, limb_params_c)

@@ -101,11 +101,13 @@ cdef class BiellipsoidWrap:
 
 # ===== Light Source class and wrapper =====
 cdef extern from "light_source.cpp":
+    const int MAX_SOURCE_PARAMS
+    const int MAX_LIMB_PARAMS
     cdef cppclass LightSource:
         int source_type
-        double source_params[12]
+        double source_params[MAX_SOURCE_PARAMS]
         int limb_type
-        double limb_params[4]
+        double limb_params[MAX_LIMB_PARAMS]
         double limb_norm
 
         LightSource()

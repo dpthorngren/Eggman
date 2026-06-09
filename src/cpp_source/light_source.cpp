@@ -5,10 +5,10 @@
 LightSource::LightSource() {
     limb_type = 0;
     source_type = 0;
-    for (int i = 0; i < MAX_SOURCE_PARAMS; i++) {
+    for (int i = 0; i < MAX_LIMB_PARAMS; i++) {
         limb_params[i] = 0.;
     }
-    for (int i = 0; i < MAX_LIMB_PARAMS; i++) {
+    for (int i = 0; i < MAX_SOURCE_PARAMS; i++) {
         source_params[i] = 0.;
     }
     limb_norm = M_PI;
