@@ -26,5 +26,8 @@ cpp_build/%.o: src/cpp_source/%.cpp | cpp_build
 cpp_build:
 	mkdir -p cpp_build
 
+tester: tests/test_lib_eggman.cpp | $(TARGET)
+	$(CXX) -Wall -g -I src/include -lgsl  tests/test_lib_eggman.cpp $(TARGET) -o tests/tester
+
 clean:
 	rm -rf cpp_build

@@ -1,5 +1,6 @@
 # Directories not version-controlled
 cpp_build/
+tests/tester
 projects/
 old/
 plots

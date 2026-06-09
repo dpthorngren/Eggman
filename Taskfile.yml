@@ -25,13 +25,33 @@ tasks:
 
   lint:
     desc: "Run cython linter"
+    deps: [libtest]
     run: once
     cmds:
       - flake8 ./*.py ./src/eggman/*.py --count --show-source --statistics # $(git ls-tree -r HEAD --name-only | grep '.*py$') --count --show-source --statistics
       - cython-lint .
 
+  libtest_build:
+    desc: "Build the Eggman shared library and testing program."
+    sources:
+      - src/cpp_source/[a-z_]*.cpp
+      - src/include/[a-z_]*.hpp
+      - tests/test_lib_eggman.cpp
+      - makefile
+    generates:
+      - tests/tester
+    cmds:
+      - make tester
+
+  libtest:
+    desc: "Test the Eggman C++ code as a shared library (not using Cython or Python)"
+    deps: [libtest_build]
+    run: once
+    cmds:
+      - ./tests/tester
+
   test:
-    deps: [lint, devbuild]
+    deps: [libtest, lint, devbuild]
     desc: "Run pytest."
     cmds:
       - pytest -x
