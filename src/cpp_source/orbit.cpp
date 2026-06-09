@@ -58,6 +58,10 @@ Orbit::Orbit(
 }
 
 Vec3 Orbit::get_position(double t) {
+    // Skip objects locked at the origin (convenient for other objects)
+    if (semimajor == 0.) {
+        return {0., 0., 0.};
+    }
     // Solve Kepler's equation in the rotated and inclined frame, relative to
     // inferior conjunction
     double ma = 2 * M_PI * (t - t_p) / period;
@@ -70,8 +74,7 @@ Vec3 Orbit::get_position(double t) {
     double y_inc = x_rot * -s_tap + y_rot * c_tap;
     // Transform back to the view frame (x = right, y = up, z = towards observer)
     // centered on star
-    Vec3 result = {x_inc, y_inc * c_inc, y_inc * s_inc};
-    return result;
+    return {x_inc, y_inc * c_inc, y_inc * s_inc};
 }
 
 // Trivial Accessors

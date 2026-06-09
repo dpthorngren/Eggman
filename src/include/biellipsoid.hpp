@@ -3,6 +3,7 @@
 
 #include "ellipse.hpp"
 #include "math_utils.hpp"
+#include "orbit.hpp"
 
 /* Describes a biellipsoid -- two ellipsoids smoothly and continuously joined along the yz plane,
  * then rotated and shifted. Member functions provide bounds and limits related to integrating
@@ -16,6 +17,9 @@ class Biellipsoid {
     double r_back;
     double r_up;
     double r_side;
+    double theta;
+    double phi;
+    double gamma;
     // Rotation matrix from ellipsoid space to view space.
     // Forward vector (view space) is the first column rot[::3].
     // View vector (ellipsoid space) is minus the last column -rot[2::3].
@@ -29,6 +33,7 @@ class Biellipsoid {
     void set_position(Vec3 new_position);
     // Rotate around z, y, and x; then if ci (cos(inclination)) is given, align with orbit
     void set_rotation(double theta, double phi, double gamma, double ci = -2.);
+    void position_from_orbit(double t, Orbit *orb, bool rotate_with_orbit = false);
     void update_derived(); // Updates f_limb and b_limb when radii or rot change.
 
     // Derived info

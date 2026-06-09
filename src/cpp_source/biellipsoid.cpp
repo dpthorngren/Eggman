@@ -7,6 +7,9 @@ Biellipsoid::Biellipsoid() {
     r_back = 1.0;
     r_up = 1.0;
     r_side = 1.0;
+    theta = 0.;
+    phi = 0.;
+    gamma = 0.;
     rot = {1., 0., 0., 0., 1., 0., 0., 0., 1.};
     f_limb = Ellipse();
     b_limb = Ellipse();
@@ -17,6 +20,9 @@ Biellipsoid::Biellipsoid(double r_forward, double r_back, double r_up, double r_
     this->r_back = r_back;
     this->r_up = r_up;
     this->r_side = r_side;
+    theta = 0.;
+    phi = 0.;
+    gamma = 0.;
     // Valid defaults, but expect user to usually call set_rotation next.
     rot = {1., 0., 0., 0., 1., 0., 0., 0., 1.};
     f_limb = Ellipse();
@@ -33,15 +39,15 @@ void Biellipsoid::set_radii(double r_forward, double r_back, double r_up, double
 
 void Biellipsoid::set_rotation(double theta, double phi, double gamma, double ci) {
     // Setup the rotation matrix (from ellipsoid-aligned to view frame)
-    theta = theta * M_PI / 180;
-    phi = phi * M_PI / 180;
-    gamma = gamma * M_PI / 180;
-    double ct = cos(theta);
-    double st = sin(theta);
-    double cp = cos(phi);
-    double sp = sin(phi);
-    double cg = cos(gamma);
-    double sg = sin(gamma);
+    this->theta = theta * M_PI / 180;
+    this->phi = phi * M_PI / 180;
+    this->gamma = gamma * M_PI / 180;
+    double ct = cos(this->theta);
+    double st = sin(this->theta);
+    double cp = cos(this->phi);
+    double sp = sin(this->phi);
+    double cg = cos(this->gamma);
+    double sg = sin(this->gamma);
     rot = {
         cp * ct,  -cp * st * cg + sp * sg, cp * st * sg + sp * cg,  st, ct * cg, -ct * sg,
         -sp * ct, sp * st * cg + cp * sg,  -sp * st * sg + cp * cg,
@@ -62,6 +68,13 @@ void Biellipsoid::set_rotation(double theta, double phi, double gamma, double ci
         }
     }
     update_derived();
+}
+
+void Biellipsoid::position_from_orbit(double t, Orbit *orb, bool rotate_with_orbit) {
+    set_position(orb->get_position(t));
+    if (rotate_with_orbit) {
+        set_rotation(theta, phi, gamma, orb->get_cos_inc());
+    }
 }
 
 void Biellipsoid::set_position(Vec3 new_position) { this->position = new_position; }

@@ -19,6 +19,7 @@ tasks:
       - src/eggman/cy_*.cpp
     cmds:
       - rm -rf build eggman.egg-info src/eggman/*.so
+      - rm -rf build eggman.egg-info src/eggman/*.cpp
       - pip uninstall eggman --yes
       - pip install --no-build-isolation -e .[develop]
 

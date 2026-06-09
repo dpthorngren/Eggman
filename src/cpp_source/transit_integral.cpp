@@ -3,7 +3,7 @@
 
 double transit_integrand(double y, void *params) {
     TransitIntegralParams *g = (TransitIntegralParams *)params;
-    double mu = sqrt(g->x*g->x + y*y);
+    double mu = sqrt(g->x * g->x + y * y);
     return g->emitter.get_brightness(mu, 0., 0.);
 }
 
@@ -33,7 +33,6 @@ void transit_integral(
     bool rotate_with_orbit
 ) {
     int code = 0;
-    Vec3 position = {0., 0., 0.};
     Vec3 split_point;
     double result, err;
     Bounds x_lim, y_lim;
@@ -69,12 +68,11 @@ void transit_integral(
     integOuter.params = &g;
 
     for (int i = 0; i < n; i++) {
-        position = orb->get_position(times[i]);
-        if (position.z < 0) {
+        g.bell.position_from_orbit(times[i], orb, rotate_with_orbit && (!discontinuous_pole));
+        if (g.bell.position.z < 0) {
             outputs[i] = 1.0;
             continue;
         }
-        g.bell.set_position(position);
 
         // Rotate and get planet bounding box
         if (discontinuous_pole) {
@@ -82,8 +80,10 @@ void transit_integral(
             g.bell.position.y = -st * g.bell.position.x + ct * g.bell.position.y;
             g.bell.position.x = x;
             x_lim = (Bounds){x - r_back, x + r_forward};
-            y_lim = (Bounds){g.bell.position.y - fmax(r_back, r_forward),
-                             g.bell.position.y + fmax(r_back, r_forward)};
+            y_lim = (Bounds){
+                g.bell.position.y - fmax(r_back, r_forward),
+                g.bell.position.y + fmax(r_back, r_forward)
+            };
         } else {
             if (rotate_with_orbit) {
                 g.bell.set_rotation(theta, phi, gamma, orb->get_cos_inc());
