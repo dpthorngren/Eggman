@@ -28,7 +28,7 @@ double solve_kepler(double mean_anomaly, double eccen) {
 
 Orbit::Orbit() {
     period = 1.;
-    semimajor = 1.;
+    semimajor = 0.;
     eccen = 0.;
     s_inc = 1.;
     c_inc = 0.;

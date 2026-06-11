@@ -1,6 +1,7 @@
 #include "biellipsoid.hpp"
 #include "light_source.hpp"
 #include "orbit.hpp"
+#include "phase_curve_integral.hpp"
 #include "transit_integral.hpp"
 #import <cmath>
 #include <iostream>
@@ -90,6 +91,71 @@ int test_transit() {
     return errors;
 }
 
+int test_phase_curve() {
+    ANNOUNCE_TEST();
+    int errors = 0;
+    PhaseIntegrator p = PhaseIntegrator();
+
+    // Add the star
+    Orbit orb = Orbit();
+    double source_params[MAX_SOURCE_PARAMS] = {1.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                                               0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+    double limb_params[MAX_LIMB_PARAMS] = {0., 0., 0.0, 0.0};
+    Biellipsoid bell = Biellipsoid();
+    bell.update_derived();
+    LightSource star = LightSource(1, source_params, 1, limb_params);
+    TEST_APPROX(star.limb_norm, M_PI, 1e-9, errors)
+    TEST_APPROX(star.get_brightness(0., 0., 0.), 1 / M_PI, 1e-9, errors)
+    p.add_object(&orb, &bell, &star);
+    TEST_ASSERT(p.get_n_objects(), ==, 1, errors);
+
+    // Add the planet
+    orb = Orbit(10., 0., 5., 0.00, 89., 90.);
+    bell = Biellipsoid(.12, .09, .08, .08);
+    bell.update_derived();
+    source_params[0] = 1e-6;
+    LightSource planet = LightSource(1, source_params, 0, limb_params);
+    TEST_APPROX(star.limb_norm, M_PI, 1e-9, errors);
+    TEST_APPROX(planet.get_brightness(0., 0., 0.), 1e-6 / M_PI, 1e-9, errors)
+    p.add_object(&orb, &bell, &planet);
+    TEST_ASSERT(p.get_n_objects(), ==, 2, errors);
+
+    // Test sources individually
+    p.set_time(2.5);
+    TEST_APPROX(p.shapes[0].position.x, 0.0, 1e-9, errors);
+    TEST_APPROX(p.shapes[0].position.y, 0.0, 1e-9, errors);
+    TEST_APPROX(p.shapes[0].position.z, 0.0, 1e-9, errors);
+    TEST_APPROX(p.shapes[1].position.x, 5.0, 1e-9, errors);
+    TEST_APPROX(p.shapes[1].position.y, 0.0, 1e-9, errors);
+    TEST_APPROX(p.shapes[1].position.z, 0.0, 1e-9, errors);
+    double r = p.integrate_single(0);
+    TEST_APPROX(r, 1.0, 1e-7, errors);
+    r = p.integrate_single(1);
+    TEST_APPROX(r, .12 * .09 * 1e-6, 1e-7, errors);
+
+    // Test a full phase curve
+    const int n_times = 4;
+    double time[n_times];
+    double result[n_times];
+    for (int i = 0; i < n_times; i++) {
+        time[i] = 10. * i / n_times;
+        result[i] = -1.;
+    }
+    p.phase_curve_integral(time, result, n_times);
+    for (int i = 0; i < n_times; i++) {
+        TEST_ASSERT(result[i], >, 0., errors);
+        TEST_ASSERT(result[i], <, 2., errors);
+    }
+    TEST_ASSERT(result[0], <, 1, errors);
+    TEST_ASSERT(result[1], >, 1, errors);
+    TEST_APPROX(result[2], 1, 1e-6, errors);
+    TEST_ASSERT(result[3], >, 1, errors);
+    TEST_APPROX(result[3], 1 + .12 * .09 * 1e-6, 1e-6, errors);
+    TEST_APPROX(result[2], result[1], 1e-6, errors);
+
+    return errors;
+}
+
 int main() {
     // Note: This tester is not as rigorous as the Pytest tests.  It is intended mainly to catch
     // memory management errors and distinguish between C++ errors and Cython wrapping errors.
@@ -98,6 +164,7 @@ int main() {
     errors += test_biellipsoid();
     errors += test_orbital_position();
     errors += test_transit();
+    errors += test_phase_curve();
     if (errors == 0) {
         cout << "All tests passed." << endl << endl;
     } else {

@@ -7,14 +7,14 @@
 /* Describes a light source in terms of its emission map and limb darkening.
  *
  * Base source type code, number of parameters, and notes:
- * 0, 0, No emission (also bypasses limb darkening)
- * 1, 1, Uniform emission at a given constant brightness (L / 4*pi)
- * 2, 4, Dayside, nightside, and pole brightness, with transition size
+ * - 0, 0, No emission (also bypasses limb darkening)
+ * - 1, 1, Uniform emission at a given constant brightness (L / 4*pi)
+ * - 2, 4, Dayside, nightside, and pole brightness, with transition size
  *
  * Limb larkening type code, number of parameters, and notes:
- * 0, 0, Lambertian (appears uniformly bright as mu terms cancel)
- * 1, 2, Quadratic formula of Mandel & Agol 2002
- * 2, 4, Non-linear formula of Mandel & Agol 2002
+ * - 0, 0, Lambertian (appears uniformly bright as mu terms cancel)
+ * - 1, 2, Quadratic formula of Mandel & Agol 2002
+ * - 2, 4, Non-linear formula of Mandel & Agol 2002
  */
 class LightSource {
   public:
