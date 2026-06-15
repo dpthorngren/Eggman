@@ -6,6 +6,7 @@ include "orbit_wrap.pyx"
 include "biellipsoid_wrap.pyx"
 include "light_source_wrap.pyx"
 include "ellipse_wrap.pyx"
+include "phase_wrap.pyx"
 
 
 cpdef object transit(double r_forward, double r_back, double r_up, double r_side, double theta, double phi, double gamma, double[::1] t, double t0, double period, double semimajor, double inclination, str limb_type, object limb, double eccen=0, double lon_periapse=90, bint rotate_with_orbit=True):

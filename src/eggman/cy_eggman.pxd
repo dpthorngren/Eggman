@@ -130,3 +130,30 @@ cdef extern from "transit_integral.cpp":
     void transit_integral(double *times, double *outputs, int n, const Orbit &orb, const LightSource &emitter, double theta, double phi, double gamma, double r_forward, double r_back, double r_up, double r_side, bint rotate_with_orbit)
 
 cpdef object transit(double r_forward, double r_back, double r_up, double r_side, double theta, double phi, double gamma, double[::1] t, double t0, double period, double semimajor, double inclination, str limbType, object limb, double eccen=?, double lon_periapse=?, bint rotate_with_orbit=?)
+
+
+# ===== Phase Curve Class and Wrapper =====
+cdef extern from "phase_curve_integral.cpp":
+    const int MAX_PHASE_OBJECTS
+    cdef cppclass PhaseIntegrator:
+        Orbit orbits[MAX_PHASE_OBJECTS]
+        Biellipsoid shapes[MAX_PHASE_OBJECTS]
+        LightSource lights[MAX_PHASE_OBJECTS]
+        bint rotate_with_orbit[MAX_PHASE_OBJECTS]
+        Bounds xlim[MAX_PHASE_OBJECTS]
+        Bounds ylim[MAX_PHASE_OBJECTS]
+
+        PhaseIntegrator()
+        PhaseIntegrator(PhaseIntegrator &p)
+
+        int add_object(const Orbit &orb, const Biellipsoid &bell, const LightSource &source, bint rot_with_orbit)
+        int get_n_objects() const
+        void clear_objects()
+        void set_time(double t)
+        double integrate_single(int i)
+        void phase_curve_integral(double *times, double *outputs, int n)
+
+cdef class PhaseIntegratorWrap:
+    cdef PhaseIntegrator pci
+    # All wrapper functions are implemented in Python, so aren't declared here.
+    # For use from Cython, use the C++ class directly

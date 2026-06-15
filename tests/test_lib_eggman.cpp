@@ -94,7 +94,7 @@ int test_transit() {
 int test_phase_curve() {
     ANNOUNCE_TEST();
     int errors = 0;
-    PhaseIntegrator p = PhaseIntegrator();
+    PhaseIntegrator p;
 
     // Add the star
     Orbit orb = Orbit();

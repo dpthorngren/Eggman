@@ -34,6 +34,7 @@ class PhaseIntegrator {
     Bounds ylim[MAX_PHASE_OBJECTS];
 
     PhaseIntegrator();
+    PhaseIntegrator(PhaseIntegrator &p);
     ~PhaseIntegrator();
 
     int add_object(const Orbit &orb, const Biellipsoid &bell, const LightSource &source, bool rot_with_orbit = false);

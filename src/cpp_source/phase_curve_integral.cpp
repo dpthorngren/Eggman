@@ -97,6 +97,26 @@ PhaseIntegrator::PhaseIntegrator() {
     gsl_set_error_handler_off();
 };
 
+PhaseIntegrator::PhaseIntegrator(PhaseIntegrator &p){
+    x = p.x;
+    i_target = p.i_target;
+    n_objects = p.n_objects;
+    workspaceInner = gsl_integration_workspace_alloc(100);
+    workspaceOuter = gsl_integration_workspace_alloc(100);
+    integInner.function = &phase_curve_integrand;
+    integInner.params = this;
+    integOuter.function = &phase_curve_inner_integral;
+    integOuter.params = this;
+    for(int i = 0; i < n_objects; i++){
+        orbits[i] = p.orbits[i];
+        shapes[i] = p.shapes[i];
+        lights[i] = p.lights[i];
+        rotate_with_orbit[i] = p.rotate_with_orbit[i];
+        xlim[i] = Bounds();
+        ylim[i] = Bounds();
+    }
+}
+
 PhaseIntegrator::~PhaseIntegrator() {
     if (workspaceInner != nullptr) {
         gsl_integration_workspace_free(workspaceInner);

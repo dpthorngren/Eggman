@@ -24,7 +24,7 @@ cdef class BiellipsoidWrap:
     @property
     def radii(self):
         '''The forward, backward, up, and side radii of the bielipsoid.'''
-        return np.array([self.bell.r_forward, self.bell.r_back, self.bell.r_up, self.bell.r_side]),
+        return np.array([self.bell.r_forward, self.bell.r_back, self.bell.r_up, self.bell.r_side])
 
     @property
     def rot(self):
