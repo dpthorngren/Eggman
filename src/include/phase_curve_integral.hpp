@@ -36,8 +36,8 @@ class PhaseIntegrator {
     PhaseIntegrator();
     ~PhaseIntegrator();
 
-    int add_object(Orbit *orb, Biellipsoid *bell, LightSource *source, bool rot_with_orbit = false);
-    int get_n_objects();
+    int add_object(const Orbit &orb, const Biellipsoid &bell, const LightSource &source, bool rot_with_orbit = false);
+    int get_n_objects() const;
     void clear_objects();
     void set_time(double t);
     double integrate_single(int i);

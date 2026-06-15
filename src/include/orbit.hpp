@@ -24,13 +24,13 @@ class Orbit {
         double lon_periapse
     );
     // Get the position of the orbiting object in view space at time t
-    Vec3 get_position(double t);
+    Vec3 get_position(double t) const;
 
     // Trivial Accessors
-    double get_period();
-    double get_semimajor();
-    double get_eccen();
-    double get_cos_inc();
+    double get_period() const;
+    double get_semimajor() const;
+    double get_eccen() const;
+    double get_cos_inc() const;
 };
 
 #endif

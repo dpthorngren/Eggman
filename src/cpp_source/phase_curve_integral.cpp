@@ -109,15 +109,12 @@ PhaseIntegrator::~PhaseIntegrator() {
 }
 
 int PhaseIntegrator::add_object(
-    Orbit *orb, Biellipsoid *bell, LightSource *source, bool rot_with_orbit
+    const Orbit &orb, const Biellipsoid &bell, const LightSource &source, bool rot_with_orbit
 ) {
-    if ((orb == nullptr) || (bell == nullptr) || (source == nullptr) ||
-        (n_objects == MAX_PHASE_OBJECTS)) {
-        return 1;
-    }
-    orbits[n_objects] = *orb;
-    shapes[n_objects] = *bell;
-    lights[n_objects] = *source;
+    // Note: These are all data-only structs, so these are copy operations
+    orbits[n_objects] = orb;
+    shapes[n_objects] = bell;
+    lights[n_objects] = source;
     rotate_with_orbit[n_objects] = rot_with_orbit;
     n_objects += 1;
     return 0;
@@ -127,7 +124,7 @@ void PhaseIntegrator::clear_objects() { n_objects = 0; }
 
 void PhaseIntegrator::set_time(double t) {
     for (int i = 0; i < n_objects; i++) {
-        shapes[i].position_from_orbit(t, &(orbits[i]));
+        shapes[i].position_from_orbit(t, orbits[i]);
         xlim[i] = shapes[i].x_bounds();
         ylim[i] = shapes[i].y_bounds();
     }
@@ -168,7 +165,7 @@ double PhaseIntegrator::integrate_single(int it) {
     return (code != 0) ? NAN : result;
 }
 
-int PhaseIntegrator::get_n_objects() { return n_objects; }
+int PhaseIntegrator::get_n_objects() const { return n_objects; }
 
 void PhaseIntegrator::phase_curve_integral(double *times, double *outputs, int n) {
     // TODO: Adjust to separately get the brightness of each component

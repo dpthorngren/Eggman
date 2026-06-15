@@ -46,11 +46,11 @@ int test_orbital_position() {
     int errors = 0;
     Biellipsoid bell = Biellipsoid(.2, .18, .15, .23);
     Orbit orb = Orbit(2., 0., 5., 0., 85., 90.);
-    bell.position_from_orbit(0.0, &orb);
+    bell.position_from_orbit(0.0, orb);
     TEST_APPROX(bell.position.x, 0., 1e-12, errors);
     TEST_APPROX(bell.position.y, 5. * cos(85 * M_PI / 180), 1e-12, errors);
     TEST_APPROX(bell.position.z, 5. * sin(85 * M_PI / 180), 1e-12, errors);
-    bell.position_from_orbit(0.5, &orb);
+    bell.position_from_orbit(0.5, orb);
     TEST_APPROX(bell.position.x, 5., 1e-12, errors);
     TEST_APPROX(bell.position.y, 0., 1e-12, errors);
     TEST_APPROX(bell.position.z, 0., 1e-12, errors);
@@ -74,7 +74,7 @@ int test_transit() {
         outputs[i] = -1.0;
     }
 
-    transit_integral(times, outputs, n_times, &orb, &star, 0., 0., 0., .1, .09, .08, .07, true);
+    transit_integral(times, outputs, n_times, orb, star, 0., 0., 0., .1, .09, .08, .07, true);
 
     // General bounds
     for (int i = 0; i < n_times; i++) {
@@ -106,7 +106,7 @@ int test_phase_curve() {
     LightSource star = LightSource(1, source_params, 1, limb_params);
     TEST_APPROX(star.limb_norm, M_PI, 1e-9, errors)
     TEST_APPROX(star.get_brightness(0., 0., 0.), 1 / M_PI, 1e-9, errors)
-    p.add_object(&orb, &bell, &star);
+    p.add_object(orb, bell, star);
     TEST_ASSERT(p.get_n_objects(), ==, 1, errors);
 
     // Add the planet
@@ -117,7 +117,7 @@ int test_phase_curve() {
     LightSource planet = LightSource(1, source_params, 0, limb_params);
     TEST_APPROX(star.limb_norm, M_PI, 1e-9, errors);
     TEST_APPROX(planet.get_brightness(0., 0., 0.), 1e-6 / M_PI, 1e-9, errors)
-    p.add_object(&orb, &bell, &planet);
+    p.add_object(orb, bell, planet);
     TEST_ASSERT(p.get_n_objects(), ==, 2, errors);
 
     // Test sources individually

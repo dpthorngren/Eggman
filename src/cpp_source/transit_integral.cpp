@@ -28,7 +28,7 @@ double transit_inner_integral(double x, void *params) {
 
 
 void transit_integral(
-    double *times, double *outputs, int n, Orbit *orb, LightSource *emitter, double theta,
+    double *times, double *outputs, int n, const Orbit &orb, const LightSource &emitter, double theta,
     double phi, double gamma, double r_forward, double r_back, double r_up, double r_side,
     bool rotate_with_orbit
 ) {
@@ -56,7 +56,7 @@ void transit_integral(
     // Prepare the inner (y) integral variables
     gsl_integration_workspace *workspaceInner = gsl_integration_workspace_alloc(100);
     gsl_function integInner;
-    TransitIntegralParams g = {*emitter, bell, 0., workspaceInner, &integInner};
+    TransitIntegralParams g = {emitter, bell, 0., workspaceInner, &integInner};
     integInner.function = &transit_integrand;
     integInner.params = &g;
     g.integrand = &integInner;
@@ -86,7 +86,7 @@ void transit_integral(
             };
         } else {
             if (rotate_with_orbit) {
-                g.bell.set_rotation(theta, phi, gamma, orb->get_cos_inc());
+                g.bell.set_rotation(theta, phi, gamma, orb.get_cos_inc());
             }
             x_lim = g.bell.x_bounds();
             y_lim = g.bell.y_bounds();

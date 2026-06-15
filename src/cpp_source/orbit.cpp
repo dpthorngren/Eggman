@@ -57,7 +57,7 @@ Orbit::Orbit(
     t_p = ma_p * period / (2 * M_PI) + t0;
 }
 
-Vec3 Orbit::get_position(double t) {
+Vec3 Orbit::get_position(double t) const {
     // Skip objects locked at the origin (convenient for other objects)
     if (semimajor == 0.) {
         return {0., 0., 0.};
@@ -78,7 +78,7 @@ Vec3 Orbit::get_position(double t) {
 }
 
 // Trivial Accessors
-double Orbit::get_period() { return period; }
-double Orbit::get_semimajor() { return semimajor; }
-double Orbit::get_eccen() { return eccen; }
-double Orbit::get_cos_inc() { return c_inc; }
+double Orbit::get_period() const { return period; }
+double Orbit::get_semimajor() const { return semimajor; }
+double Orbit::get_eccen() const { return eccen; }
+double Orbit::get_cos_inc() const { return c_inc; }

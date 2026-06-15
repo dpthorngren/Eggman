@@ -50,7 +50,7 @@ LightSource::LightSource(
     }
 }
 
-double LightSource::get_brightness(double mu, double cos_lat, double lon) {
+double LightSource::get_brightness(double mu, double cos_lat, double lon) const {
     // See light_source.hpp for the type codes used here
     double base, limb_coeff, nu, sqrtmu;
 
@@ -90,7 +90,7 @@ double LightSource::get_brightness(double mu, double cos_lat, double lon) {
     return base * limb_coeff / limb_norm;
 }
 
-double LightSource::get_brightness_sphere(double x, double y) {
+double LightSource::get_brightness_sphere(double x, double y) const {
     double rsq = x * x + y * y;
     if (rsq > 1.) {
         // Point is not on the sphere
@@ -114,7 +114,7 @@ double LightSource::get_brightness_sphere(double x, double y) {
     return get_brightness(mu, y, lon);
 }
 
-bool LightSource::uses_mu() {
+bool LightSource::uses_mu() const {
     switch (limb_type) {
     case 0:
         return false;
@@ -127,7 +127,7 @@ bool LightSource::uses_mu() {
     }
 }
 
-bool LightSource::uses_latlon() {
+bool LightSource::uses_latlon() const {
     switch (source_type) {
     case 0:
         return false;

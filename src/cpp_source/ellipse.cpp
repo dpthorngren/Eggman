@@ -16,7 +16,7 @@ Ellipse::Ellipse(Vec3 e1, Vec3 e2) {
     y_size = sqrt(e1.y * e1.y + e2.y * e2.y);
 }
 
-void Ellipse::get_ybounds(double x, Vec3 *out_min, Vec3 *out_max) {
+void Ellipse::get_ybounds(double x, Vec3 *out_min, Vec3 *out_max) const {
     x = CLAMP(x, -x_size, x_size);
     double disc = (x * x) * (e2.x * e2.x) - (x_size * x_size) * (x * x - e1.x * e1.x);
     // If the discriminant is negative return the boundary instead
@@ -45,7 +45,7 @@ void Ellipse::get_ybounds(double x, Vec3 *out_min, Vec3 *out_max) {
     }
 }
 
-bool Ellipse::line_intersects(double x, double y, Vec3 *out) {
+bool Ellipse::line_intersects(double x, double y, Vec3 *out) const {
     // Inverse matrix to transform to circle space, check if point is inside
     double det = e1.x * e2.y - e2.x * e1.y;
     double u = (e2.y * x - e2.x * y) / det;
@@ -56,7 +56,7 @@ bool Ellipse::line_intersects(double x, double y, Vec3 *out) {
     return u * u + v * v <= 1.;
 }
 
-Vec3 Ellipse::nearest_to_line(double x0, double y0) {
+Vec3 Ellipse::nearest_to_line(double x0, double y0) const {
     Vec3 result = {x0, y0, 0.0};
     if (line_intersects(x0, y0, &result)) {
         return result;

@@ -18,5 +18,5 @@ cpdef object transit(double r_forward, double r_back, double r_up, double r_side
         assert not rotate_with_orbit, "Rotation with orbit is not supported for catwoman emulation mode (r_up < 0)."
     results = np.full((len(t),), np.nan)
     cdef double[:] results_view = results
-    transit_integral(&(t[0]), &(results_view[0]), len(t), &orb, &emitter, theta, phi, gamma, r_forward, r_back, r_up, r_side, rotate_with_orbit)
+    transit_integral(&(t[0]), &(results_view[0]), len(t), orb, emitter, theta, phi, gamma, r_forward, r_back, r_up, r_side, rotate_with_orbit)
     return results
