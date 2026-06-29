@@ -8,7 +8,7 @@
  *
  * Base source type code, number of parameters, and notes:
  * - 0, 0, No emission (also bypasses limb darkening)
- * - 1, 1, Uniform emission at a given constant brightness (L / 4*pi)
+ * - 1, 1, Uniform emission at a given constant brightness
  * - 2, 4, Dayside, nightside, and pole brightness, with transition size
  *
  * Limb larkening type code, number of parameters, and notes:

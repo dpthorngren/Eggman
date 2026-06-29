@@ -30,19 +30,17 @@ LightSource::LightSource(
     // Normalization to apply to limb darkening calculations (see Mandel & Agol 2002)
     switch (limb_type) {
     case 0:
-        limb_norm = M_PI;
+        limb_norm = 1.0;
         break;
     case 1:
         limb_norm = 1 - limb_params[0] / 3.;
         limb_norm -= limb_params[1] / 6.;
-        limb_norm *= M_PI;
         break;
     case 2:
         limb_norm = 1 - limb_params[0] / 5.;
         limb_norm -= limb_params[1] / 3.;
         limb_norm -= limb_params[2] * 3 / 7.;
         limb_norm -= limb_params[3] / 2.;
-        limb_norm *= M_PI;
         break;
     default:
         limb_norm = NAN;

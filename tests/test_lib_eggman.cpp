@@ -98,13 +98,13 @@ int test_phase_curve() {
 
     // Add the star
     Orbit orb = Orbit();
-    double source_params[MAX_SOURCE_PARAMS] = {1.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-                                               0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+    double source_params[MAX_SOURCE_PARAMS] = {1.0 / M_PI, 0.0, 0.0, 0.0, 0.0, 0.0,
+                                               0.0,        0.0, 0.0, 0.0, 0.0, 0.0};
     double limb_params[MAX_LIMB_PARAMS] = {0., 0., 0.0, 0.0};
     Biellipsoid bell = Biellipsoid();
     bell.update_derived();
     LightSource star = LightSource(1, source_params, 1, limb_params);
-    TEST_APPROX(star.limb_norm, M_PI, 1e-9, errors)
+    TEST_APPROX(star.limb_norm, 1.0, 1e-9, errors)
     TEST_APPROX(star.get_brightness(0., 0., 0.), 1 / M_PI, 1e-9, errors)
     p.add_object(orb, bell, star);
     TEST_ASSERT(p.get_n_objects(), ==, 1, errors);
@@ -115,8 +115,8 @@ int test_phase_curve() {
     bell.update_derived();
     source_params[0] = 1e-6;
     LightSource planet = LightSource(1, source_params, 0, limb_params);
-    TEST_APPROX(star.limb_norm, M_PI, 1e-9, errors);
-    TEST_APPROX(planet.get_brightness(0., 0., 0.), 1e-6 / M_PI, 1e-9, errors)
+    TEST_APPROX(star.limb_norm, 1.0, 1e-9, errors);
+    TEST_APPROX(planet.get_brightness(0., 0., 0.), 1e-6, 1e-9, errors)
     p.add_object(orb, bell, planet);
     TEST_ASSERT(p.get_n_objects(), ==, 2, errors);
 
@@ -156,6 +156,41 @@ int test_phase_curve() {
     return errors;
 }
 
+int test_light_source() {
+    ANNOUNCE_TEST();
+    int errors = 0;
+    double limb_params[MAX_LIMB_PARAMS] = {0.01, .01, 0., 0.};
+    double source_params[MAX_SOURCE_PARAMS] = {1.0 / M_PI, 0., 0., 0., 0., 0.,
+                                               0.,         0., 0., 0., 0., 0.};
+    // No source should always return 0
+    LightSource s = LightSource(0, source_params, 0, limb_params);
+    TEST_APPROX(s.get_brightness_sphere(0., 0.), 0., 1e-9, errors);
+    TEST_APPROX(s.get_brightness_sphere(0.5, 0.5), 0., 1e-9, errors);
+    TEST_APPROX(s.get_brightness(0.9, 0.8, 45.), 0., 1e-9, errors);
+    // Lambertian emitter of total brightness 1
+    double expect = 1 / M_PI;
+    s = LightSource(1, source_params, 0, limb_params);
+    TEST_APPROX(s.get_brightness_sphere(0., 0.), expect, 1e-9, errors);
+    TEST_APPROX(s.get_brightness_sphere(0.5, 0.5), expect, 1e-9, errors);
+    TEST_APPROX(s.get_brightness(0.9, 0.8, 45.), expect, 1e-9, errors);
+    // Standard star (brightness 1, quadratic limb darkening)
+    s = LightSource(1, source_params, 1, limb_params);
+    // Small params ~= lambertian
+    TEST_APPROX(s.get_brightness_sphere(0.5, 0.), expect, 1e-1, errors);
+    // Center is brighter, limb is darker
+    double center = s.get_brightness_sphere(0., 0.);
+    double edge = s.get_brightness_sphere(0.9, 0.);
+    TEST_ASSERT(center, >, expect, errors);
+    TEST_ASSERT(edge, <, expect, errors);
+    // Now with more reasonable limb params
+    limb_params[0] = 0.2;
+    limb_params[1] = 0.1;
+    s = LightSource(1, source_params, 1, limb_params);
+    TEST_ASSERT(s.get_brightness_sphere(0., 0.), >, center, errors);
+    TEST_ASSERT(s.get_brightness_sphere(0.9, 0.), <, edge, errors);
+    return errors;
+}
+
 int main() {
     // Note: This tester is not as rigorous as the Pytest tests.  It is intended mainly to catch
     // memory management errors and distinguish between C++ errors and Cython wrapping errors.
@@ -165,6 +200,7 @@ int main() {
     errors += test_orbital_position();
     errors += test_transit();
     errors += test_phase_curve();
+    errors += test_light_source();
     if (errors == 0) {
         cout << "All tests passed." << endl << endl;
     } else {

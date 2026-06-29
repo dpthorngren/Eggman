@@ -1,4 +1,6 @@
 #include "transit_integral.hpp"
+#include <gsl/gsl_errno.h>
+#include <iostream>
 
 
 double transit_integrand(double y, void *params) {
@@ -21,16 +23,22 @@ double transit_inner_integral(double x, void *params) {
     }
 
     code = gsl_integration_qag(
-        g->integrand, ylim.min, ylim.max, 1e-7, 1e-7, 100, 1, g->work, &result, &err
+        g->integrand, ylim.min, ylim.max, 1e-5, 1e-7, 100, 1, g->work, &result, &err
     );
-    return (code == 0) ? result : NAN;
+    if ((code != 0) &&
+        (((code != GSL_EMAXITER) && (code != GSL_EROUND)) || (err > 1e-9 + 1e-6 * fabs(result)))) {
+        std::cout << "INTEGRATION ERROR (Inner integral) " << code << ": " << gsl_strerror(code)
+                  << "Output = " << result << ", err = " << err << std::endl;
+        return NAN;
+    }
+    return result;
 }
 
 
 void transit_integral(
-    double *times, double *outputs, int n, const Orbit &orb, const LightSource &emitter, double theta,
-    double phi, double gamma, double r_forward, double r_back, double r_up, double r_side,
-    bool rotate_with_orbit
+    double *times, double *outputs, int n, const Orbit &orb, const LightSource &emitter,
+    double theta, double phi, double gamma, double r_forward, double r_back, double r_up,
+    double r_side, bool rotate_with_orbit
 ) {
     int code = 0;
     Vec3 split_point;
@@ -113,16 +121,30 @@ void transit_integral(
             }
         }
         code = gsl_integration_qag(
-            &integOuter, x_min, split_point.x, 1e-7, 1e-5, 100, 1, workspaceOuter, &result, &err
+            &integOuter, x_min, split_point.x, 1e-6, 1e-9, 100, 1, workspaceOuter, &result, &err
         );
-        outputs[i] = (code != 0) ? NAN : 1 - result;
+        if ((code != 0) && (((code != GSL_EMAXITER) && (code != GSL_EROUND)) ||
+                            (err > 1e-9 + 1e-6 * fabs(result)))) {
+            std::cout << "INTEGRATION ERROR (Outer integral 1) at i, t = " << i << ", " << times[i]
+                      << code << ": " << gsl_strerror(code) << "Output = " << result
+                      << ", err = " << err << std::endl;
+            outputs[i] = NAN;
+        }
+        outputs[i] = 1 - result / M_PI;
         if (discontinuous_pole) {
             g.bell.set_radii(r_forward, r_back, r_forward, r_side);
         }
         code = gsl_integration_qag(
-            &integOuter, split_point.x, x_max, 1e-7, 1e-5, 100, 1, workspaceOuter, &result, &err
+            &integOuter, split_point.x, x_max, 1e-6, 1e-9, 100, 1, workspaceOuter, &result, &err
         );
-        outputs[i] = (code != 0) ? NAN : outputs[i] - result;
+        if ((code != 0) && (((code != GSL_EMAXITER) && (code != GSL_EROUND)) ||
+                            (err > 1e-9 + 1e-6 * fabs(result)))) {
+            std::cout << "INTEGRATION ERROR (Outer integral 2) at i, t = " << i << ", " << times[i]
+                      << code << ": " << gsl_strerror(code) << "Output = " << result
+                      << ", err = " << err << std::endl;
+            outputs[i] = NAN;
+        }
+        outputs[i] -= result / M_PI;
     }
 
     // Cleanup

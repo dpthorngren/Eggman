@@ -41,9 +41,8 @@ def test_transit_grazing():
     baseArgs['t'] = np.array([0.])
     assert eggman.transit(.11, .1, .1 + 1e-3, .1, **dict(baseArgs)) < 1.
     assert eggman.transit(.1 + 1e-3, .1 - 1e-3, -1., .1, **dict(baseArgs)) < 1.
-    # TODO: Would like to pass these, but they don't actually violate my <1 PPM precision target.
-    # assert eggman.transit(.09, .1, .1 + 1e-6, .1, **dict(baseArgs)) < 1.
-    # assert eggman.transit(.1, .09, .1 + 1e-6, .1, **dict(baseArgs)) < 1.
+    assert eggman.transit(.09, .1, .1 + 1e-6, .1, **dict(baseArgs)) < 1.
+    assert eggman.transit(.1, .09, .1 + 1e-6, .1, **dict(baseArgs)) < 1.
 
     # Barely non-grazing on top (true grazing transit)
     assert eggman.transit(.11, .1, .1 - 1e-3, .1, **dict(baseArgs)) == 1.
