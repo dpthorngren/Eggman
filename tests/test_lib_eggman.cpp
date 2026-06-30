@@ -38,6 +38,22 @@ int test_biellipsoid() {
     TEST_APPROX(bell.x_bounds().max, 1 + .15, 1e-12, errors);
     TEST_APPROX(bell.y_bounds().min, .1 + -.1, 1e-12, errors);
     TEST_APPROX(bell.y_bounds().max, .1 + .1, 1e-12, errors);
+
+    // Test line projection
+    bell = Biellipsoid(1., 1., 1., 1.);
+    bell.update_derived();
+    Vec3 loc = bell.line_project(0, 0);
+    TEST_APPROX(loc.x, 0., 1e-9, errors);
+    TEST_APPROX(loc.y, 0., 1e-9, errors);
+    TEST_APPROX(loc.z, 1., 1e-9, errors);
+    TEST_APPROX(bell.line_project(0., 0., true).x, 1.0, 1e-9, errors);
+    loc = bell.line_project(0.5, 0);
+    TEST_APPROX(loc.x, 0.5, 1e-9, errors);
+    TEST_APPROX(loc.y, 0., 1e-9, errors);
+    TEST_APPROX(loc.z, sqrt(1 - .5 * .5), 1e-9, errors);
+    TEST_APPROX(bell.line_project(0.5, 0., true).x, loc.z, 1e-9, errors);
+    TEST_APPROX(bell.line_project(1 - 1e-12, 0., true).x, 0., 1e-4, errors);
+    TEST_APPROX(bell.line_project(0.5, 0., true).x, cos(M_PI / 6), 1e-9, errors);
     return errors;
 }
 
@@ -146,6 +162,7 @@ int test_phase_curve() {
     TEST_APPROX(star.get_brightness(0., 0., 0.), 1 / M_PI, 1e-9, errors)
     p.add_object(orb, bell, star);
     TEST_ASSERT(p.get_n_objects(), ==, 1, errors);
+    TEST_APPROX(p.integrate_single(0), 1.0, 1e-7, errors);
 
     // Add the planet
     orb = Orbit(10., 0., 5., 0.00, 89., 90.);
@@ -190,6 +207,23 @@ int test_phase_curve() {
     TEST_ASSERT(result[3], >, 1, errors);
     TEST_APPROX(result[3], 1 + .12 * .09 * 1e-6, 1e-6, errors);
     TEST_APPROX(result[2], result[1], 1e-6, errors);
+
+    // Test quadratic star
+    limb_params[0] = 0.2;
+    limb_params[1] = 0.1;
+    bell = Biellipsoid();
+    bell.update_derived();
+    star = LightSource(1, source_params, 1, limb_params);
+    TEST_APPROX(star.limb_type, 1, 1e-9, errors)
+    double expect = 1. - .2 / 3 - .1 / 6.;
+    TEST_APPROX(star.limb_norm, expect, 1e-9, errors);
+    expect = expect / 2.;
+    double nu = 1.0 - sqrt(1 - 0.5 * 0.5);
+    expect = (1.0 - .5 * nu - .2 * nu * nu) / expect;
+    TEST_APPROX(star.get_brightness_sphere(0.5, 0.), expect, 1e-9, errors) p.clear_objects();
+    p.add_object(Orbit(), Biellipsoid(), star);
+    TEST_ASSERT(p.get_n_objects(), ==, 1, errors);
+    TEST_APPROX(p.integrate_single(0), 1.0, 1e-7, errors);
 
     return errors;
 }

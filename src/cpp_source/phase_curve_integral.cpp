@@ -1,9 +1,12 @@
 #include "phase_curve_integral.hpp"
+#include "math_utils.hpp"
 #include <algorithm>
+#include <cstdio>
+#include <iostream>
 
 double phase_curve_integrand(double y, void *params) {
     PhaseIntegrator *p = (PhaseIntegrator *)params;
-    Vec3 pos = p->shapes[p->i_target].line_project(p->x, y);
+    Vec3 pos = p->shapes[p->i_target].line_project(p->x, y, true);
     return p->lights[p->i_target].get_brightness(pos.x, pos.y, pos.z);
 }
 
@@ -67,9 +70,12 @@ double phase_curve_inner_integral(double x, void *params) {
     double result, err;
     for (i = 0; i < n; i++) {
         code = gsl_integration_qag(
-            &p->integInner, b[i].min, b[i].max, 1e-7, 1e-5, 100, 1, p->workspaceInner, &result, &err
+            &p->integInner, b[i].min, b[i].max, 1e-5, 1e-7, 100, 1, p->workspaceInner, &result, &err
         );
-        if (code != 0) {
+        if ((code != 0) && (((code != GSL_EMAXITER) && (code != GSL_EROUND)) ||
+                            (err > 1e-9 + 1e-6 * fabs(result)))) {
+            std::cout << "INTEGRATION ERROR (Inner integral) " << code << ": " << gsl_strerror(code)
+                      << ". Output = " << result << ", err = " << err << std::endl;
             return NAN;
         }
         total += result;
@@ -97,7 +103,7 @@ PhaseIntegrator::PhaseIntegrator() {
     gsl_set_error_handler_off();
 };
 
-PhaseIntegrator::PhaseIntegrator(PhaseIntegrator &p){
+PhaseIntegrator::PhaseIntegrator(PhaseIntegrator &p) {
     x = p.x;
     i_target = p.i_target;
     n_objects = p.n_objects;
@@ -107,7 +113,7 @@ PhaseIntegrator::PhaseIntegrator(PhaseIntegrator &p){
     integInner.params = this;
     integOuter.function = &phase_curve_inner_integral;
     integOuter.params = this;
-    for(int i = 0; i < n_objects; i++){
+    for (int i = 0; i < n_objects; i++) {
         orbits[i] = p.orbits[i];
         shapes[i] = p.shapes[i];
         lights[i] = p.lights[i];
@@ -136,6 +142,8 @@ int PhaseIntegrator::add_object(
     shapes[n_objects] = bell;
     lights[n_objects] = source;
     rotate_with_orbit[n_objects] = rot_with_orbit;
+    xlim[n_objects] = shapes[n_objects].x_bounds();
+    ylim[n_objects] = shapes[n_objects].y_bounds();
     n_objects += 1;
     return 0;
 }
@@ -151,6 +159,10 @@ void PhaseIntegrator::set_time(double t) {
 }
 
 double PhaseIntegrator::integrate_single(int it) {
+    // Skip non-emitting objects
+    if (lights[it].source_type == 0) {
+        return 0.;
+    }
     // Determine which objects might occlude the target object
     double result, err;
     i_target = it;
@@ -179,10 +191,17 @@ double PhaseIntegrator::integrate_single(int it) {
     integration_bounds[n_bounds] = xmax;
     n_bounds += 1;
     std::sort(integration_bounds, integration_bounds + n_bounds);
+    // TODO: Actually use the integration bounds >.<
     int code = gsl_integration_qag(
-        &integOuter, xmin, xmax, 1e-7, 1e-5, 100, 1, workspaceOuter, &result, &err
+        &integOuter, xmin, xmax, 1e-6, 1e-9, 100, 1, workspaceOuter, &result, &err
     );
-    return (code != 0) ? NAN : result;
+    if ((code != 0) &&
+        (((code != GSL_EMAXITER) && (code != GSL_EROUND)) || (err > 1e-9 + 1e-6 * fabs(result)))) {
+        std::cout << "INTEGRATION ERROR (Outer integral) " << code << ": " << gsl_strerror(code)
+                  << ". Output = " << result << ", err = " << err << std::endl;
+        return NAN;
+    }
+    return result;
 }
 
 int PhaseIntegrator::get_n_objects() const { return n_objects; }
@@ -198,10 +217,6 @@ void PhaseIntegrator::phase_curve_integral(double *times, double *outputs, int n
         // Integrate each object in sequence
         result = 0.;
         for (j = 0; j < n_objects; j++) {
-            // Skip non-emitting objects
-            if (lights[j].source_type == 0) {
-                continue;
-            }
             result += integrate_single(j);
         }
         outputs[i] = result;

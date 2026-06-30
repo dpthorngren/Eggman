@@ -27,7 +27,7 @@ class LightSource {
     LightSource();
     LightSource(int source_type, double *source, int limb_type, double *limb_params);
 
-    double get_brightness(double mu, double cos_lat, double lon) const;
+    double get_brightness(double mu, double sin_lat, double lon) const;
     // Wrapper for get_brightness on a unit sphere given x and y coordinates
     double get_brightness_sphere(double x, double y) const;
     // Whether this light source needs the cos angle of incidence to calculate brightness

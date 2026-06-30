@@ -6,7 +6,7 @@ import eggman
 
 def test_phase_trivial():
     p = eggman.PhaseIntegratorWrap()
-    p.add_star("quadratic", [0., 0.])
+    p.add_star("quadratic", [0.2, 0.1])
     p.add_planet(.1, .11, .08, 1.3, 0., 0., 0., 0., 8., 5., 89., 0.)
     assert p.get_n_objects() == 2
     p.set_time(0.)
@@ -19,7 +19,9 @@ def test_phase_trivial():
     assert shape.radii == approx([1., 1., 1., 1.], abs=1e-6)
     assert light.source_type == "uniform"
     assert light.limb_type == "quadratic"
-    assert light.limb_params == approx([0., 0.], abs=1e-12)
+    assert light.limb_params == approx([.2, .1], abs=1e-12)
+    assert light.get_brightness_sphere(0., 0.) > (1 / np.pi)
+    assert light.get_brightness_sphere(0.99, 0.) < (1 / np.pi)
 
     # Check planet structs
     orbit, shape, light, rotate = p[1]
@@ -29,10 +31,12 @@ def test_phase_trivial():
         [0., 5 * np.cos(89 * np.pi / 180), 5 * np.sin(89 * np.pi / 180)], abs=1e-6)
     assert shape.radii == approx([.1, .11, .08, 1.3], abs=1e-6)
     assert light.source_type == "none"
+    assert light.get_brightness(1., 0., 0.) == 0.
     with raises(IndexError):
         p[2]
 
     # Test single integrations
+    p.set_time(0.)
     assert p.integrate_single(1) == 0.
     assert p.integrate_single(0) < 1
     p.set_time(2.)

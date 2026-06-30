@@ -11,7 +11,7 @@ LightSource::LightSource() {
     for (int i = 0; i < MAX_SOURCE_PARAMS; i++) {
         source_params[i] = 0.;
     }
-    limb_norm = M_PI;
+    limb_norm = 1.0;
 }
 
 LightSource::LightSource(
@@ -48,7 +48,7 @@ LightSource::LightSource(
     }
 }
 
-double LightSource::get_brightness(double mu, double cos_lat, double lon) const {
+double LightSource::get_brightness(double mu, double sin_lat, double lon) const {
     // See light_source.hpp for the type codes used here
     double base, limb_coeff, nu, sqrtmu;
 

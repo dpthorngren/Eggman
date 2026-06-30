@@ -16,7 +16,10 @@ double transit_inner_integral(double x, void *params) {
     g->x = x;
 
     // Get y bounds and check for no overlap between planet and star (at this x)
+    double y_bound = sqrt(1 - x * x);
     Bounds ylim = g->bell.slice_ylimits(x);
+    ylim.min = fmax(ylim.min, -y_bound);
+    ylim.max = fmin(ylim.max, y_bound);
     if (ylim.min >= ylim.max) {
         return 0.;
     }
@@ -128,8 +131,9 @@ void transit_integral(
                       << code << ": " << gsl_strerror(code) << "Output = " << result
                       << ", err = " << err << std::endl;
             outputs[i] = NAN;
+            continue;
         }
-        outputs[i] = 1 - result / M_PI;
+        outputs[i] = 1 - result;
         if (discontinuous_pole) {
             g.bell.set_radii(r_forward, r_back, r_forward, r_side);
         }
@@ -142,8 +146,9 @@ void transit_integral(
                       << code << ": " << gsl_strerror(code) << "Output = " << result
                       << ", err = " << err << std::endl;
             outputs[i] = NAN;
+            continue;
         }
-        outputs[i] -= result / M_PI;
+        outputs[i] -= result;
     }
 
     // Cleanup

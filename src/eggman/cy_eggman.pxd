@@ -84,7 +84,7 @@ cdef extern from "biellipsoid.cpp":
         Bounds y_bounds()
         Bounds slice_ylimits(double x)
         bint line_intersects (double x, double y)
-        Vec3 line_project (double x, double y)
+        Vec3 line_project (double x, double y, bint latlonmu)
         Vec3 world_to_aligned(Vec3 loc)
         Vec3 world_to_sphere(Vec3 loc)
         Vec3 aligned_to_world(Vec3 loc)
@@ -113,7 +113,7 @@ cdef extern from "light_source.cpp":
         LightSource()
         LightSource(int source_type, double *source, int limb_type, double *limb_params)
 
-        double get_brightness(double mu, double cos_lat, double lon)
+        double get_brightness(double mu, double sin_lat, double lon)
         double get_brightness_sphere(double x, double y)
         bint uses_mu()
         bint uses_latlon()

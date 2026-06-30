@@ -174,9 +174,10 @@ bool Biellipsoid::line_intersects(double x, double y) {
     return false;
 }
 
-Vec3 Biellipsoid::line_project(double x, double y) {
+Vec3 Biellipsoid::line_project(double x, double y, bool mulatlon) {
     x -= position.x;
     y -= position.y;
+    double mu;
     Vec3 hit;
     // Line origin in forward sphere-space: (x, y, 0) in world-space
     Vec3 p0 = {
@@ -190,13 +191,17 @@ Vec3 Biellipsoid::line_project(double x, double y) {
     offset = u.x * p0.x + u.y * p0.y + u.z * p0.z;
     len = LENGTH(p0);
     det = offset * offset - len * len + 1;
-    if (det > 0) {
+    if (det >= 0) {
         offset = sqrt(det) - offset;
         hit = (Vec3){
             (p0.x + offset * u.x) * r_forward, (p0.y + offset * u.y) * r_up,
             (p0.z + offset * u.z) * r_side
         };
-        if (hit.x > 0) {
+        if (hit.x >= 0) {
+            if (mulatlon) {
+                mu = rot.xz * hit.x / r_forward + rot.yz * hit.y / r_up + rot.zz * hit.z / r_side;
+                return {mu, hit.y / r_up, atan2(hit.z, -hit.x)};
+            }
             return aligned_to_world(hit);
         }
     }
@@ -218,6 +223,10 @@ Vec3 Biellipsoid::line_project(double x, double y) {
     if (hit.x > 0) {
         // No intersections
         return (Vec3){NAN, NAN, NAN};
+    }
+    if (mulatlon) {
+        mu = rot.xz * hit.x / r_forward + rot.yz * hit.y / r_up + rot.zz * hit.z / r_side;
+        return {mu, hit.y / r_up, atan2(hit.z, -hit.x)};
     }
     return aligned_to_world(hit);
 }
