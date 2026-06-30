@@ -16,10 +16,10 @@ cdef class PhaseIntegratorWrap:
             csource = source.source
         self.pci.add_object(orb, bell, csource, rotate_with_orbit)
 
-    def add_star(self, str limb_type, list[double] limb_params):
+    def add_star(self, str limb_type, list[double] limb_params, double brightness=1./np.pi):
         cdef Orbit orb = Orbit()
         cdef Biellipsoid bell = Biellipsoid()
-        cdef LightSource source = LightSourceWrap("uniform", [1./math.M_PI], limb_type, limb_params).source
+        cdef LightSource source = LightSourceWrap("uniform", [brightness], limb_type, limb_params).source
         self.pci.add_object(orb, bell, source, False)
 
     def set_time(self, double t):

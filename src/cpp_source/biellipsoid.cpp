@@ -3,6 +3,7 @@
 #include <cmath>
 
 Biellipsoid::Biellipsoid() {
+    position = {0., 0., 0.};
     r_forward = 1.0;
     r_back = 1.0;
     r_up = 1.0;
@@ -13,20 +14,23 @@ Biellipsoid::Biellipsoid() {
     rot = {1., 0., 0., 0., 1., 0., 0., 0., 1.};
     f_limb = Ellipse();
     b_limb = Ellipse();
+    update_derived();
 }
 
 Biellipsoid::Biellipsoid(double r_forward, double r_back, double r_up, double r_side) {
+    position = {0., 0., 0.};
     this->r_forward = r_forward;
     this->r_back = r_back;
     this->r_up = r_up;
     this->r_side = r_side;
+    // Valid defaults, but expect user to usually call set_rotation next.
     theta = 0.;
     phi = 0.;
     gamma = 0.;
-    // Valid defaults, but expect user to usually call set_rotation next.
     rot = {1., 0., 0., 0., 1., 0., 0., 0., 1.};
     f_limb = Ellipse();
     b_limb = Ellipse();
+    update_derived();
 }
 
 void Biellipsoid::set_radii(double r_forward, double r_back, double r_up, double r_side) {

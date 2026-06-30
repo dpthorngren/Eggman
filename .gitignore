@@ -8,7 +8,8 @@ data
 scratch/
 src/eggman/cy_*.cpp
 src/eggman/*.html
-experiment.py
+experiment*.py
+./*.png
 *.ipynb
 .task
 .clangd

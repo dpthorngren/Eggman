@@ -18,8 +18,8 @@ using namespace std;
     }
 #define TEST_APPROX(A, B, atol, out)                                                               \
     if (fabs((A) - (B)) > atol) {                                                                  \
-        cout << "ERROR in " << __func__ << " at line " << __LINE__ << endl;                        \
-        cout << "  Assertion \"" << #A << "~=" << #B << "\" (" << (A) << "~=" << (B)               \
+        cout << "  ERROR in " << __func__ << " at line " << __LINE__ << ":" << endl;               \
+        cout << "    Assertion \"" << #A << "~=" << #B << "\" (" << (A) << "~=" << (B)             \
              << ") is false." << endl;                                                             \
         out += 1;                                                                                  \
     }
@@ -61,8 +61,8 @@ int test_transit() {
     ANNOUNCE_TEST();
     int errors = 0;
     Orbit orb = Orbit(2., 0., 5., 0.01, 85., 90.);
-    double source_params[MAX_SOURCE_PARAMS] = {1.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-                                               0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+    double source_params[MAX_SOURCE_PARAMS] = {1.0 / M_PI, 0.0, 0.0, 0.0, 0.0, 0.0,
+                                               0.0,        0.0, 0.0, 0.0, 0.0, 0.0};
     double limb_params[MAX_LIMB_PARAMS] = {0.0, 0.0, 0.0, 0.0};
     LightSource star = LightSource(1, source_params, 1, limb_params);
 
@@ -74,20 +74,58 @@ int test_transit() {
         outputs[i] = -1.0;
     }
 
-    transit_integral(times, outputs, n_times, orb, star, 0., 0., 0., .1, .09, .08, .07, true);
-
-    // General bounds
-    for (int i = 0; i < n_times; i++) {
+    // No limb darkening, sphere
+    transit_integral(times, outputs, n_times, orb, star, 0., 0., 0., .1, .1, .1, .1, true);
+    for (int i = 0; i < n_times; i++) { // General bounds
         TEST_ASSERT(outputs[i], <=, 1., errors);
         TEST_ASSERT(outputs[i], >=, 0., errors);
     }
     // Out of transit
     TEST_APPROX(outputs[n_times / 4], 1.0, 1e-12, errors);
     TEST_APPROX(outputs[n_times / 2], 1.0, 1e-12, errors);
-    // In-transit
-    TEST_ASSERT(outputs[0], <, 1.0, errors);
+    // In-transit (pi omitted because star brightness is 1/pi)
+    TEST_APPROX(outputs[0], 1.0 - .1 * .1, 1e-7, errors);
     TEST_ASSERT(outputs[1], <, 1.0, errors);
     TEST_ASSERT(outputs[n_times - 2], <, 1.0, errors);
+
+    // No limb darkening, oblate spheroid
+    orb = Orbit(2., 0., 5., 0.01, 90., 90.);
+    transit_integral(times, outputs, n_times, orb, star, 0., 0., 0., .11, .11, .08, .11, true);
+    // Out of transit
+    TEST_APPROX(outputs[n_times / 4], 1.0, 1e-12, errors);
+    TEST_APPROX(outputs[n_times / 2], 1.0, 1e-12, errors);
+    // In-transit (pi omitted because star brightness is 1/pi)
+    TEST_APPROX(outputs[0], 1.0 - .11 * .08, 1e-7, errors);
+    TEST_ASSERT(outputs[1], <, 1.0, errors);
+    TEST_ASSERT(outputs[n_times - 2], <, 1.0, errors);
+
+    // No limb darkening, asymmetric transit
+    orb = Orbit(2., 0., 5., 0.01, 90., 90.);
+    transit_integral(times, outputs, n_times, orb, star, 0., 0., 0., .11, .09, -1., .1, false);
+    // Out of transit
+    TEST_APPROX(outputs[n_times / 4], 1.0, 1e-12, errors);
+    TEST_APPROX(outputs[n_times / 2], 1.0, 1e-12, errors);
+    // In-transit (pi omitted because star brightness is 1/pi)
+    TEST_APPROX(outputs[0], 1.0 - (.11 * .11 + .09 * .09) / 2.0, 1e-7, errors);
+    TEST_ASSERT(outputs[1], <, 1.0, errors);
+    TEST_ASSERT(outputs[n_times - 2], <, 1.0, errors);
+
+    // Limb Darkening, symmetric transit (ref from catwoman)
+    orb = Orbit(1., 0., 15., 0, 90., 90.);
+    limb_params[0] = .1;
+    limb_params[1] = .3;
+    double times2[2] = {.001, .01};
+    star = LightSource(1, source_params, 1, limb_params);
+    transit_integral(times2, outputs, 2, orb, star, 0., 0., 0., .1, .1, .1, .1, true);
+    TEST_APPROX(outputs[0], 0.989098758791, 1e-7, errors);
+    TEST_APPROX(outputs[1], 0.992627013829, 1e-7, errors);
+
+    // Limb Darkening, asymmetric transit (ref from catwoman)
+    star = LightSource(1, source_params, 1, limb_params);
+    orb = Orbit(1., 0., 15., 0, 90., 90.);
+    transit_integral(times2, outputs, 2, orb, star, 0., 0., 0., .11, .1, -1, .1, true);
+    TEST_APPROX(outputs[0], 0.987953744290, 1e-7, errors);
+    TEST_APPROX(outputs[1], 0.991639160200, 1e-7, errors);
     return errors;
 }
 
@@ -188,6 +226,11 @@ int test_light_source() {
     s = LightSource(1, source_params, 1, limb_params);
     TEST_ASSERT(s.get_brightness_sphere(0., 0.), >, center, errors);
     TEST_ASSERT(s.get_brightness_sphere(0.9, 0.), <, edge, errors);
+    double norm = (1. - .2 / 3 - .1 / 6);
+    TEST_APPROX(s.limb_norm, norm, 1e-9, errors);
+    expect = 1.0 - sqrt(1 - 0.7 * 0.7);
+    expect = (1.0 - .2 * expect - .1 * expect * expect) / (norm * M_PI);
+    TEST_APPROX(s.get_brightness_sphere(0.7, 0.0), expect, 1e-9, errors)
     return errors;
 }
 

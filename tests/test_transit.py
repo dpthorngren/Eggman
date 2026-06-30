@@ -123,3 +123,23 @@ def test_transit_analytic():
         1 - (.12*.15 + .19*.15) / 2., abs=1e-7)
     assert eggman.transit(.01, .01, .02, .02, **baseArgs) == approx(
         1 - (.01*.02 + .01*.02) / 2., abs=1e-7)
+
+
+def test_transit_numerical():
+    # Test cases where the transit depth was calculated from other codes
+    baseArgs = {
+        't': np.array([.001, .01]),
+        't0': 0.,
+        'theta': 0.,
+        'phi': 0.,
+        'gamma': 0.,
+        'period': 1.,
+        'semimajor': 15.,
+        'inclination': 90.,
+        'limb_type': 'quadratic',
+        'limb': [0.1, 0.3],
+        'rotate_with_orbit': False,
+    }
+    result = eggman.transit(.11, .1, -1, .1, **baseArgs) 
+    assert result[0] == approx(0.98795528377, abs=1e-7)
+    assert result[1] == approx(0.99233922113, abs=1e-7)

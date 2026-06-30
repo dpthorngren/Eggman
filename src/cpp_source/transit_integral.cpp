@@ -5,8 +5,7 @@
 
 double transit_integrand(double y, void *params) {
     TransitIntegralParams *g = (TransitIntegralParams *)params;
-    double mu = sqrt(g->x * g->x + y * y);
-    return g->emitter.get_brightness(mu, 0., 0.);
+    return g->emitter.get_brightness_sphere(g->x, y);
 }
 
 
