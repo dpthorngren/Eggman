@@ -23,7 +23,7 @@ double transit_inner_integral(double x, void *params) {
     }
 
     code = gsl_integration_qag(
-        g->integrand, ylim.min, ylim.max, 1e-5, 1e-7, 100, 1, g->work, &result, &err
+        g->integrand, ylim.min, ylim.max, 1e-8, 1e-8, 100, 1, g->work, &result, &err
     );
     if (integration_failed(code, result, err, 1e-9, 1e-7)) {
         return NAN;
@@ -84,8 +84,8 @@ void transit_integral(
             x = ct * g.bell.position.x + st * g.bell.position.y;
             g.bell.position.y = -st * g.bell.position.x + ct * g.bell.position.y;
             g.bell.position.x = x;
-            x_lim = (Bounds){x - r_back, x + r_forward};
-            y_lim = (Bounds){
+            x_lim = {x - r_back, x + r_forward};
+            y_lim = {
                 g.bell.position.y - fmax(r_back, r_forward),
                 g.bell.position.y + fmax(r_back, r_forward)
             };
@@ -118,7 +118,7 @@ void transit_integral(
             }
         }
         code = gsl_integration_qag(
-            &integOuter, x_min, split_point.x, 1e-6, 1e-9, 100, 1, workspaceOuter, &result, &err
+            &integOuter, x_min, split_point.x, 1e-8, 1e-8, 100, 1, workspaceOuter, &result, &err
         );
         if (integration_failed(code, result, err, 1e-9, 1e-7)) {
             outputs[i] = NAN;
@@ -129,7 +129,7 @@ void transit_integral(
             g.bell.set_radii(r_forward, r_back, r_forward, r_side);
         }
         code = gsl_integration_qag(
-            &integOuter, split_point.x, x_max, 1e-6, 1e-9, 100, 1, workspaceOuter, &result, &err
+            &integOuter, split_point.x, x_max, 1e-8, 1e-8, 100, 1, workspaceOuter, &result, &err
         );
         if (integration_failed(code, result, err, 1e-9, 1e-7)) {
             outputs[i] = NAN;
