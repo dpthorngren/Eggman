@@ -2,6 +2,7 @@
 #define MATHUTILS_HPP
 
 #include <cmath>
+#include <gsl/gsl_errno.h>
 
 // Linear algebra structs and macros
 #define SIGN(x) ((x < 0.) ? -1. : ((x > 0.) ? 1. : 0.))
@@ -77,6 +78,29 @@ inline void matmul3x3(Mat3 &a, Mat3 &b, Mat3 &out) {
 inline Vec3 normalized(Vec3 v) {
     double len = sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
     return (Vec3){v.x / len, v.y / len, v.z / len};
+}
+
+inline bool integration_failed(
+    int code, double result, double err, double atol, double rtol, bool print_error = true
+) {
+    if (code == 0) {
+        // No errors, accept the result
+        return false;
+    }
+    if ((code == GSL_EMAXITER) || (code == GSL_EROUND)) {
+        // Integrator didn't meet its error targets...
+        if (err > atol + rtol * fabs(result)) {
+            // ...but it meets ours, so accept the result without error
+            return false;
+        } else if (print_error) {
+            // ...nor our ftol / atol, so print an error and reject the result
+            const char *msg = gsl_strerror(code);
+            printf("INTEGRATION ERROR %i: %s. Result=%f, err=%f", code, msg, result, err);
+            return true;
+        }
+    }
+    // Other GSL error
+    return true;
 }
 
 #endif

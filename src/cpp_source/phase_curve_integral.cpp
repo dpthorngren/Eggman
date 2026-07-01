@@ -72,10 +72,7 @@ double phase_curve_inner_integral(double x, void *params) {
         code = gsl_integration_qag(
             &p->integInner, b[i].min, b[i].max, 1e-5, 1e-7, 100, 1, p->workspaceInner, &result, &err
         );
-        if ((code != 0) && (((code != GSL_EMAXITER) && (code != GSL_EROUND)) ||
-                            (err > 1e-9 + 1e-6 * fabs(result)))) {
-            std::cout << "INTEGRATION ERROR (Inner integral) " << code << ": " << gsl_strerror(code)
-                      << ". Output = " << result << ", err = " << err << std::endl;
+        if (integration_failed(code, result, err, 1e-9, 1e-7)) {
             return NAN;
         }
         total += result;
@@ -195,10 +192,7 @@ double PhaseIntegrator::integrate_single(int it) {
     int code = gsl_integration_qag(
         &integOuter, xmin, xmax, 1e-6, 1e-9, 100, 1, workspaceOuter, &result, &err
     );
-    if ((code != 0) &&
-        (((code != GSL_EMAXITER) && (code != GSL_EROUND)) || (err > 1e-9 + 1e-6 * fabs(result)))) {
-        std::cout << "INTEGRATION ERROR (Outer integral) " << code << ": " << gsl_strerror(code)
-                  << ". Output = " << result << ", err = " << err << std::endl;
+    if (integration_failed(code, result, err, 1e-9, 1e-7)) {
         return NAN;
     }
     return result;

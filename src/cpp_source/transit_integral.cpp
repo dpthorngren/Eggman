@@ -1,6 +1,4 @@
 #include "transit_integral.hpp"
-#include <gsl/gsl_errno.h>
-#include <iostream>
 
 
 double transit_integrand(double y, void *params) {
@@ -27,10 +25,7 @@ double transit_inner_integral(double x, void *params) {
     code = gsl_integration_qag(
         g->integrand, ylim.min, ylim.max, 1e-5, 1e-7, 100, 1, g->work, &result, &err
     );
-    if ((code != 0) &&
-        (((code != GSL_EMAXITER) && (code != GSL_EROUND)) || (err > 1e-9 + 1e-6 * fabs(result)))) {
-        std::cout << "INTEGRATION ERROR (Inner integral) " << code << ": " << gsl_strerror(code)
-                  << "Output = " << result << ", err = " << err << std::endl;
+    if (integration_failed(code, result, err, 1e-9, 1e-7)) {
         return NAN;
     }
     return result;
@@ -125,11 +120,7 @@ void transit_integral(
         code = gsl_integration_qag(
             &integOuter, x_min, split_point.x, 1e-6, 1e-9, 100, 1, workspaceOuter, &result, &err
         );
-        if ((code != 0) && (((code != GSL_EMAXITER) && (code != GSL_EROUND)) ||
-                            (err > 1e-9 + 1e-6 * fabs(result)))) {
-            std::cout << "INTEGRATION ERROR (Outer integral 1) at i, t = " << i << ", " << times[i]
-                      << code << ": " << gsl_strerror(code) << "Output = " << result
-                      << ", err = " << err << std::endl;
+        if (integration_failed(code, result, err, 1e-9, 1e-7)) {
             outputs[i] = NAN;
             continue;
         }
@@ -140,11 +131,7 @@ void transit_integral(
         code = gsl_integration_qag(
             &integOuter, split_point.x, x_max, 1e-6, 1e-9, 100, 1, workspaceOuter, &result, &err
         );
-        if ((code != 0) && (((code != GSL_EMAXITER) && (code != GSL_EROUND)) ||
-                            (err > 1e-9 + 1e-6 * fabs(result)))) {
-            std::cout << "INTEGRATION ERROR (Outer integral 2) at i, t = " << i << ", " << times[i]
-                      << code << ": " << gsl_strerror(code) << "Output = " << result
-                      << ", err = " << err << std::endl;
+        if (integration_failed(code, result, err, 1e-9, 1e-7)) {
             outputs[i] = NAN;
             continue;
         }

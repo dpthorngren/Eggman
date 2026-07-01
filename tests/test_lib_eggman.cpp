@@ -133,15 +133,22 @@ int test_transit() {
     double times2[2] = {.001, .01};
     star = LightSource(1, source_params, 1, limb_params);
     transit_integral(times2, outputs, 2, orb, star, 0., 0., 0., .1, .1, .1, .1, true);
-    TEST_APPROX(outputs[0], 0.989098758791, 1e-7, errors);
-    TEST_APPROX(outputs[1], 0.992627013829, 1e-7, errors);
+    TEST_APPROX(outputs[0], 0.989098764152, 1e-7, errors);
+    TEST_APPROX(outputs[1], 0.992627976697, 1e-7, errors);
 
     // Limb Darkening, asymmetric transit (ref from catwoman)
     star = LightSource(1, source_params, 1, limb_params);
     orb = Orbit(1., 0., 15., 0, 90., 90.);
     transit_integral(times2, outputs, 2, orb, star, 0., 0., 0., .11, .1, -1, .1, true);
-    TEST_APPROX(outputs[0], 0.987953744290, 1e-7, errors);
-    TEST_APPROX(outputs[1], 0.991639160200, 1e-7, errors);
+    TEST_APPROX(outputs[0], 0.987955255779, 1e-7, errors);
+    TEST_APPROX(outputs[1], 0.992338297293, 1e-7, errors);
+
+    // Limb Darkening, asymmetric transit, slightly inclined (ref from catwoman)
+    star = LightSource(1, source_params, 1, limb_params);
+    orb = Orbit(1., 0., 15., 0, 89., 90.);
+    transit_integral(times2, outputs, 2, orb, star, 0., 0., 0., .11, .09, -1, .1, true);
+    TEST_APPROX(outputs[0], 0.989036823106, 1e-7, errors);
+    TEST_APPROX(outputs[1], 0.995336819655, 1e-7, errors);
     return errors;
 }
 

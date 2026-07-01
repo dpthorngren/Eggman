@@ -140,6 +140,24 @@ def test_transit_numerical():
         'limb': [0.1, 0.3],
         'rotate_with_orbit': False,
     }
-    result = eggman.transit(.11, .1, -1, .1, **baseArgs) 
-    assert result[0] == approx(0.98795528377, abs=1e-7)
-    assert result[1] == approx(0.99233922113, abs=1e-7)
+
+    # Symmetric case, comparing with batman and catwoman
+    result = eggman.transit(.12, .12, .12, .12, **baseArgs)
+    assert result[0] == approx(0.984304107347, abs=1e-7)
+    assert result[1] == approx(0.989985655450, abs=1e-7)
+
+    # Symmetric case, comparing with batman and catwoman
+    result = eggman.transit(.1, .1, .1, .10, **baseArgs)
+    assert result[0] == approx(0.989098764152, abs=1e-7)
+    assert result[1] == approx(0.992627976697, abs=1e-7)
+
+    # Asymmetric discontinuous poles case 1, comparing with catwoman
+    result = eggman.transit(.11, .1, -1, .1, **baseArgs)
+    assert result[0] == approx(0.987955255779, abs=1e-7)
+    assert result[1] == approx(0.992338297293, abs=1e-7)
+
+    # Asymmetric discontinuous poles case 2, comparing with catwoman
+    baseArgs['inclination'] = 88
+    result = eggman.transit(.11, .09, -1, .1, **baseArgs)
+    assert result[0] == approx(0.989036823106, abs=1e-7)
+    assert result[1] == approx(0.995336819655, abs=1e-7)
