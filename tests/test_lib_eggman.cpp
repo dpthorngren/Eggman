@@ -164,7 +164,6 @@ int test_phase_curve() {
                                                0.0,        0.0, 0.0, 0.0, 0.0, 0.0};
     double limb_params[MAX_LIMB_PARAMS] = {0., 0., 0.0, 0.0};
     Biellipsoid bell = Biellipsoid();
-    bell.update_derived();
     LightSource star = LightSource(1, source_params, 1, limb_params);
     TEST_APPROX(star.limb_norm, 1.0, 1e-9, errors)
     TEST_APPROX(star.get_brightness(0., 0., 0.), 1 / M_PI, 1e-9, errors)
@@ -175,7 +174,6 @@ int test_phase_curve() {
     // Add the planet
     orb = Orbit(10., 0., 5., 0.00, 89., 90.);
     bell = Biellipsoid(.12, .09, .08, .08);
-    bell.update_derived();
     source_params[0] = 1e-6;
     LightSource planet = LightSource(1, source_params, 0, limb_params);
     TEST_APPROX(star.limb_norm, 1.0, 1e-9, errors);
@@ -221,7 +219,6 @@ int test_phase_curve() {
     limb_params[1] = 0.1;
     source_params[0] = 1 / M_PI;
     bell = Biellipsoid();
-    bell.update_derived();
     star = LightSource(1, source_params, 1, limb_params);
     TEST_APPROX(star.limb_type, 1, 1e-9, errors)
     double expect = 1. - .2 / 3 - .1 / 6.;
@@ -230,7 +227,7 @@ int test_phase_curve() {
     expect = (1.0 - .2 * nu - .1 * nu * nu) / (expect * M_PI);
     TEST_APPROX(star.get_brightness_sphere(0.5, 0.), expect, 1e-9, errors);
     p.clear_objects();
-    p.add_object(Orbit(), Biellipsoid(), star);
+    p.add_object(Orbit(), bell, star);
     TEST_ASSERT(p.get_n_objects(), ==, 1, errors);
     TEST_APPROX(p.integrate_single(0), 1.0, 1e-7, errors);
 

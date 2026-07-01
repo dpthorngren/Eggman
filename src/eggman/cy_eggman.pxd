@@ -76,6 +76,7 @@ cdef extern from "biellipsoid.cpp":
         void set_rotation(double theta, double phi, double gamma, double ci)
         void set_position(Vec3 new_position)
         void set_radii(double r_forward, double r_back, double r_up, double r_side)
+        void position_from_orbit(double t, const Orbit &orb, bint rotate_with_orbit)
         void update_derived()
         Vec3 forward_vector()
         bint is_forward(Vec3 loc)

@@ -10,6 +10,7 @@ double phase_curve_integrand(double y, void *params) {
 
 double phase_curve_inner_integral(double x, void *params) {
     PhaseIntegrator *p = (PhaseIntegrator *)params;
+    p->x = x;
     // Determine the range(s) to integrate over
     // Max size of the bounds "stack" is low, so using an array.
     Bounds b[MAX_PHASE_OBJECTS + 1];
@@ -48,12 +49,13 @@ double phase_curve_inner_integral(double x, void *params) {
                 }
             } else if (occ.max < b[j].max) {
                 // Contained within bounds -> split integration area
-                for (k = j + 1; k < n - 1; k++) {
+                for (k = j; k < n; k++) {
                     b[k + 1] = b[k];
                 }
                 b[j].max = occ.min;
                 b[j + 1].min = occ.max;
                 j += 1;
+                n += 1;
             } else if (occ.min < b[j].max) {
                 // Lower overlap -> truncate
                 b[i].max = occ.min;
@@ -68,7 +70,7 @@ double phase_curve_inner_integral(double x, void *params) {
     double result, err;
     for (i = 0; i < n; i++) {
         code = gsl_integration_qag(
-            &p->integInner, b[i].min, b[i].max, 1e-5, 1e-7, 100, 1, p->workspaceInner, &result, &err
+            &p->integInner, b[i].min, b[i].max, 1e-8, 1e-8, 100, 1, p->workspaceInner, &result, &err
         );
         if (integration_failed(code, result, err, 1e-9, 1e-7)) {
             return NAN;
