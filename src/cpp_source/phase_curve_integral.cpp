@@ -1,8 +1,6 @@
 #include "phase_curve_integral.hpp"
 #include "math_utils.hpp"
 #include <algorithm>
-#include <cstdio>
-#include <iostream>
 
 double phase_curve_integrand(double y, void *params) {
     PhaseIntegrator *p = (PhaseIntegrator *)params;
@@ -12,7 +10,7 @@ double phase_curve_integrand(double y, void *params) {
 
 double phase_curve_inner_integral(double x, void *params) {
     PhaseIntegrator *p = (PhaseIntegrator *)params;
-    // Need to determine the range(s) to integrate over
+    // Determine the range(s) to integrate over
     // Max size of the bounds "stack" is low, so using an array.
     Bounds b[MAX_PHASE_OBJECTS + 1];
     // Initially, plan to integrate over the entire target
@@ -190,7 +188,7 @@ double PhaseIntegrator::integrate_single(int it) {
     std::sort(integration_bounds, integration_bounds + n_bounds);
     // TODO: Actually use the integration bounds >.<
     int code = gsl_integration_qag(
-        &integOuter, xmin, xmax, 1e-6, 1e-9, 100, 1, workspaceOuter, &result, &err
+        &integOuter, xmin, xmax, 1e-8, 1e-8, 100, 1, workspaceOuter, &result, &err
     );
     if (integration_failed(code, result, err, 1e-9, 1e-7)) {
         return NAN;

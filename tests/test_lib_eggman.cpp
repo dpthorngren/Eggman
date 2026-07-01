@@ -216,19 +216,20 @@ int test_phase_curve() {
     TEST_APPROX(result[3], 1 + .12 * .09 * 1e-6, 1e-6, errors);
     TEST_APPROX(result[2], result[1], 1e-6, errors);
 
-    // Test quadratic star
+    // Test star with quadratic limb-darkening
     limb_params[0] = 0.2;
     limb_params[1] = 0.1;
+    source_params[0] = 1 / M_PI;
     bell = Biellipsoid();
     bell.update_derived();
     star = LightSource(1, source_params, 1, limb_params);
     TEST_APPROX(star.limb_type, 1, 1e-9, errors)
     double expect = 1. - .2 / 3 - .1 / 6.;
     TEST_APPROX(star.limb_norm, expect, 1e-9, errors);
-    expect = expect / 2.;
     double nu = 1.0 - sqrt(1 - 0.5 * 0.5);
-    expect = (1.0 - .5 * nu - .2 * nu * nu) / expect;
-    TEST_APPROX(star.get_brightness_sphere(0.5, 0.), expect, 1e-9, errors) p.clear_objects();
+    expect = (1.0 - .2 * nu - .1 * nu * nu) / (expect * M_PI);
+    TEST_APPROX(star.get_brightness_sphere(0.5, 0.), expect, 1e-9, errors);
+    p.clear_objects();
     p.add_object(Orbit(), Biellipsoid(), star);
     TEST_ASSERT(p.get_n_objects(), ==, 1, errors);
     TEST_APPROX(p.integrate_single(0), 1.0, 1e-7, errors);
