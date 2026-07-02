@@ -3,7 +3,6 @@
 #include "orbit.hpp"
 #include "phase_curve_integral.hpp"
 #include "transit_integral.hpp"
-#import <cmath>
 #include <iostream>
 
 using namespace std;

@@ -51,7 +51,7 @@ cdef extern from "ellipse.cpp":
         double y_size
         Ellipse()
         Ellipse(Vec3 e1, Vec3 e2)
-        void get_ybounds(double x, Vec3 *out_min, Vec3 *out_max)
+        void get_ybounds(double x, Vec3 &out_min, Vec3 &out_max)
         bint line_intersects(double x, double y, Vec3* out)
         Vec3 nearest_to_line(double xt, double yt)
 

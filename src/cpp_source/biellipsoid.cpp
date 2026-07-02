@@ -12,8 +12,6 @@ Biellipsoid::Biellipsoid() {
     phi = 0.;
     gamma = 0.;
     rot = {1., 0., 0., 0., 1., 0., 0., 0., 1.};
-    f_limb = Ellipse();
-    b_limb = Ellipse();
     update_derived();
 }
 
@@ -28,8 +26,6 @@ Biellipsoid::Biellipsoid(double r_forward, double r_back, double r_up, double r_
     phi = 0.;
     gamma = 0.;
     rot = {1., 0., 0., 0., 1., 0., 0., 0., 1.};
-    f_limb = Ellipse();
-    b_limb = Ellipse();
     update_derived();
 }
 
@@ -84,6 +80,14 @@ void Biellipsoid::position_from_orbit(double t, const Orbit &orb, bool rotate_wi
 void Biellipsoid::set_position(Vec3 new_position) { this->position = new_position; }
 
 void Biellipsoid::update_derived() {
+    // See if we can bypass these calculations
+    is_sphere =
+        isclose(r_forward, r_back) && isclose(r_forward, r_up) && isclose(r_forward, r_side);
+    if (is_sphere) {
+        f_limb = Ellipse((Vec3){r_forward, 0., 0.}, (Vec3){0., r_forward, 0.});
+        b_limb = Ellipse({r_forward, 0., 0.}, {0., r_forward, 0.});
+        return;
+    }
     // Calculate limb planes and construct the limb ellipses
     Vec3 temp, e1, e2;
     Vec3 limb_plane = (Vec3){-rot.zx / r_forward, -rot.zy / r_up, -rot.zz / r_side};
@@ -133,7 +137,15 @@ Bounds Biellipsoid::slice_ylimits(double x) {
     Bounds result = {INFINITY, -INFINITY};
     x -= position.x;
 
-    f_limb.get_ybounds(x, &lower, &upper);
+    if (is_sphere) {
+        x /= r_forward;
+        result.max = r_forward * sqrt(1 - x * x);
+        result.min = position.y - result.max;
+        result.max += position.y;
+        return result;
+    }
+
+    f_limb.get_ybounds(x, lower, upper);
     if (is_forward_local(lower)) {
         result.min = fmin(result.min, lower.y);
         result.max = fmax(result.max, lower.y);
@@ -143,7 +155,7 @@ Bounds Biellipsoid::slice_ylimits(double x) {
         result.max = fmax(result.max, upper.y);
     }
 
-    b_limb.get_ybounds(x, &lower, &upper);
+    b_limb.get_ybounds(x, lower, upper);
     if (!is_forward_local(lower)) {
         result.min = fmin(result.min, lower.y);
         result.max = fmax(result.max, lower.y);
@@ -175,10 +187,26 @@ bool Biellipsoid::line_intersects(double x, double y) {
 }
 
 Vec3 Biellipsoid::line_project(double x, double y, bool mulatlon) {
+    double mu, x1, y1;
+    Vec3 hit;
     x -= position.x;
     y -= position.y;
-    double mu;
-    Vec3 hit;
+    if (is_sphere) {
+        // Much simpler calculation for spheres
+        x1 = x / r_forward;
+        y1 = y / r_forward;
+        mu = x1 * x1 + y1 * y1;
+        if (mu < 0) {
+            // No intersections
+            return {NAN, NAN, NAN};
+        }
+        mu = sqrt(1 - mu);
+        if (mulatlon) {
+            // TODO: These lat-lon calculations are not correct
+            return {mu, y1, atan2(mu * r_forward, -hit.x)};
+        }
+        return {x, y, mu * r_forward};
+    }
     // Line origin in forward sphere-space: (x, y, 0) in world-space
     Vec3 p0 = {
         (rot.xx * x + rot.yx * y) / r_forward, (rot.xy * x + rot.yy * y) / r_up,
@@ -283,9 +311,7 @@ Bounds Biellipsoid::y_bounds() {
     }
 }
 
-double Biellipsoid::get_area() {
-    return 0.5 * (f_limb.get_area() + b_limb.get_area());
-}
+double Biellipsoid::get_area() { return 0.5 * (f_limb.get_area() + b_limb.get_area()); }
 
 inline Vec3 Biellipsoid::world_to_aligned(Vec3 loc) {
     Vec3 result;

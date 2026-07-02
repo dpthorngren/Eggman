@@ -17,6 +17,7 @@ class Biellipsoid {
     double r_back;
     double r_up;
     double r_side;
+    bool is_sphere;
     double theta;
     double phi;
     double gamma;

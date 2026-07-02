@@ -34,7 +34,7 @@ cdef class EllipseWrap:
     def get_ybounds(self, double x):
         cdef Vec3 out_min
         cdef Vec3 out_max
-        self.ell.get_ybounds(x, &out_min, &out_max)
+        self.ell.get_ybounds(x, out_min, out_max)
         return np.array([
             [out_min.x, out_min.y, out_min.z],
             [out_max.x, out_max.y, out_max.z],

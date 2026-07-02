@@ -61,6 +61,10 @@ typedef struct {
     double max;
 } Bounds;
 
+inline bool isclose(double a, double b, double tol = 1e-9) {
+    return fabs(a - b) < tol + tol * fabs(a);
+}
+
 inline void matmul3x3(Mat3 &a, Mat3 &b, Mat3 &out) {
     out.xx = a.xx * b.xx + a.xy * b.yx + a.xz * b.zx;
     out.xy = a.xx * b.xy + a.xy * b.yy + a.xz * b.zy;

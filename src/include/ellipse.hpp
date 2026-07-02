@@ -17,8 +17,8 @@ class Ellipse {
     double y_size; // Bounds the ellipse to y to [+y_size, -y_size]
 
     Ellipse();
-    Ellipse(Vec3 e1, Vec3 e2);
-    void get_ybounds(double x, Vec3 *out_min, Vec3 *out_max) const;
+    Ellipse(const Vec3 &e1, const Vec3 &e2);
+    void get_ybounds(double x, Vec3 &out_min, Vec3 &out_max) const;
     // Returns whether the line through x, y in view space intersects the ellipse
     bool line_intersects(double x, double y, Vec3 *out = nullptr) const;
     // Finds the nearest point on/in the ellipse to the line through x0, y0

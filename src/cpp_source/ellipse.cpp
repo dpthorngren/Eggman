@@ -9,14 +9,14 @@ Ellipse::Ellipse() {
     y_size = 1.0;
 }
 
-Ellipse::Ellipse(Vec3 e1, Vec3 e2) {
+Ellipse::Ellipse(const Vec3 &e1, const Vec3 &e2) {
     this->e1 = e1;
     this->e2 = e2;
     x_size = sqrt(e1.x * e1.x + e2.x * e2.x);
     y_size = sqrt(e1.y * e1.y + e2.y * e2.y);
 }
 
-void Ellipse::get_ybounds(double x, Vec3 *out_min, Vec3 *out_max) const {
+void Ellipse::get_ybounds(double x, Vec3 &out_min, Vec3 &out_max) const {
     x = CLAMP(x, -x_size, x_size);
     double disc = (x * x) * (e2.x * e2.x) - (x_size * x_size) * (x * x - e1.x * e1.x);
     // If the discriminant is negative return the boundary instead
@@ -37,11 +37,11 @@ void Ellipse::get_ybounds(double x, Vec3 *out_min, Vec3 *out_max) const {
 
     // Write the results, in sorted order, to the output locations
     if (p1.y < p2.y) {
-        *out_min = p1;
-        *out_max = p2;
+        out_min = p1;
+        out_max = p2;
     } else {
-        *out_min = p2;
-        *out_max = p1;
+        out_min = p2;
+        out_max = p1;
     }
 }
 

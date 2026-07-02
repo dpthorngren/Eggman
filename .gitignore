@@ -1,6 +1,7 @@
 # Directories not version-controlled
 cpp_build/
 tests/tester
+tests/perf_eggman
 projects/
 old/
 plots

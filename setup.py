@@ -6,6 +6,7 @@ ext = Extension(
     ["src/eggman/cy_eggman.pyx"],
     libraries=["gsl"],
     include_dirs=["src/include/", "src/cpp_source/"],
+    extra_compile_args=['-O3'],
 )
 
 directives = {

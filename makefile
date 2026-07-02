@@ -29,5 +29,10 @@ cpp_build:
 tester: tests/test_lib_eggman.cpp | $(TARGET)
 	$(CXX) -Wall -g -I src/include -lgsl  tests/test_lib_eggman.cpp $(TARGET) -o tests/tester
 
+perf: tests/perf_eggman.cpp | $(TARGET)
+	g++ -O2 tests/perf_eggman.cpp $(SRCS) -o tests/perf_eggman -pg -g -I src/include -lgsl 
+
 clean:
 	rm -rf cpp_build
+	rm -f tests/tester
+	rm -f tests/perf_eggman
