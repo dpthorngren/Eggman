@@ -87,3 +87,5 @@ Vec3 Ellipse::nearest_to_line(double x0, double y0) const {
     result = (Vec3){x, y, e1.z * ct + e2.z * st};
     return result;
 }
+
+double Ellipse::get_area() const { return M_PI * fabs(e1.x * e2.y - e2.x * e1.y); }

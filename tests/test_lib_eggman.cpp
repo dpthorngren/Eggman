@@ -54,6 +54,17 @@ int test_biellipsoid() {
     TEST_APPROX(bell.line_project(0.5, 0., true).x, loc.z, 1e-9, errors);
     TEST_APPROX(bell.line_project(1 - 1e-12, 0., true).x, 0., 1e-4, errors);
     TEST_APPROX(bell.line_project(0.5, 0., true).x, cos(M_PI / 6), 1e-9, errors);
+
+    // Test area calculation
+    bell = Biellipsoid(1., 1.5, 1.33, 1.);
+    bell.set_position({1., 1., 1.});
+    TEST_APPROX(bell.get_area(), M_PI * 1.33 * (1.5 + 1.) / 2.0, 1e-9, errors);
+    bell.set_rotation(0., 90., 0.);
+    TEST_APPROX(bell.get_area(), M_PI * 1.33, 1e-9, errors);
+    for (int i = 0; i < 10; i++) {
+        bell.set_rotation(i * 180. / 10., 0., 0.);
+        TEST_APPROX(bell.get_area(), M_PI * 1.33 * (1.5 + 1.) / 2.0, 1e-9, errors);
+    }
     return errors;
 }
 

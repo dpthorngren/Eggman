@@ -1,6 +1,6 @@
 #include "phase_curve_integral.hpp"
 #include "math_utils.hpp"
-#include <algorithm>
+#include <cmath>
 
 double phase_curve_integrand(double y, void *params) {
     PhaseIntegrator *p = (PhaseIntegrator *)params;
@@ -167,9 +167,7 @@ double PhaseIntegrator::integrate_single(int it) {
     double xmax = xlim[i_target].max;
 
     // Detect trivially non-overlapping objects and mark them to be skipped
-    int n_bounds = 1;
-    double integration_bounds[MAX_PHASE_OBJECTS + 1];
-    integration_bounds[0] = xmin;
+    int n_occluders = 0;
     for (int i = 0; i < n_objects; i++) {
         relevant[i] =
             // Objects cannot occlude themselves
@@ -180,15 +178,14 @@ double PhaseIntegrator::integrate_single(int it) {
              (xlim[i].max > xmin) && (xlim[i].min < xmax) &&
              // Objects that don't overlap in y with the target cannot occlude it
              (ylim[i].max > ylim[i_target].min) && (ylim[i].min < ylim[i_target].max));
-        if (relevant[i]) {
-            integration_bounds[n_bounds] = shapes[i].position.x;
-            n_bounds += 1;
+        n_occluders += relevant[i];
+    }
+    if (n_occluders == 0) {
+        result = lights[it].get_integrated_brightness(shapes[it]);
+        if (!isnan(result)){
+            return result;
         }
     }
-    integration_bounds[n_bounds] = xmax;
-    n_bounds += 1;
-    std::sort(integration_bounds, integration_bounds + n_bounds);
-    // TODO: Actually use the integration bounds >.<
     int code = gsl_integration_qag(
         &integOuter, xmin, xmax, 1e-8, 1e-8, 100, 1, workspaceOuter, &result, &err
     );

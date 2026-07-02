@@ -94,46 +94,23 @@ double LightSource::get_brightness_sphere(double x, double y) const {
         // Point is not on the sphere
         return 0.;
     }
-    double mu = 0;
-    if (uses_mu()) {
-        // Angle of incidence mu for the unit sphere is just:
-        mu = sqrt(1 - rsq);
-    }
-    double lon = 0.;
-    if (uses_latlon()) {
-        // In view coordinates, the unit sphere has:
-        // x, y, z = [cos(lon) cos(lat), sin(lat), sin(lon) cos(lat)]
-        // x^2 + y^2 + z^2 = 1
-        // tan(lon) = z / x = +/- sqrt(1 - x^2 - y^2) / x
-        // Negative case faces viewer, so:
-        lon = atan2(-sqrt(1 - rsq), x);
-    }
-    // For the unit sphere, y is the cos(latitude)
+    double mu = sqrt(1 - rsq);
+    // In view coordinates, the unit sphere has:
+    // x, y, z = [cos(lon) cos(lat), sin(lat), sin(lon) cos(lat)]
+    // x^2 + y^2 + z^2 = 1
+    // tan(lon) = z / x = +/- sqrt(1 - x^2 - y^2) / x
+    // Negative case faces viewer, so:
+    double lon = atan2(-sqrt(1 - rsq), x);
+    // For the unit sphere, y is the sin(latitude)
     return get_brightness(mu, y, lon);
 }
 
-bool LightSource::uses_mu() const {
-    switch (limb_type) {
-    case 0:
-        return false;
-    case 1:
-        return true;
-    case 2:
-        return true;
-    default:
-        return false;
-    }
-}
-
-bool LightSource::uses_latlon() const {
+double LightSource::get_integrated_brightness(Biellipsoid &bell) {
     switch (source_type) {
-    case 0:
-        return false;
-    case 1:
-        return false;
-    case 2:
-        return true;
-    default:
-        return false;
+    case 0: // No emission
+        return 0.;
+    case 1: // Flat emission
+        return source_params[0] * bell.get_area();
     }
+    return NAN;
 }

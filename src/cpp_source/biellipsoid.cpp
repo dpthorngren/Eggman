@@ -283,6 +283,10 @@ Bounds Biellipsoid::y_bounds() {
     }
 }
 
+double Biellipsoid::get_area() {
+    return 0.5 * (f_limb.get_area() + b_limb.get_area());
+}
+
 inline Vec3 Biellipsoid::world_to_aligned(Vec3 loc) {
     Vec3 result;
     loc.x -= position.x;

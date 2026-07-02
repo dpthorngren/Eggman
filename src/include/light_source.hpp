@@ -1,6 +1,7 @@
 #ifndef LIGHT_SOURCE_HPP
 #define LIGHT_SOURCE_HPP
 
+#include "biellipsoid.hpp"
 #define MAX_SOURCE_PARAMS 12
 #define MAX_LIMB_PARAMS 4
 
@@ -30,10 +31,9 @@ class LightSource {
     double get_brightness(double mu, double sin_lat, double lon) const;
     // Wrapper for get_brightness on a unit sphere given x and y coordinates
     double get_brightness_sphere(double x, double y) const;
-    // Whether this light source needs the cos angle of incidence to calculate brightness
-    bool uses_mu() const;
-    // Whether this light source needs lat and lon to calculate brightness
-    bool uses_latlon() const;
+    // Total luminosity if the object is completely unobscured
+    // Returns NAN if this cannot be computed without an actual integration
+    double get_integrated_brightness(Biellipsoid &bell);
 };
 
 #endif

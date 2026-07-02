@@ -54,6 +54,8 @@ class Biellipsoid {
     Vec3 line_project(double x, double y, bool mulatlon = false);
     // Finds the nearest point on/in the biellipse to the line through x, y
     Vec3 nearest_to_line(double x, double y);
+    // Gets the area of the biellipsoid in the x-y (view) plane
+    double get_area();
 
     // Coordinate transforms
     Vec3 world_to_aligned(Vec3 loc);
