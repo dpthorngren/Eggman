@@ -32,8 +32,10 @@ class PhaseIntegrator {
     bool rotate_with_orbit[MAX_PHASE_OBJECTS];
     Bounds xlim[MAX_PHASE_OBJECTS];
     Bounds ylim[MAX_PHASE_OBJECTS];
+    double atol;
+    double rtol;
 
-    PhaseIntegrator();
+    PhaseIntegrator(double atol=1e-6, double rtol=1e-3);
     PhaseIntegrator(PhaseIntegrator &p);
     ~PhaseIntegrator();
 

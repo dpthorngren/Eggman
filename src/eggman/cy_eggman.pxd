@@ -128,9 +128,9 @@ cdef class LightSourceWrap:
 
 # ===== Transit integration function and wrapper =====
 cdef extern from "transit_integral.cpp":
-    void transit_integral(double *times, double *outputs, int n, const Orbit &orb, const LightSource &emitter, double theta, double phi, double gamma, double r_forward, double r_back, double r_up, double r_side, bint rotate_with_orbit)
+    void transit_integral(double *times, double *outputs, int n, const Orbit &orb, const LightSource &emitter, double theta, double phi, double gamma, double r_forward, double r_back, double r_up, double r_side, bint rotate_with_orbit, double atol, double rtol)
 
-cpdef object transit(double r_forward, double r_back, double r_up, double r_side, double theta, double phi, double gamma, double[::1] t, double t0, double period, double semimajor, double inclination, str limbType, object limb, double eccen=?, double lon_periapse=?, bint rotate_with_orbit=?)
+cpdef object transit(double r_forward, double r_back, double r_up, double r_side, double theta, double phi, double gamma, double[::1] t, double t0, double period, double semimajor, double inclination, str limbType, object limb, double eccen=?, double lon_periapse=?, bint rotate_with_orbit=?, double atol=?, double rtol=?)
 
 
 # ===== Phase Curve Class and Wrapper =====
@@ -152,6 +152,8 @@ cdef extern from "phase_curve_integral.cpp":
         void clear_objects()
         void set_time(double t)
         double integrate_single(int i)
+        double rtol
+        double atol
         void phase_curve_integral(double *times, double *outputs, int n)
 
 cdef class PhaseIntegratorWrap:

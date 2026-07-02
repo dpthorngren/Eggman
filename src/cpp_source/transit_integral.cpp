@@ -35,7 +35,7 @@ double transit_inner_integral(double x, void *params) {
 void transit_integral(
     double *times, double *outputs, int n, const Orbit &orb, const LightSource &emitter,
     double theta, double phi, double gamma, double r_forward, double r_back, double r_up,
-    double r_side, bool rotate_with_orbit
+    double r_side, bool rotate_with_orbit, double atol, double rtol
 ) {
     int code = 0;
     Vec3 split_point;
@@ -61,7 +61,7 @@ void transit_integral(
     // Prepare the inner (y) integral variables
     gsl_integration_workspace *workspaceInner = gsl_integration_workspace_alloc(100);
     gsl_function integInner;
-    TransitIntegralParams g = {emitter, bell, 0., workspaceInner, &integInner};
+    TransitIntegralParams g = {emitter, bell, 0., atol, rtol, workspaceInner, &integInner};
     integInner.function = &transit_integrand;
     integInner.params = &g;
     g.integrand = &integInner;
@@ -118,9 +118,10 @@ void transit_integral(
             }
         }
         code = gsl_integration_qag(
-            &integOuter, x_min, split_point.x, 1e-8, 1e-8, 100, 1, workspaceOuter, &result, &err
+            &integOuter, x_min, split_point.x, .1 * atol, .1 * rtol, 100, 1, workspaceOuter,
+            &result, &err
         );
-        if (integration_failed(code, result, err, 1e-9, 1e-7)) {
+        if (integration_failed(code, result, err, atol, rtol)) {
             outputs[i] = NAN;
             continue;
         }
@@ -129,9 +130,10 @@ void transit_integral(
             g.bell.set_radii(r_forward, r_back, r_forward, r_side);
         }
         code = gsl_integration_qag(
-            &integOuter, split_point.x, x_max, 1e-8, 1e-8, 100, 1, workspaceOuter, &result, &err
+            &integOuter, split_point.x, x_max, .1 * atol, .1 * rtol, 100, 1, workspaceOuter,
+            &result, &err
         );
-        if (integration_failed(code, result, err, 1e-9, 1e-7)) {
+        if (integration_failed(code, result, err, atol, rtol)) {
             outputs[i] = NAN;
             continue;
         }

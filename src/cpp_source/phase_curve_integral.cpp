@@ -70,9 +70,10 @@ double phase_curve_inner_integral(double x, void *params) {
     double result, err;
     for (i = 0; i < n; i++) {
         code = gsl_integration_qag(
-            &p->integInner, b[i].min, b[i].max, 1e-8, 1e-8, 100, 1, p->workspaceInner, &result, &err
+            &p->integInner, b[i].min, b[i].max, .1 * p->atol, .1 * p->rtol, 100, 1,
+            p->workspaceInner, &result, &err
         );
-        if (integration_failed(code, result, err, 1e-9, 1e-7)) {
+        if (integration_failed(code, result, err, p->atol, p->rtol)) {
             return NAN;
         }
         total += result;
@@ -81,10 +82,12 @@ double phase_curve_inner_integral(double x, void *params) {
 }
 
 
-PhaseIntegrator::PhaseIntegrator() {
+PhaseIntegrator::PhaseIntegrator(double atol, double rtol) {
     x = 0.;
     i_target = 0;
     n_objects = 0;
+    this->atol = atol;
+    this->rtol = rtol;
 
     // Prepare the inner (y) integral variables
     workspaceInner = gsl_integration_workspace_alloc(100);
@@ -104,6 +107,8 @@ PhaseIntegrator::PhaseIntegrator(PhaseIntegrator &p) {
     x = p.x;
     i_target = p.i_target;
     n_objects = p.n_objects;
+    atol = p.atol;
+    rtol = p.rtol;
     workspaceInner = gsl_integration_workspace_alloc(100);
     workspaceOuter = gsl_integration_workspace_alloc(100);
     integInner.function = &phase_curve_integrand;
@@ -182,14 +187,14 @@ double PhaseIntegrator::integrate_single(int it) {
     }
     if (n_occluders == 0) {
         result = lights[it].get_integrated_brightness(shapes[it]);
-        if (!isnan(result)){
+        if (!isnan(result)) {
             return result;
         }
     }
     int code = gsl_integration_qag(
-        &integOuter, xmin, xmax, 1e-8, 1e-8, 100, 1, workspaceOuter, &result, &err
+        &integOuter, xmin, xmax, .1 * atol, .1 * rtol, 100, 1, workspaceOuter, &result, &err
     );
-    if (integration_failed(code, result, err, 1e-9, 1e-7)) {
+    if (integration_failed(code, result, err, atol, rtol)) {
         return NAN;
     }
     return result;

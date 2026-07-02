@@ -1,6 +1,10 @@
 
 cdef class PhaseIntegratorWrap:
 
+    def __init__(self, atol=1e-6, rtol=1e-3):
+        self.pci.atol = atol
+        self.pci.rtol = rtol
+
     def add_object(self, OrbitWrap orbit, BiellipsoidWrap bell, LightSourceWrap source, bint rotate_with_orbit=False):
         self.pci.add_object(orbit.orb, bell.bell, source.source, rotate_with_orbit)
 

@@ -9,7 +9,7 @@ include "ellipse_wrap.pyx"
 include "phase_wrap.pyx"
 
 
-cpdef object transit(double r_forward, double r_back, double r_up, double r_side, double theta, double phi, double gamma, double[::1] t, double t0, double period, double semimajor, double inclination, str limb_type, object limb, double eccen=0, double lon_periapse=90, bint rotate_with_orbit=True):
+cpdef object transit(double r_forward, double r_back, double r_up, double r_side, double theta, double phi, double gamma, double[::1] t, double t0, double period, double semimajor, double inclination, str limb_type, object limb, double eccen=0, double lon_periapse=90, bint rotate_with_orbit=True, double atol=1e-6, double rtol=1e-3):
     '''Wrapper for the c function transit3d_integral'''
     cdef Orbit orb = Orbit(period, t0, semimajor, eccen, inclination, lon_periapse)
     cdef LightSource emitter = LightSourceWrap("uniform", [1./np.pi], limb_type, limb).source
@@ -19,5 +19,5 @@ cpdef object transit(double r_forward, double r_back, double r_up, double r_side
         assert not rotate_with_orbit, "Rotation with orbit is not supported for catwoman emulation mode (r_up < 0)."
     results = np.full((len(t),), np.nan)
     cdef double[:] results_view = results
-    transit_integral(&(t[0]), &(results_view[0]), len(t), orb, emitter, theta, phi, gamma, r_forward, r_back, r_up, r_side, rotate_with_orbit)
+    transit_integral(&(t[0]), &(results_view[0]), len(t), orb, emitter, theta, phi, gamma, r_forward, r_back, r_up, r_side, rotate_with_orbit, atol, rtol)
     return results
