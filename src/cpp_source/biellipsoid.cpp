@@ -187,7 +187,7 @@ bool Biellipsoid::line_intersects(double x, double y) const {
 }
 
 bool Biellipsoid::raycast(double x, double y, double *mu_out, Vec3 *hit_out) const {
-    double mu, rsq, len, det, offset;
+    double mu, rsq, len_u_sq, det, offset, lusq;
     Vec3 hit, p0, u;
     x -= position.x;
     y -= position.y;
@@ -201,6 +201,10 @@ bool Biellipsoid::raycast(double x, double y, double *mu_out, Vec3 *hit_out) con
         }
         hit.z = sqrt(1 - rsq);
         mu = hit.z;
+        if (hit_out != nullptr) {
+            MATMUL_T(rot, hit, p0);
+            hit = p0;
+        }
         goto OUTPUT_RET;
     }
     // TODO: Determine forward or backwards ellipse directly, skip for symmetric case
@@ -211,12 +215,14 @@ bool Biellipsoid::raycast(double x, double y, double *mu_out, Vec3 *hit_out) con
         (rot.xz * x + rot.yz * y) / r_side
     };
     // Direction of the line in forward sphere-space
-    u = normalized({rot.zx / r_forward, rot.zy / r_up, rot.zz / r_side});
+    u = {rot.zx / r_forward, rot.zy / r_up, rot.zz / r_side};
+    // Saving a sqrt by not normalizing u, but it makes some of the algebra a little funky
+    lusq = u.x * u.x + u.y * u.y + u.z * u.z;
     offset = u.x * p0.x + u.y * p0.y + u.z * p0.z;
-    len = LENGTH(p0);
-    det = offset * offset - len * len + 1;
+    len_u_sq = p0.x * p0.x + p0.y * p0.y + p0.z * p0.z;
+    det = offset * offset / lusq - len_u_sq + 1;
     if (det >= 0) {
-        offset = sqrt(det) - offset;
+        offset = (sqrt(lusq * det) - offset) / lusq;
         hit = {(p0.x + offset * u.x), (p0.y + offset * u.y), (p0.z + offset * u.z)};
         if (hit.x >= 0) {
             goto OUTPUT_RET;
@@ -225,14 +231,15 @@ bool Biellipsoid::raycast(double x, double y, double *mu_out, Vec3 *hit_out) con
 
     // Find the backward near-point in backward sphere-space
     p0.x = p0.x * r_forward / r_back;
-    u = normalized({rot.zx / r_back, rot.zy / r_up, rot.zz / r_side});
+    u = {rot.zx / r_back, rot.zy / r_up, rot.zz / r_side};
+    lusq = u.x * u.x + u.y * u.y + u.z * u.z;
     offset = u.x * p0.x + u.y * p0.y + u.z * p0.z;
-    len = LENGTH(p0);
-    det = offset * offset - len * len + 1;
+    len_u_sq = p0.x * p0.x + p0.y * p0.y + p0.z * p0.z;
+    det = offset * offset / lusq - len_u_sq + 1;
     if (det < 0) {
         return false; // No intersections
     }
-    offset = sqrt(det) - offset;
+    offset = (sqrt(lusq * det) - offset) / lusq;
     hit = {(p0.x + offset * u.x), (p0.y + offset * u.y), (p0.z + offset * u.z)};
     if (hit.x > 0) {
         return false; // No intersections
