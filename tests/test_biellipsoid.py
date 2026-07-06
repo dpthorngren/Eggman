@@ -151,13 +151,15 @@ def test_biellipsoid_point_visible():
 
 def test_biellipsoid_intersect():
     bell = BiellipsoidWrap(0., 0., 0., 0, 0, 0, 1.33, 1.33, 1.33, 1.33)
-    hit = bell.line_project(.5, .5)
+    _, hit, _ = bell.raycast(.5, .5)
+    hit = bell.sphere_to_world(hit)
     assert hit[0] == 0.5
     assert hit[1] == 0.5
     assert np.linalg.norm(hit / 1.33) == approx(1.0)
     # Changing the far ellipsoid shouldn't matter
     bell = BiellipsoidWrap(0., 0., 0., 0, 0, 0, 1.2, 0.5, 1.2, 1.2)
-    hit = bell.line_project(.5, .5)
+    _, hit, _ = bell.raycast(.5, .5)
+    hit = bell.sphere_to_world(hit)
     assert hit[0] == 0.5
     assert hit[1] == 0.5
     assert np.linalg.norm(hit / 1.2) == approx(1.0)
@@ -167,7 +169,8 @@ def test_biellipsoid_intersect():
         radii = 1.5 * np.random.rand(4) + .5
         bell = BiellipsoidWrap(*loc, *angles, *radii)
         for pos in np.random.rand(100, 2) * 4 - 2 + loc[:2]:
-            hit = bell.line_project(pos[0], pos[1])
+            found, hit, _ = bell.raycast(pos[0], pos[1])
+            hit = bell.sphere_to_world(hit)
             if bell.line_intersects(pos[0], pos[1]):
                 assert hit[:2] == approx(pos[:2])
                 pos_rot = np.ravel(bell.rot.T @ np.row_stack(hit - loc))
@@ -176,7 +179,7 @@ def test_biellipsoid_intersect():
                 pos_rot[2] /= bell.r_side
                 assert np.linalg.norm(pos_rot) == approx(1)
             else:
-                assert np.all(np.isnan(hit))
+                assert not found
 
 
 def test_biellipsoid_slice_ylimits():

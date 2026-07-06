@@ -33,25 +33,28 @@ LightSource::LightSource(SourceType type, double *params) {
     }
 }
 
-double LightSource::get_brightness(double mu, double sin_lat, double lon) const {
-    // See light_source.hpp for the type codes used here
-    double base, limb_coeff, nu, sqrtmu;
-
-    mu = CLAMP(mu, 0., 1.);
+double LightSource::get_brightness(double x, double y, const Biellipsoid &bell) const {
+    double mu, nu, limb_coeff;
     switch (stype) {
     case None:
         return 0.;
     case Lambertian:
         return params[0];
     case QuadraticLimb:
+        if (!bell.raycast(x, y, &mu, nullptr)) {
+            return 0; // Point doesn't intersect biellipsoid
+        }
         nu = 1 - mu;
         limb_coeff = 1 - params[1] * nu - params[2] * nu * nu;
         return params[0] * limb_coeff / limb_norm;
     case NonLinearLimb:
-        sqrtmu = sqrt(mu);
-        limb_coeff = 1.0 - params[1] * (1 - sqrtmu);
+        if (!bell.raycast(x, y, &mu, nullptr)) {
+            return 0; // Point doesn't intersect biellipsoid
+        }
+        nu = sqrt(mu);
+        limb_coeff = 1.0 - params[1] * (1 - nu);
         limb_coeff -= params[2] * (1 - mu);
-        limb_coeff -= params[3] * (1 - mu * sqrtmu);
+        limb_coeff -= params[3] * (1 - mu * nu);
         limb_coeff -= params[4] * (1 - mu * mu);
         return params[0] * limb_coeff / limb_norm;
     default:
@@ -59,33 +62,45 @@ double LightSource::get_brightness(double mu, double sin_lat, double lon) const 
     }
 }
 
+
 double LightSource::get_brightness_sphere(double x, double y) const {
+    double mu, nu, limb_coeff;
     double rsq = x * x + y * y;
     if (rsq > 1.) {
-        // Point is not on the sphere
-        return 0.;
+        return 0.; // Point is not on the sphere
     }
-    double mu = sqrt(1 - rsq);
-    // In view coordinates, the unit sphere has:
-    // x, y, z = [cos(lon) cos(lat), sin(lat), sin(lon) cos(lat)]
-    // x^2 + y^2 + z^2 = 1
-    // tan(lon) = z / x = +/- sqrt(1 - x^2 - y^2) / x
-    // Negative case faces viewer, so:
-    double lon = atan2(-sqrt(1 - rsq), x);
-    // For the unit sphere, y is the sin(latitude)
-    return get_brightness(mu, y, lon);
+    switch (stype) {
+    case None:
+        return 0.;
+    case Lambertian:
+        return params[0];
+    case QuadraticLimb:
+        nu = 1 - CLAMP(sqrt(1 - rsq), 0., 1.0);
+        limb_coeff = 1 - params[1] * nu - params[2] * nu * nu;
+        return params[0] * limb_coeff / limb_norm;
+    case NonLinearLimb:
+        mu = CLAMP(sqrt(1 - rsq), 0., 1.0);
+        nu = sqrt(mu);
+        limb_coeff = 1.0 - params[1] * (1 - nu);
+        limb_coeff -= params[2] * (1 - mu);
+        limb_coeff -= params[3] * (1 - mu * nu);
+        limb_coeff -= params[4] * (1 - mu * mu);
+        return params[0] * limb_coeff / limb_norm;
+    default:
+        return NAN;
+    }
 }
 
-double LightSource::get_integrated_brightness(Biellipsoid &bell) {
+double LightSource::get_integrated_brightness(const Biellipsoid &bell) const {
     switch (stype) {
     case None:
         return 0.;
     case Lambertian:
         return params[0] * bell.get_area();
     case QuadraticLimb:
-        return params[0] * bell.get_area();
+        return bell.is_sphere ? params[0] * bell.get_area() : NAN;
     case NonLinearLimb:
-        return params[0] * bell.get_area();
+        return bell.is_sphere ? params[0] * bell.get_area() : NAN;
     default:
         return NAN;
     }

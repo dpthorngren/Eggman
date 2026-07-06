@@ -38,33 +38,32 @@ class Biellipsoid {
     void update_derived(); // Updates f_limb and b_limb when radii or rot change.
 
     // Derived info
-    Bounds x_bounds();
-    Bounds y_bounds();
+    Bounds x_bounds() const;
+    Bounds y_bounds() const;
     // Checks if loc is on the forward side of the biellipsoid or the back
-    bool is_forward(Vec3 loc);
-    bool is_forward_local(Vec3 loc);
+    bool is_forward(Vec3 loc) const;
+    bool is_forward_local(Vec3 loc) const;
     // Checks if loc is not behind / inside the biellipsoid
-    bool is_visible(Vec3 loc);
+    bool is_visible(Vec3 loc) const;
     // Determines the y range occupied by the biellipsoid for this x value (min=max outside range)
-    Bounds slice_ylimits(double x);
+    Bounds slice_ylimits(double x) const;
     // Returns whether the line through x, y intersects the biellipsoid
-    bool line_intersects(double x, double y);
-    // Finds the intersection of a line through (x, y) with the biellipsoid, choosing point with the
-    // larger z and returning the location in world space or hit longitude, sin(latitude),
-    // and cos(incidence angle) if mulatlon is set.
-    Vec3 line_project(double x, double y, bool mulatlon = false);
+    bool line_intersects(double x, double y) const;
+    // Finds the near intersection of a line through (x, y) with the biellipsoid
+    // writing to the angle of incidence mu and hit position (Sphere space) if not null
+    bool raycast(double x, double y, double *mu_out = nullptr, Vec3 *hit_out = nullptr) const;
     // Finds the nearest point on/in the biellipse to the line through x, y
-    Vec3 nearest_to_line(double x, double y);
+    Vec3 nearest_to_line(double x, double y) const;
     // Gets the area of the biellipsoid in the x-y (view) plane
-    double get_area();
+    double get_area() const;
 
     // Coordinate transforms
-    Vec3 world_to_aligned(Vec3 loc);
-    Vec3 world_to_sphere(Vec3 loc);
-    Vec3 aligned_to_world(Vec3 loc);
-    Vec3 aligned_to_sphere(Vec3 loc);
-    Vec3 sphere_to_world(Vec3 loc);
-    Vec3 sphere_to_aligned(Vec3 loc);
+    Vec3 world_to_aligned(Vec3 loc) const;
+    Vec3 world_to_sphere(Vec3 loc) const;
+    Vec3 aligned_to_world(Vec3 loc) const;
+    Vec3 aligned_to_sphere(Vec3 loc) const;
+    Vec3 sphere_to_world(Vec3 loc) const;
+    Vec3 sphere_to_aligned(Vec3 loc) const;
 };
 
 #endif

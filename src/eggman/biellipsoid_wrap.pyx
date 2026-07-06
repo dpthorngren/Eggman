@@ -98,9 +98,11 @@ cdef class BiellipsoidWrap:
     def line_intersects(self, double x, double y):
         return self.bell.line_intersects(x, y)
 
-    def line_project(self, double x, double y, bint latlonmu=False):
-        cdef Vec3 result = self.bell.line_project(x, y, latlonmu)
-        return np.array([result.x, result.y, result.z])
+    def raycast(self, double x, double y):
+        cdef Vec3 loc
+        cdef double mu
+        cdef bint hit = self.bell.raycast(x, y, &mu, &loc)
+        return hit, np.array([loc.x, loc.y, loc.z]), mu
 
     def world_to_aligned(self, loc):
         cdef Vec3 v = Vec3(loc[0], loc[1], loc[2])

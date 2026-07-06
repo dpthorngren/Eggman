@@ -41,18 +41,24 @@ int test_biellipsoid() {
     // Test line projection
     bell = Biellipsoid(1., 1., 1., 1.);
     bell.update_derived();
-    Vec3 loc = bell.line_project(0, 0);
+    Vec3 loc;
+    double mu;
+    bool hit = bell.raycast(0, 0, &mu, &loc);
+    TEST_ASSERT(hit, ==, true, errors);
     TEST_APPROX(loc.x, 0., 1e-9, errors);
     TEST_APPROX(loc.y, 0., 1e-9, errors);
     TEST_APPROX(loc.z, 1., 1e-9, errors);
-    TEST_APPROX(bell.line_project(0., 0., true).x, 1.0, 1e-9, errors);
-    loc = bell.line_project(0.5, 0);
+    TEST_APPROX(mu, 1.0, 1e-9, errors);
+    hit = bell.raycast(0.5, 0, &mu, &loc);
+    TEST_ASSERT(hit, ==, true, errors);
     TEST_APPROX(loc.x, 0.5, 1e-9, errors);
     TEST_APPROX(loc.y, 0., 1e-9, errors);
     TEST_APPROX(loc.z, sqrt(1 - .5 * .5), 1e-9, errors);
-    TEST_APPROX(bell.line_project(0.5, 0., true).x, loc.z, 1e-9, errors);
-    TEST_APPROX(bell.line_project(1 - 1e-12, 0., true).x, 0., 1e-4, errors);
-    TEST_APPROX(bell.line_project(0.5, 0., true).x, cos(M_PI / 6), 1e-9, errors);
+    bell.raycast(0.5, 0., &mu, &loc);
+    TEST_APPROX(mu, loc.z, 1e-9, errors);
+    TEST_APPROX(mu, cos(M_PI / 6), 1e-9, errors);
+    bell.raycast(1 - 1e-12, 0., &mu);
+    TEST_APPROX(mu, 0., 1e-4, errors);
 
     // Test area calculation
     bell = Biellipsoid(1., 1.5, 1.33, 1.);
@@ -174,7 +180,7 @@ int test_phase_curve() {
     Biellipsoid bell = Biellipsoid();
     LightSource star = LightSource(QuadraticLimb, source_params);
     TEST_APPROX(star.limb_norm, 1.0, 1e-9, errors)
-    TEST_APPROX(star.get_brightness(0., 0., 0.), 1 / M_PI, 1e-9, errors)
+    TEST_APPROX(star.get_brightness(0., 0., bell), 1 / M_PI, 1e-9, errors)
     p.add_object(orb, bell, star);
     TEST_ASSERT(p.get_n_objects(), ==, 1, errors);
     TEST_APPROX(p.integrate_single(0), 1.0, 1e-7, errors);
@@ -185,7 +191,7 @@ int test_phase_curve() {
     source_params[0] = 1e-6;
     LightSource planet = LightSource(Lambertian, source_params);
     TEST_APPROX(star.limb_norm, 1.0, 1e-9, errors);
-    TEST_APPROX(planet.get_brightness(0., 0., 0.), 1e-6, 1e-9, errors)
+    TEST_APPROX(planet.get_brightness(0., 0., bell), 1e-6, 1e-9, errors)
     p.add_object(orb, bell, planet);
     TEST_ASSERT(p.get_n_objects(), ==, 2, errors);
 
@@ -245,18 +251,19 @@ int test_light_source() {
     ANNOUNCE_TEST();
     int errors = 0;
     double source_params[MAX_SOURCE_PARAMS] = {1.0 / M_PI, 0.01, 0.1, 0., 0., 0.,
-                                               0.,         0., 0., 0., 0., 0.};
+                                               0.,         0.,   0.,  0., 0., 0.};
     // No source should always return 0
+    Biellipsoid bell = Biellipsoid();
     LightSource s = LightSource(None, source_params);
     TEST_APPROX(s.get_brightness_sphere(0., 0.), 0., 1e-9, errors);
     TEST_APPROX(s.get_brightness_sphere(0.5, 0.5), 0., 1e-9, errors);
-    TEST_APPROX(s.get_brightness(0.9, 0.8, 45.), 0., 1e-9, errors);
+    TEST_APPROX(s.get_brightness(0.9, 0.8, bell), 0., 1e-9, errors);
     // Lambertian emitter of total brightness 1
     double expect = 1 / M_PI;
     s = LightSource(Lambertian, source_params);
     TEST_APPROX(s.get_brightness_sphere(0., 0.), expect, 1e-9, errors);
     TEST_APPROX(s.get_brightness_sphere(0.5, 0.5), expect, 1e-9, errors);
-    TEST_APPROX(s.get_brightness(0.9, 0.8, 45.), expect, 1e-9, errors);
+    TEST_APPROX(s.get_brightness(0.9, 0.8, bell), expect, 1e-9, errors);
     // Standard star (brightness 1, quadratic limb darkening)
     s = LightSource(QuadraticLimb, source_params);
     // Small params ~= lambertian

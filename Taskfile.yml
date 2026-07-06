@@ -42,6 +42,13 @@ tasks:
     cmds:
       - make tester
 
+  profile:
+    desc: "Build the performance test program and run it, getting results with gprof."
+    cmds:
+      - make perf
+      - time tests/perf_eggman
+      - gprof tests/perf_eggman
+
   libtest:
     desc: "Test the Eggman C++ code as a shared library (not using Cython or Python)"
     deps: [libtest_build]

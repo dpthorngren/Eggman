@@ -25,7 +25,7 @@ int main() {
     p.add_object(orb, bell, planet);
 
     // Test a full phase curve
-    const int n_times = 1000;
+    const int n_times = 10000;
     double time[n_times];
     double result[n_times];
     for (int i = 0; i < n_times; i++) {

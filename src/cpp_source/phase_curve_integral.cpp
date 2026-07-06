@@ -4,8 +4,7 @@
 
 double phase_curve_integrand(double y, void *params) {
     PhaseIntegrator *p = (PhaseIntegrator *)params;
-    Vec3 pos = p->shapes[p->i_target].line_project(p->x, y, true);
-    return p->lights[p->i_target].get_brightness(pos.x, pos.y, pos.z);
+    return p->lights[p->i_target].get_brightness(p->x, y, p->shapes[p->i_target]);
 }
 
 double phase_curve_inner_integral(double x, void *params) {

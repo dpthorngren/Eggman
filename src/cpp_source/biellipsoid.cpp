@@ -132,7 +132,7 @@ void Biellipsoid::update_derived() {
     b_limb = Ellipse(e1, e2);
 }
 
-Bounds Biellipsoid::slice_ylimits(double x) {
+Bounds Biellipsoid::slice_ylimits(double x) const {
     Vec3 lower, upper;
     Bounds result = {INFINITY, -INFINITY};
     x -= position.x;
@@ -170,7 +170,7 @@ Bounds Biellipsoid::slice_ylimits(double x) {
     return result;
 }
 
-bool Biellipsoid::line_intersects(double x, double y) {
+bool Biellipsoid::line_intersects(double x, double y) const {
     bool hit;
     Vec3 loc;
     x -= position.x;
@@ -186,51 +186,40 @@ bool Biellipsoid::line_intersects(double x, double y) {
     return false;
 }
 
-Vec3 Biellipsoid::line_project(double x, double y, bool mulatlon) {
-    double mu, x1, y1;
-    Vec3 hit;
+bool Biellipsoid::raycast(double x, double y, double *mu_out, Vec3 *hit_out) const {
+    double mu, rsq, len, det, offset;
+    Vec3 hit, p0, u;
     x -= position.x;
     y -= position.y;
     if (is_sphere) {
         // Much simpler calculation for spheres
-        x1 = x / r_forward;
-        y1 = y / r_forward;
-        mu = x1 * x1 + y1 * y1;
-        if (mu < 0) {
-            // No intersections
-            return {NAN, NAN, NAN};
+        hit.x = x / r_forward;
+        hit.y = y / r_forward;
+        rsq = hit.x * hit.x + hit.y * hit.y;
+        if (rsq < 0) {
+            return false; // No intersections
         }
-        mu = sqrt(1 - mu);
-        if (mulatlon) {
-            // TODO: These lat-lon calculations are not correct
-            return {mu, y1, atan2(mu * r_forward, -hit.x)};
-        }
-        return {x, y, mu * r_forward};
+        hit.z = sqrt(1 - rsq);
+        mu = hit.z;
+        goto OUTPUT_RET;
     }
+    // TODO: Determine forward or backwards ellipse directly, skip for symmetric case
+
     // Line origin in forward sphere-space: (x, y, 0) in world-space
-    Vec3 p0 = {
+    p0 = {
         (rot.xx * x + rot.yx * y) / r_forward, (rot.xy * x + rot.yy * y) / r_up,
         (rot.xz * x + rot.yz * y) / r_side
     };
-    // Find the forward near-point in forward sphere-space
     // Direction of the line in forward sphere-space
-    Vec3 u = normalized({rot.zx / r_forward, rot.zy / r_up, rot.zz / r_side});
-    double len, det, offset;
+    u = normalized({rot.zx / r_forward, rot.zy / r_up, rot.zz / r_side});
     offset = u.x * p0.x + u.y * p0.y + u.z * p0.z;
     len = LENGTH(p0);
     det = offset * offset - len * len + 1;
     if (det >= 0) {
         offset = sqrt(det) - offset;
-        hit = (Vec3){
-            (p0.x + offset * u.x) * r_forward, (p0.y + offset * u.y) * r_up,
-            (p0.z + offset * u.z) * r_side
-        };
+        hit = {(p0.x + offset * u.x), (p0.y + offset * u.y), (p0.z + offset * u.z)};
         if (hit.x >= 0) {
-            if (mulatlon) {
-                mu = rot.xz * hit.x / r_forward + rot.yz * hit.y / r_up + rot.zz * hit.z / r_side;
-                return {mu, hit.y / r_up, atan2(hit.z, -hit.x)};
-            }
-            return aligned_to_world(hit);
+            goto OUTPUT_RET;
         }
     }
 
@@ -241,25 +230,25 @@ Vec3 Biellipsoid::line_project(double x, double y, bool mulatlon) {
     len = LENGTH(p0);
     det = offset * offset - len * len + 1;
     if (det < 0) {
-        // No intersections
-        return (Vec3){NAN, NAN, NAN};
+        return false; // No intersections
     }
     offset = sqrt(det) - offset;
-    hit = {
-        (p0.x + offset * u.x) * r_back, (p0.y + offset * u.y) * r_up, (p0.z + offset * u.z) * r_side
-    };
+    hit = {(p0.x + offset * u.x), (p0.y + offset * u.y), (p0.z + offset * u.z)};
     if (hit.x > 0) {
-        // No intersections
-        return (Vec3){NAN, NAN, NAN};
+        return false; // No intersections
     }
-    if (mulatlon) {
-        mu = rot.xz * hit.x / r_forward + rot.yz * hit.y / r_up + rot.zz * hit.z / r_side;
-        return {mu, hit.y / r_up, atan2(hit.z, -hit.x)};
+
+OUTPUT_RET: // Yes, yes, goto's are bad.  Deal with it :)
+    if (mu_out != nullptr) {
+        *mu_out = mu;
     }
-    return aligned_to_world(hit);
+    if (hit_out != nullptr) {
+        *hit_out = hit;
+    }
+    return true;
 }
 
-Vec3 Biellipsoid::nearest_to_line(double x, double y) {
+Vec3 Biellipsoid::nearest_to_line(double x, double y) const {
     Vec3 result;
     if (is_forward((Vec3){x, y, position.z})) {
         result = f_limb.nearest_to_line(x - position.x, y - position.y);
@@ -270,16 +259,16 @@ Vec3 Biellipsoid::nearest_to_line(double x, double y) {
     return result;
 }
 
-inline bool Biellipsoid::is_forward(Vec3 loc) {
+inline bool Biellipsoid::is_forward(Vec3 loc) const {
     return ((loc.x - position.x) * rot.xx + (loc.y - position.y) * rot.yx +
             (loc.z - position.z) * rot.zx) >= 0;
 }
 
-inline bool Biellipsoid::is_forward_local(Vec3 loc) {
+inline bool Biellipsoid::is_forward_local(Vec3 loc) const {
     return (loc.x * rot.xx + loc.y * rot.yx + loc.z * rot.zx) >= 0;
 }
 
-bool Biellipsoid::is_visible(Vec3 loc) {
+bool Biellipsoid::is_visible(Vec3 loc) const {
     // In this niche world-aligned-but-scaled frame, planet is a unit sphere at the origin
     // but the view vector is (0, 0, -1)
     Vec3 loc_sph = world_to_sphere(loc);
@@ -295,7 +284,7 @@ bool Biellipsoid::is_visible(Vec3 loc) {
     return (xysq + loc.z * loc.z) > 1;
 }
 
-Bounds Biellipsoid::x_bounds() {
+Bounds Biellipsoid::x_bounds() const {
     if (rot.xx > 0) {
         return {position.x - b_limb.x_size, position.x + f_limb.x_size};
     } else {
@@ -303,7 +292,7 @@ Bounds Biellipsoid::x_bounds() {
     }
 }
 
-Bounds Biellipsoid::y_bounds() {
+Bounds Biellipsoid::y_bounds() const {
     if (rot.yy > 0) {
         return {position.y - b_limb.y_size, position.y + f_limb.y_size};
     } else {
@@ -311,9 +300,9 @@ Bounds Biellipsoid::y_bounds() {
     }
 }
 
-double Biellipsoid::get_area() { return 0.5 * (f_limb.get_area() + b_limb.get_area()); }
+double Biellipsoid::get_area() const { return 0.5 * (f_limb.get_area() + b_limb.get_area()); }
 
-inline Vec3 Biellipsoid::world_to_aligned(Vec3 loc) {
+inline Vec3 Biellipsoid::world_to_aligned(Vec3 loc) const {
     Vec3 result;
     loc.x -= position.x;
     loc.y -= position.y;
@@ -322,7 +311,7 @@ inline Vec3 Biellipsoid::world_to_aligned(Vec3 loc) {
     return result;
 }
 
-inline Vec3 Biellipsoid::world_to_sphere(Vec3 loc) {
+inline Vec3 Biellipsoid::world_to_sphere(Vec3 loc) const {
     Vec3 result;
     loc.x -= position.x;
     loc.y -= position.y;
@@ -334,7 +323,7 @@ inline Vec3 Biellipsoid::world_to_sphere(Vec3 loc) {
     return result;
 }
 
-inline Vec3 Biellipsoid::aligned_to_world(Vec3 loc) {
+inline Vec3 Biellipsoid::aligned_to_world(Vec3 loc) const {
     Vec3 result;
     MATMUL(rot, loc, result);
     result.x += position.x;
@@ -343,14 +332,14 @@ inline Vec3 Biellipsoid::aligned_to_world(Vec3 loc) {
     return result;
 }
 
-inline Vec3 Biellipsoid::aligned_to_sphere(Vec3 loc) {
+inline Vec3 Biellipsoid::aligned_to_sphere(Vec3 loc) const {
     loc.x /= (loc.x < 0 ? r_back : r_forward);
     loc.y /= r_up;
     loc.z /= r_side;
     return loc;
 }
 
-inline Vec3 Biellipsoid::sphere_to_world(Vec3 loc) {
+inline Vec3 Biellipsoid::sphere_to_world(Vec3 loc) const {
     Vec3 result;
     loc.x *= (loc.x < 0 ? r_back : r_forward);
     loc.y *= r_up;
@@ -362,7 +351,7 @@ inline Vec3 Biellipsoid::sphere_to_world(Vec3 loc) {
     return result;
 }
 
-inline Vec3 Biellipsoid::sphere_to_aligned(Vec3 loc) {
+inline Vec3 Biellipsoid::sphere_to_aligned(Vec3 loc) const {
     loc.x *= (loc.x < 0 ? r_back : r_forward);
     loc.y *= r_up;
     loc.z *= r_side;

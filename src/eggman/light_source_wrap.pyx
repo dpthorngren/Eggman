@@ -32,8 +32,8 @@ cdef class LightSourceWrap:
             source_params_c[i] = p
         self.source = LightSource(source_code, source_params_c)
 
-    def get_brightness(self, nu, lat, lon):
-        return self.source.get_brightness(nu, lat, lon)
+    def get_brightness(self, double x, double y, BiellipsoidWrap bell):
+        return self.source.get_brightness(x, y, bell.bell)
 
     def get_brightness_sphere(self, x, y):
         types = [float, np.float64, np.float32, np.int32, np.int64, int]
