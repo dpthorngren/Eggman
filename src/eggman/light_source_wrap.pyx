@@ -1,55 +1,36 @@
 
 cdef class LightSourceWrap:
-    _source_type_names_ = ['none', 'uniform', 'daynightpole']
-    _source_n_params_ = [0, 1, 4]
-    _limb_type_names_ = ['lambertian', 'quadratic', 'nonlinear']
-    _limb_n_params_ = [0, 2, 4]
+    _source_type_names_ = ['none', 'lambertian', 'quadratic_limb', 'nonlinear_limb', 'day_night']
+    _source_n_params_ = [0, 1, 3, 5, 3]
+    _source_enum_ = [SourceType.None, SourceType.Lambertian, SourceType.QuadraticLimb, SourceType.NonLinearLimb, SourceType.DayNight]
 
     @property
     def source_type(self):
-        return self._source_type_names_[self.source.source_type]
+        return self._source_type_names_[self.source.stype]
 
     @property
     def source_type_code(self):
-        return self.source.source_type
+        return self.source.stype
 
     @property
     def source_params(self):
-        return np.array(self.source.source_params)[:self._source_n_params_[self.source_type_code]]
-
-    @property
-    def limb_type(self):
-        return self._limb_type_names_[self.source.limb_type]
-
-    @property
-    def limb_type_code(self):
-        return self.source.limb_type
-
-    @property
-    def limb_params(self):
-        return np.array(self.source.limb_params)[:self._limb_n_params_[self.limb_type_code]]
+        return np.array(self.source.params)[:self._source_n_params_[self.source_type_code]]
 
     @property
     def limb_norm(self):
         return self.source.limb_norm
 
-    def __init__(self, str source_type, list[double] source_params, str limb_type, list[double] limb_params):
+    def __init__(self, str source_type, list[double] source_params):
         source_type = source_type.lower().strip()
         assert source_type in self._source_type_names_, f"Error: source_type {source_type} not recognized, must be one of {self._source_type_names_}"
-        cdef int source_code = self._source_type_names_.index(source_type)
+        cdef SourceType source_code = self._source_enum_[self._source_type_names_.index(source_type)]
+        if source_type in ['quadratic_limb', 'nonlinear_limb'] and len(source_params) == self._source_n_params_[source_code] - 1:
+            source_params.insert(0, 1/np.pi)
         assert len(source_params) == self._source_n_params_[source_code], f"Error: wrong number of source parameters; should be {self._source_n_params_[source_code]}, was {len(source_params)}."
         cdef double[MAX_SOURCE_PARAMS] source_params_c = [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.]
         for i, p in enumerate(source_params):
             source_params_c[i] = p
-
-        limb_type = limb_type.lower().strip()
-        assert limb_type in self._limb_type_names_, f"Error: limb_type {limb_type} not recognized, must be one of {self._limb_type_names_}"
-        cdef int limb_code = self._limb_type_names_.index(limb_type)
-        assert len(limb_params) == self._limb_n_params_[limb_code], f"Error: wrong number of limb parameters; should be {self._limb_n_params_[limb_code]}, was {len(limb_params)}."
-        cdef double[MAX_LIMB_PARAMS] limb_params_c = [0., 0., 0., 0.]
-        for i, p in enumerate(limb_params):
-            limb_params_c[i] = p
-        self.source = LightSource(source_code, source_params_c, limb_code, limb_params_c)
+        self.source = LightSource(source_code, source_params_c)
 
     def get_brightness(self, nu, lat, lon):
         return self.source.get_brightness(nu, lat, lon)

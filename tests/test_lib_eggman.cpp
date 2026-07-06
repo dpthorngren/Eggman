@@ -89,8 +89,7 @@ int test_transit() {
     Orbit orb = Orbit(2., 0., 5., 0.01, 85., 90.);
     double source_params[MAX_SOURCE_PARAMS] = {1.0 / M_PI, 0.0, 0.0, 0.0, 0.0, 0.0,
                                                0.0,        0.0, 0.0, 0.0, 0.0, 0.0};
-    double limb_params[MAX_LIMB_PARAMS] = {0.0, 0.0, 0.0, 0.0};
-    LightSource star = LightSource(1, source_params, 1, limb_params);
+    LightSource star = LightSource(QuadraticLimb, source_params);
 
     const int n_times = 100;
     double outputs[n_times];
@@ -138,23 +137,23 @@ int test_transit() {
 
     // Limb Darkening, symmetric transit (ref from catwoman)
     orb = Orbit(1., 0., 15., 0, 90., 90.);
-    limb_params[0] = .1;
-    limb_params[1] = .3;
+    source_params[1] = .1;
+    source_params[2] = .3;
     double times2[2] = {.001, .01};
-    star = LightSource(1, source_params, 1, limb_params);
+    star = LightSource(QuadraticLimb, source_params);
     transit_integral(times2, outputs, 2, orb, star, 0., 0., 0., .1, .1, .1, .1, true);
     TEST_APPROX(outputs[0], 0.989098764152, 1e-7, errors);
     TEST_APPROX(outputs[1], 0.992627976697, 1e-7, errors);
 
     // Limb Darkening, asymmetric transit (ref from catwoman)
-    star = LightSource(1, source_params, 1, limb_params);
+    star = LightSource(QuadraticLimb, source_params);
     orb = Orbit(1., 0., 15., 0, 90., 90.);
     transit_integral(times2, outputs, 2, orb, star, 0., 0., 0., .11, .1, -1, .1, true);
     TEST_APPROX(outputs[0], 0.987955283022, 1e-7, errors);
     TEST_APPROX(outputs[1], 0.992339221135, 1e-7, errors);
 
     // Limb Darkening, asymmetric transit, slightly inclined (ref from catwoman)
-    star = LightSource(1, source_params, 1, limb_params);
+    star = LightSource(QuadraticLimb, source_params);
     orb = Orbit(1., 0., 15., 0, 89., 90.);
     transit_integral(times2, outputs, 2, orb, star, 0., 0., 0., .11, .09, -1, .1, true);
     // Note the reduced precision.  I *think* this is Catwoman's fault, but it's hard to tell.
@@ -172,9 +171,8 @@ int test_phase_curve() {
     Orbit orb = Orbit();
     double source_params[MAX_SOURCE_PARAMS] = {1.0 / M_PI, 0.0, 0.0, 0.0, 0.0, 0.0,
                                                0.0,        0.0, 0.0, 0.0, 0.0, 0.0};
-    double limb_params[MAX_LIMB_PARAMS] = {0., 0., 0.0, 0.0};
     Biellipsoid bell = Biellipsoid();
-    LightSource star = LightSource(1, source_params, 1, limb_params);
+    LightSource star = LightSource(QuadraticLimb, source_params);
     TEST_APPROX(star.limb_norm, 1.0, 1e-9, errors)
     TEST_APPROX(star.get_brightness(0., 0., 0.), 1 / M_PI, 1e-9, errors)
     p.add_object(orb, bell, star);
@@ -185,7 +183,7 @@ int test_phase_curve() {
     orb = Orbit(10., 0., 5., 0.00, 89., 90.);
     bell = Biellipsoid(.12, .09, .08, .08);
     source_params[0] = 1e-6;
-    LightSource planet = LightSource(1, source_params, 0, limb_params);
+    LightSource planet = LightSource(Lambertian, source_params);
     TEST_APPROX(star.limb_norm, 1.0, 1e-9, errors);
     TEST_APPROX(planet.get_brightness(0., 0., 0.), 1e-6, 1e-9, errors)
     p.add_object(orb, bell, planet);
@@ -225,12 +223,11 @@ int test_phase_curve() {
     TEST_APPROX(result[2], result[1], 1e-6, errors);
 
     // Test star with quadratic limb-darkening
-    limb_params[0] = 0.2;
-    limb_params[1] = 0.1;
+    source_params[1] = 0.2;
+    source_params[2] = 0.1;
     source_params[0] = 1 / M_PI;
     bell = Biellipsoid();
-    star = LightSource(1, source_params, 1, limb_params);
-    TEST_APPROX(star.limb_type, 1, 1e-9, errors)
+    star = LightSource(QuadraticLimb, source_params);
     double expect = 1. - .2 / 3 - .1 / 6.;
     TEST_APPROX(star.limb_norm, expect, 1e-9, errors);
     double nu = 1.0 - sqrt(1 - 0.5 * 0.5);
@@ -247,22 +244,21 @@ int test_phase_curve() {
 int test_light_source() {
     ANNOUNCE_TEST();
     int errors = 0;
-    double limb_params[MAX_LIMB_PARAMS] = {0.01, .01, 0., 0.};
-    double source_params[MAX_SOURCE_PARAMS] = {1.0 / M_PI, 0., 0., 0., 0., 0.,
+    double source_params[MAX_SOURCE_PARAMS] = {1.0 / M_PI, 0.01, 0.1, 0., 0., 0.,
                                                0.,         0., 0., 0., 0., 0.};
     // No source should always return 0
-    LightSource s = LightSource(0, source_params, 0, limb_params);
+    LightSource s = LightSource(None, source_params);
     TEST_APPROX(s.get_brightness_sphere(0., 0.), 0., 1e-9, errors);
     TEST_APPROX(s.get_brightness_sphere(0.5, 0.5), 0., 1e-9, errors);
     TEST_APPROX(s.get_brightness(0.9, 0.8, 45.), 0., 1e-9, errors);
     // Lambertian emitter of total brightness 1
     double expect = 1 / M_PI;
-    s = LightSource(1, source_params, 0, limb_params);
+    s = LightSource(Lambertian, source_params);
     TEST_APPROX(s.get_brightness_sphere(0., 0.), expect, 1e-9, errors);
     TEST_APPROX(s.get_brightness_sphere(0.5, 0.5), expect, 1e-9, errors);
     TEST_APPROX(s.get_brightness(0.9, 0.8, 45.), expect, 1e-9, errors);
     // Standard star (brightness 1, quadratic limb darkening)
-    s = LightSource(1, source_params, 1, limb_params);
+    s = LightSource(QuadraticLimb, source_params);
     // Small params ~= lambertian
     TEST_APPROX(s.get_brightness_sphere(0.5, 0.), expect, 1e-1, errors);
     // Center is brighter, limb is darker
@@ -271,9 +267,9 @@ int test_light_source() {
     TEST_ASSERT(center, >, expect, errors);
     TEST_ASSERT(edge, <, expect, errors);
     // Now with more reasonable limb params
-    limb_params[0] = 0.2;
-    limb_params[1] = 0.1;
-    s = LightSource(1, source_params, 1, limb_params);
+    source_params[1] = 0.2;
+    source_params[2] = 0.1;
+    s = LightSource(QuadraticLimb, source_params);
     TEST_ASSERT(s.get_brightness_sphere(0., 0.), >, center, errors);
     TEST_ASSERT(s.get_brightness_sphere(0.9, 0.), <, edge, errors);
     double norm = (1. - .2 / 3 - .1 / 6);

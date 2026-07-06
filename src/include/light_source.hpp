@@ -3,30 +3,24 @@
 
 #include "biellipsoid.hpp"
 #define MAX_SOURCE_PARAMS 12
-#define MAX_LIMB_PARAMS 4
 
-/* Describes a light source in terms of its emission map and limb darkening.
- *
- * Base source type code, number of parameters, and notes:
- * - 0, 0, No emission (also bypasses limb darkening)
- * - 1, 1, Uniform emission at a given constant brightness
- * - 2, 4, Dayside, nightside, and pole brightness, with transition size
- *
- * Limb larkening type code, number of parameters, and notes:
- * - 0, 0, Lambertian (appears uniformly bright as mu terms cancel)
- * - 1, 2, Quadratic formula of Mandel & Agol 2002
- * - 2, 4, Non-linear formula of Mandel & Agol 2002
- */
+typedef enum {
+    None,          // 0 params, no emission
+    Lambertian,    // 1 params, uniform brightness regardless of angle
+    QuadraticLimb, // 3 params, quadratic formula of Mandel & Agol 2002
+    NonLinearLimb, // 5 params, non-linear formula of Mandel & Agol 2002
+    DayNight,      // 3 params
+} SourceType;
+
+
 class LightSource {
   public:
-    int source_type;
-    double source_params[MAX_SOURCE_PARAMS];
-    int limb_type;
-    double limb_params[MAX_LIMB_PARAMS];
+    SourceType stype;
+    double params[MAX_SOURCE_PARAMS];
     double limb_norm;
 
     LightSource();
-    LightSource(int source_type, double *source, int limb_type, double *limb_params);
+    LightSource(SourceType type, double *params);
 
     double get_brightness(double mu, double sin_lat, double lon) const;
     // Wrapper for get_brightness on a unit sphere given x and y coordinates

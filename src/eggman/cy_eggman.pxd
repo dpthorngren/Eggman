@@ -103,21 +103,22 @@ cdef class BiellipsoidWrap:
 # ===== Light Source class and wrapper =====
 cdef extern from "light_source.cpp":
     const int MAX_SOURCE_PARAMS
-    const int MAX_LIMB_PARAMS
+    ctypedef enum SourceType:
+        None
+        Lambertian
+        QuadraticLimb
+        NonLinearLimb
+        DayNight
     cdef cppclass LightSource:
-        int source_type
-        double source_params[MAX_SOURCE_PARAMS]
-        int limb_type
-        double limb_params[MAX_LIMB_PARAMS]
+        SourceType stype
+        double params[MAX_SOURCE_PARAMS]
         double limb_norm
 
         LightSource()
-        LightSource(int source_type, double *source, int limb_type, double *limb_params)
+        LightSource(int source_type, double *params)
 
         double get_brightness(double mu, double sin_lat, double lon)
         double get_brightness_sphere(double x, double y)
-        bint uses_mu()
-        bint uses_latlon()
 
 
 cdef class LightSourceWrap:

@@ -16,8 +16,8 @@ def test_transit_grazing():
         'period': 2 * np.pi,
         'semimajor': 10.,
         'inclination': 90.,
-        'limb_type': 'quadratic',
-        'limb': [.3, .2],
+        'source_type': 'quadratic_limb',
+        'source_params': [.3, .2],
         'rotate_with_orbit': False,
     }
 
@@ -62,8 +62,8 @@ def test_transit_is_transiting():
         'period': 10.,
         'semimajor': 10.,
         'inclination': 89.,
-        'limb_type': 'quadratic',
-        'limb': [.3, .2],
+        'source_type': 'quadratic_limb',
+        'source_params': [.3, .2],
         'eccen': 0,
         'lon_periapse': 90.,
         'rotate_with_orbit': False,
@@ -104,8 +104,8 @@ def test_transit_analytic():
         'period': 10.,
         'semimajor': 10.,
         'inclination': 89.,
-        'limb_type': 'quadratic',
-        'limb': [0., 0.],
+        'source_type': 'quadratic_limb',
+        'source_params': [0., 0.],
         'rotate_with_orbit': False,
     }
     assert eggman.transit(.1, .1, .1, .1, **baseArgs) == approx(1 - .1*.1, abs=1e-7)
@@ -136,8 +136,8 @@ def test_transit_numerical():
         'period': 1.,
         'semimajor': 15.,
         'inclination': 90.,
-        'limb_type': 'quadratic',
-        'limb': [0.1, 0.3],
+        'source_type': 'quadratic_limb',
+        'source_params': [0.1, 0.3],
         'rotate_with_orbit': False,
     }
 

@@ -9,10 +9,10 @@ include "ellipse_wrap.pyx"
 include "phase_wrap.pyx"
 
 
-cpdef object transit(double r_forward, double r_back, double r_up, double r_side, double theta, double phi, double gamma, double[::1] t, double t0, double period, double semimajor, double inclination, str limb_type, object limb, double eccen=0, double lon_periapse=90, bint rotate_with_orbit=True, double atol=1e-6, double rtol=1e-3):
+cpdef object transit(double r_forward, double r_back, double r_up, double r_side, double theta, double phi, double gamma, double[::1] t, double t0, double period, double semimajor, double inclination, str source_type, object source_params, double eccen=0, double lon_periapse=90, bint rotate_with_orbit=True, double atol=1e-6, double rtol=1e-3):
     '''Wrapper for the c function transit3d_integral'''
     cdef Orbit orb = Orbit(period, t0, semimajor, eccen, inclination, lon_periapse)
-    cdef LightSource emitter = LightSourceWrap("uniform", [1./np.pi], limb_type, limb).source
+    cdef LightSource emitter = LightSourceWrap(source_type, source_params).source
     assert (r_forward > 0) and (r_back > 0) and (r_side > 0), "Radii must be positive."
     if r_up < 0:
         assert phi == 0 and gamma == 0, "Nonzero phi and gamma are not supported for catwoman emulation mode (r_up < 0)."

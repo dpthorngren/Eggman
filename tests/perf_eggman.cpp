@@ -9,20 +9,19 @@ int main() {
 
     // Add the star
     Orbit orb = Orbit();
-    double source_params[MAX_SOURCE_PARAMS] = {1.0 / M_PI, 0.0, 0.0, 0.0, 0.0, 0.0,
+    double source_params[MAX_SOURCE_PARAMS] = {1.0 / M_PI, 0.2, 0.1, 0.0, 0.0, 0.0,
                                                0.0,        0.0, 0.0, 0.0, 0.0, 0.0};
-    double limb_params[MAX_LIMB_PARAMS] = {0.2, 0.1, 0., 0.};
     Biellipsoid bell = Biellipsoid();
-    LightSource star = LightSource(1, source_params, 1, limb_params);
+    LightSource star = LightSource(QuadraticLimb, source_params);
     p.add_object(orb, bell, star);
 
     // Add the planet
     orb = Orbit(10., 0., 5., 0.00, 89., 90.);
     bell = Biellipsoid(.12, .09, .08, .08);
     source_params[0] = 1e-3;
-    limb_params[0] = 0.;
-    limb_params[1] = 0.;
-    LightSource planet = LightSource(1, source_params, 0, limb_params);
+    source_params[1] = 0.;
+    source_params[2] = 0.;
+    LightSource planet = LightSource(QuadraticLimb, source_params);
     p.add_object(orb, bell, planet);
 
     // Test a full phase curve

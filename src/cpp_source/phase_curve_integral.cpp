@@ -162,7 +162,7 @@ void PhaseIntegrator::set_time(double t) {
 
 double PhaseIntegrator::integrate_single(int it) {
     // Skip non-emitting objects
-    if (lights[it].source_type == 0) {
+    if (lights[it].stype == None) {
         return 0.;
     }
     // Determine which objects might occlude the target object
