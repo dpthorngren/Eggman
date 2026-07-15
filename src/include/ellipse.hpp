@@ -13,6 +13,7 @@ class Ellipse {
   public:
     Vec3 e1;       // The first constructing vector for the ellipse
     Vec3 e2;       // The second constructing vector for the ellipse
+    double det;    // The determinant of the 2d (x, y) transformation matrix.
     double x_size; // Bounds the ellipse in x to [+x_size, -x_size]
     double y_size; // Bounds the ellipse to y to [+y_size, -y_size]
 

@@ -130,6 +130,31 @@ void Biellipsoid::update_derived() {
     temp = (Vec3){e2.x * r_back, e2.y * r_up, e2.z * r_side};
     MATMUL(rot, temp, e2);
     b_limb = Ellipse(e1, e2);
+
+    // Construct the joint ellipse
+    e1 = {r_up * rot.xy, r_up * rot.yy, r_up * rot.zy};
+    e2 = {r_side * rot.xz, r_side * rot.yz, r_side * rot.zz};
+    joint = Ellipse(e1, e2);
+    if (fabs(joint.det) < 1e-12) {
+        // Joint has no area (edge-on), can't rotate axes.
+        return;
+    }
+
+    // Find the limb-joint intersection point
+    double d1 = rot.xx * f_limb.e1.x + rot.yx * f_limb.e1.y + rot.zx * f_limb.e1.z;
+    double d2 = rot.xx * f_limb.e2.x + rot.yx * f_limb.e2.y + rot.zx * f_limb.e2.z;
+    double ct = -1. / sqrt(1 + d1 * d1 / (d2 * d2));
+    double st = 1. / sqrt(1 + d2 * d2 / (d1 * d1));
+    WEIGHTED_SUM(ct, st, f_limb.e1, f_limb.e2, e1);
+    if (e1.x * rot.yx - e1.y * rot.xx < 0) {
+        RESCALE(e1, -1.);
+    }
+
+    // Rotate the joint ellipse axes so that e1 points to the limb joint point
+    double u = (joint.e2.y * e1.x - joint.e2.x * e1.y) / joint.det;
+    double v = (-joint.e1.y * e1.x + joint.e1.x * e1.y) / joint.det;
+    WEIGHTED_SUM(-v, u, joint.e1, joint.e2, e2);
+    joint = Ellipse(e1, e2);
 }
 
 Bounds Biellipsoid::slice_ylimits(double x) const {
@@ -225,6 +250,7 @@ bool Biellipsoid::raycast(double x, double y, double *mu_out, Vec3 *hit_out) con
         offset = (sqrt(lusq * det) - offset) / lusq;
         hit = {(p0.x + offset * u.x), (p0.y + offset * u.y), (p0.z + offset * u.z)};
         if (hit.x >= 0) {
+            // TODO: Calculate mu
             goto OUTPUT_RET;
         }
     }
@@ -273,6 +299,31 @@ inline bool Biellipsoid::is_forward(Vec3 loc) const {
 
 inline bool Biellipsoid::is_forward_local(Vec3 loc) const {
     return (loc.x * rot.xx + loc.y * rot.yx + loc.z * rot.zx) >= 0;
+}
+
+bool Biellipsoid::is_forward_2d(double x, double y) const {
+    x -= position.x;
+    y -= position.y;
+    // Is the forward side closer to the viewer?
+    bool forward_near = rot.zx >= 0;
+    // Is the point on the forward-side of the joint line?
+    bool side = joint.e1.x * y - joint.e1.y * x >= 0;
+    if (side == forward_near) {
+        // The point is on the near side, return that.
+        return forward_near;
+    }
+    if (fabs(joint.det) < 1e-12) {
+        // Ellipse has no area, all points are outside it
+        return side;
+    }
+    // The point is on the far side, making things harder
+    // If the point overlaps the joint ellipse, then it hits the near side
+    double u = (joint.e2.y * x - joint.e2.x * y) / joint.det;
+    double v = (-joint.e1.y * x + joint.e1.x * y) / joint.det;
+    bool in_ellipse = (u * u + v * v <= 1);
+    // If in ellipse, return the forward side, otherwise return the back side
+    // Forward side indicated by forward_near, so this is equivalent to an XNOR.
+    return !(in_ellipse ^ forward_near);
 }
 
 bool Biellipsoid::is_visible(Vec3 loc) const {

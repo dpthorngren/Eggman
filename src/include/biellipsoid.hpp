@@ -27,6 +27,7 @@ class Biellipsoid {
     Mat3 rot;
     Ellipse f_limb; // The ellipse defining the forward portion of the limb
     Ellipse b_limb; // The ellipse defining the backwards portion of the limb
+    Ellipse joint;  // The ellipse connecting the two half-ellipsoids
 
     Biellipsoid();
     Biellipsoid(double r_forward, double r_backward, double r_up, double r_side);
@@ -43,6 +44,7 @@ class Biellipsoid {
     // Checks if loc is on the forward side of the biellipsoid or the back
     bool is_forward(Vec3 loc) const;
     bool is_forward_local(Vec3 loc) const;
+    bool is_forward_2d(double x, double y) const;
     // Checks if loc is not behind / inside the biellipsoid
     bool is_visible(Vec3 loc) const;
     // Determines the y range occupied by the biellipsoid for this x value (min=max outside range)

@@ -10,6 +10,10 @@ cdef class EllipseWrap:
         return np.array([self.ell.e2.x, self.ell.e2.y, self.ell.e2.z])
 
     @property
+    def det(self):
+        return self.ell.det
+
+    @property
     def x_size(self):
         return self.ell.x_size
 

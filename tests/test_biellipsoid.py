@@ -173,7 +173,7 @@ def test_biellipsoid_intersect():
             hit = bell.sphere_to_world(hit)
             if bell.line_intersects(pos[0], pos[1]):
                 assert hit[:2] == approx(pos[:2])
-                pos_rot = np.ravel(bell.rot.T @ np.row_stack(hit - loc))
+                pos_rot = np.ravel(bell.rot.T @ np.vstack(hit - loc))
                 pos_rot[0] /= bell.r_forward if pos_rot[0] > 0 else bell.r_back
                 pos_rot[1] /= bell.r_up
                 pos_rot[2] /= bell.r_side

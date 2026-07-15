@@ -47,6 +47,7 @@ cdef extern from "ellipse.cpp":
     cdef cppclass Ellipse:
         Vec3 e1
         Vec3 e2
+        double det
         double x_size
         double y_size
         Ellipse()
@@ -70,6 +71,7 @@ cdef extern from "biellipsoid.cpp":
         Mat3 rot
         Ellipse f_limb
         Ellipse b_limb
+        Ellipse joint
 
         Biellipsoid()
         Biellipsoid(double r_forward, double r_backward, double r_up, double r_side)
@@ -80,6 +82,7 @@ cdef extern from "biellipsoid.cpp":
         void update_derived()
         Vec3 forward_vector()
         bint is_forward(Vec3 loc)
+        bint is_forward_2d(double x, double y)
         bint is_visible(Vec3 loc)
         Bounds x_bounds()
         Bounds y_bounds()

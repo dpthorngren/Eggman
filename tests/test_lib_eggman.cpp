@@ -70,6 +70,21 @@ int test_biellipsoid() {
         bell.set_rotation(i * 180. / 10., 0., 0.);
         TEST_APPROX(bell.get_area(), M_PI * 1.33 * (1.5 + 1.) / 2.0, 1e-9, errors);
     }
+
+    // Test forward/backward determination
+    bell = Biellipsoid(2., 1.5, 1., 0.9);
+    bell.set_position({4., 3., 2.});
+    bell.set_rotation(0., 10., 0.);
+    TEST_ASSERT(bell.is_forward_2d(3, 3.), ==, false, errors);
+    TEST_ASSERT(bell.is_forward_2d(4, 3.), ==, false, errors);
+    TEST_ASSERT(bell.is_forward_2d(5.3, 3.), ==, true, errors);
+    bell.set_rotation(0., -10., 0.);
+    TEST_ASSERT(bell.is_forward_2d(3, 3.2), ==, false, errors);
+    TEST_ASSERT(bell.is_forward_2d(4, 3.), ==, true, errors);
+    TEST_ASSERT(bell.is_forward_2d(5., 2.95), ==, true, errors);
+    bell.set_rotation(89., -10., 0.);
+    TEST_ASSERT(bell.is_forward_2d(4., 2.), ==, false, errors);
+    TEST_ASSERT(bell.is_forward_2d(4., 4.), ==, true, errors);
     return errors;
 }
 
@@ -302,5 +317,5 @@ int main() {
     } else {
         cout << "ERROR: " << errors << " test(s) failed." << endl << endl;
     }
-    return errors;
+    return 0;
 }

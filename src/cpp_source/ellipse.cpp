@@ -7,6 +7,7 @@ Ellipse::Ellipse() {
     e2 = {0., 1., 0.};
     x_size = 1.0;
     y_size = 1.0;
+    det = e1.x * e2.y - e2.x * e1.y;
 }
 
 Ellipse::Ellipse(const Vec3 &e1, const Vec3 &e2) {
@@ -14,6 +15,7 @@ Ellipse::Ellipse(const Vec3 &e1, const Vec3 &e2) {
     this->e2 = e2;
     x_size = sqrt(e1.x * e1.x + e2.x * e2.x);
     y_size = sqrt(e1.y * e1.y + e2.y * e2.y);
+    det = e1.x * e2.y - e2.x * e1.y;
 }
 
 void Ellipse::get_ybounds(double x, Vec3 &out_min, Vec3 &out_max) const {
@@ -46,12 +48,13 @@ void Ellipse::get_ybounds(double x, Vec3 &out_min, Vec3 &out_max) const {
 }
 
 bool Ellipse::line_intersects(double x, double y, Vec3 *out) const {
+    // May not catch points on the boundary due to numerical error
     // Inverse matrix to transform to circle space, check if point is inside
-    double det = e1.x * e2.y - e2.x * e1.y;
     double u = (e2.y * x - e2.x * y) / det;
     double v = (-e1.y * x + e1.x * y) / det;
-    if (out != nullptr) {
+    if ((out != nullptr) && (fabs(det) > 1e-12)) {
         WEIGHTED_SUM(u, v, e1, e2, (*out));
+        return u * u + v * v <= 1.;
     }
     return u * u + v * v <= 1.;
 }
@@ -63,7 +66,6 @@ Vec3 Ellipse::nearest_to_line(double x0, double y0) const {
     }
 
     // Initial guess
-    double det = e1.x * e2.y - e2.x * e1.y;
     double u = (e2.y * x0 - e2.x * y0) / det;
     double v = (-e1.y * x0 + e1.x * y0) / det;
     double t = atan2(v, u);
@@ -88,4 +90,4 @@ Vec3 Ellipse::nearest_to_line(double x0, double y0) const {
     return result;
 }
 
-double Ellipse::get_area() const { return M_PI * fabs(e1.x * e2.y - e2.x * e1.y); }
+double Ellipse::get_area() const { return M_PI * fabs(det); }

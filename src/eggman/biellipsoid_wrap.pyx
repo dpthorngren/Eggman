@@ -66,6 +66,14 @@ cdef class BiellipsoidWrap:
             np.array([ell.e2.x, ell.e2.y, ell.e2.z]),
         )
 
+    @property
+    def joint(self):
+        cdef Ellipse split = self.bell.joint
+        return EllipseWrap(
+            np.array([split.e1.x, split.e1.y, split.e1.z]),
+            np.array([split.e2.x, split.e2.y, split.e2.z]),
+        )
+
     def __init__(self, double x, double y, double z, double theta, double phi, double gamma,
                  double r_forward, double r_back, double r_up, double r_side, double ci=-2):
         self.bell = Biellipsoid(r_forward, r_back, r_up, r_side)
@@ -82,6 +90,13 @@ cdef class BiellipsoidWrap:
     def is_visible(self, double x, double y, double z):
         cdef Vec3 loc = Vec3(x, y, z)
         return self.bell.is_visible(loc)
+
+    def is_forward(self, double x, double y, double z):
+        cdef Vec3 loc = Vec3(x, y, z)
+        return self.bell.is_forward(loc)
+
+    def is_forward_2d(self, double x, double y):
+        return self.bell.is_forward_2d(x, y)
 
     def x_bounds(self):
         cdef Bounds b = self.bell.x_bounds()
