@@ -95,8 +95,8 @@ cdef class BiellipsoidWrap:
         cdef Vec3 loc = Vec3(x, y, z)
         return self.bell.is_forward(loc)
 
-    def is_forward_2d(self, double x, double y):
-        return self.bell.is_forward_2d(x, y)
+    def is_forward_2d(self, double x, double y, bint local=0):
+        return self.bell.is_forward_2d(x, y, local)
 
     def x_bounds(self):
         cdef Bounds b = self.bell.x_bounds()

@@ -158,7 +158,8 @@ def test_biellipsoid_intersect():
     assert np.linalg.norm(hit / 1.33) == approx(1.0)
     # Changing the far ellipsoid shouldn't matter
     bell = BiellipsoidWrap(0., 0., 0., 0, 0, 0, 1.2, 0.5, 1.2, 1.2)
-    _, hit, _ = bell.raycast(.5, .5)
+    found, hit, _ = bell.raycast(.5, .5)
+    assert found
     hit = bell.sphere_to_world(hit)
     assert hit[0] == 0.5
     assert hit[1] == 0.5
@@ -172,6 +173,7 @@ def test_biellipsoid_intersect():
             found, hit, _ = bell.raycast(pos[0], pos[1])
             hit = bell.sphere_to_world(hit)
             if bell.line_intersects(pos[0], pos[1]):
+                assert found
                 assert hit[:2] == approx(pos[:2])
                 pos_rot = np.ravel(bell.rot.T @ np.vstack(hit - loc))
                 pos_rot[0] /= bell.r_forward if pos_rot[0] > 0 else bell.r_back

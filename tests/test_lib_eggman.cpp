@@ -40,7 +40,6 @@ int test_biellipsoid() {
 
     // Test line projection
     bell = Biellipsoid(1., 1., 1., 1.);
-    bell.update_derived();
     Vec3 loc;
     double mu;
     bool hit = bell.raycast(0, 0, &mu, &loc);
@@ -55,10 +54,26 @@ int test_biellipsoid() {
     TEST_APPROX(loc.y, 0., 1e-9, errors);
     TEST_APPROX(loc.z, sqrt(1 - .5 * .5), 1e-9, errors);
     bell.raycast(0.5, 0., &mu, &loc);
+    TEST_APPROX(0.5, loc.x, 1e-9, errors);
+    TEST_APPROX(0, loc.y, 1e-9, errors);
     TEST_APPROX(mu, loc.z, 1e-9, errors);
     TEST_APPROX(mu, cos(M_PI / 6), 1e-9, errors);
     bell.raycast(1 - 1e-12, 0., &mu);
     TEST_APPROX(mu, 0., 1e-4, errors);
+    // Aligned but no longer spherical
+    bell.set_radii(1.5, 1.4, 1.0, 0.9);
+    hit = bell.raycast(0.5, 0.0, &mu, &loc);
+    TEST_ASSERT(hit, ==, true, errors);
+    TEST_APPROX(loc.x, .5 / 1.5, 1e-9, errors);
+    TEST_APPROX(loc.y, 0., 1e-9, errors);
+    TEST_ASSERT(loc.z, >, 0, errors);
+    hit = bell.raycast(-0.5, 0.0, &mu, &loc);
+    TEST_ASSERT(hit, ==, true, errors);
+    TEST_APPROX(loc.x, -.5 / 1.4, 1e-9, errors);
+    TEST_APPROX(loc.y, 0.0, 1e-9, errors);
+    TEST_ASSERT(loc.z, >, 0, errors);
+    // TODO: Mu not currently calculated for non-spheres
+    // TEST_APPROX(mu, 1.0, 1e-9, errors);
 
     // Test area calculation
     bell = Biellipsoid(1., 1.5, 1.33, 1.);
@@ -85,6 +100,9 @@ int test_biellipsoid() {
     bell.set_rotation(89., -10., 0.);
     TEST_ASSERT(bell.is_forward_2d(4., 2.), ==, false, errors);
     TEST_ASSERT(bell.is_forward_2d(4., 4.), ==, true, errors);
+    bell.set_rotation(30., 0., 0.);
+    TEST_ASSERT(bell.is_forward_2d(3, 3.), ==, false, errors);
+    TEST_ASSERT(bell.is_forward_2d(4.1, 3.1), ==, true, errors);
     return errors;
 }
 

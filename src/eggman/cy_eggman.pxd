@@ -82,7 +82,7 @@ cdef extern from "biellipsoid.cpp":
         void update_derived()
         Vec3 forward_vector()
         bint is_forward(Vec3 loc)
-        bint is_forward_2d(double x, double y)
+        bint is_forward_2d(double x, double y, bint local)
         bint is_visible(Vec3 loc)
         Bounds x_bounds()
         Bounds y_bounds()

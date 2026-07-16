@@ -44,7 +44,7 @@ class Biellipsoid {
     // Checks if loc is on the forward side of the biellipsoid or the back
     bool is_forward(Vec3 loc) const;
     bool is_forward_local(Vec3 loc) const;
-    bool is_forward_2d(double x, double y) const;
+    bool is_forward_2d(double x, double y, bool local = false) const;
     // Checks if loc is not behind / inside the biellipsoid
     bool is_visible(Vec3 loc) const;
     // Determines the y range occupied by the biellipsoid for this x value (min=max outside range)

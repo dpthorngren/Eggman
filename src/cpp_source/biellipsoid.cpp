@@ -301,9 +301,15 @@ inline bool Biellipsoid::is_forward_local(Vec3 loc) const {
     return (loc.x * rot.xx + loc.y * rot.yx + loc.z * rot.zx) >= 0;
 }
 
-bool Biellipsoid::is_forward_2d(double x, double y) const {
-    x -= position.x;
-    y -= position.y;
+bool Biellipsoid::is_forward_2d(double x, double y, bool local) const {
+    if (!local) {
+        x -= position.x;
+        y -= position.y;
+    }
+    if (fabs(joint.det) < 1e-12) {
+        // Ellipse has no area, all points are outside it
+        return x * rot.xx + y * rot.yx > 0.;
+    }
     // Is the forward side closer to the viewer?
     bool forward_near = rot.zx >= 0;
     // Is the point on the forward-side of the joint line?
@@ -311,10 +317,6 @@ bool Biellipsoid::is_forward_2d(double x, double y) const {
     if (side == forward_near) {
         // The point is on the near side, return that.
         return forward_near;
-    }
-    if (fabs(joint.det) < 1e-12) {
-        // Ellipse has no area, all points are outside it
-        return side;
     }
     // The point is on the far side, making things harder
     // If the point overlaps the joint ellipse, then it hits the near side
