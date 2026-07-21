@@ -55,5 +55,9 @@ cdef class PhaseIntegratorWrap:
 
     def plot_objects(self, res=200, **args):
         for i in range(self.get_n_objects()):
-            _, bell, _, _ = self[i]
-            bell.plot_area(res, zorder=bell.position[2], **args)
+            _, bell, source, _ = self[i]
+            if source.source_type == "none":
+                bell.plot_area(res, zorder=bell.position[2])
+            else:
+                args.setdefault('zorder', bell.position[2])
+                source.plot_brightness(bell, res, pcm_args=args)

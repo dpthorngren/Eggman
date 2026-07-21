@@ -32,8 +32,26 @@ cdef class LightSourceWrap:
             source_params_c[i] = p
         self.source = LightSource(source_code, source_params_c)
 
-    def get_brightness(self, double x, double y, BiellipsoidWrap bell):
-        return self.source.get_brightness(x, y, bell.bell)
+    def get_brightness(self, x, y, BiellipsoidWrap bell):
+        types = [float, np.float64, np.float32, np.int32, np.int64, int]
+        if type(x) in types and type(y) in types:
+            return self.source.get_brightness_sphere(x, y)
+        x = np.atleast_1d(x)
+        y = np.atleast_1d(y)
+        assert x.ndim == 1 and y.ndim == 1
+        xlen = len(x)
+        ylen = len(y)
+
+        output = np.zeros((xlen, ylen), dtype=np.double)
+        cdef double[:] x_view = x
+        cdef double[:] y_view = y
+        cdef double[:, :] output_view = output
+
+        cdef int i, j
+        for i in range(len(x)):
+            for j in range(len(y)):
+                output_view[i, j] = self.source.get_brightness_sphere(x_view[i], y_view[j])
+        return output
 
     def get_brightness_sphere(self, x, y):
         types = [float, np.float64, np.float32, np.int32, np.int64, int]
@@ -56,14 +74,15 @@ cdef class LightSourceWrap:
                 output_view[i, j] = self.source.get_brightness_sphere(x_view[i], y_view[j])
         return output
 
-    def plot_brightness(source, res=400, pcm_args=dict()):
+    def plot_brightness(self, BiellipsoidWrap bell, res=400, pcm_args=dict()):
         from matplotlib import pyplot as plt
 
-        # TODO: Allow biellipsoid input for positioning
-        x = np.linspace(-1, 1, res)
-        y = np.linspace(-1, 1, res)
+        xlim = bell.x_bounds()
+        ylim = bell.y_bounds()
+        x = np.linspace(*xlim, res)
+        y = np.linspace(*ylim, res)
 
-        brightness = source.get_brightness_sphere(x, y)
+        brightness = self.get_brightness(x, y, bell)
         brightness = np.ma.masked_equal(brightness, 0.)
 
         pcm_args.setdefault('cmap', 'autumn')
