@@ -7,67 +7,81 @@ double phase_curve_integrand(double y, void *params) {
     return p->lights[p->i_target].get_brightness(p->x, y, p->shapes[p->i_target]);
 }
 
-double phase_curve_inner_integral(double x, void *params) {
-    PhaseIntegrator *p = (PhaseIntegrator *)params;
-    p->x = x;
-    // Determine the range(s) to integrate over
-    // Max size of the bounds "stack" is low, so using an array.
-    Bounds b[MAX_PHASE_OBJECTS + 1];
-    // Initially, plan to integrate over the entire target
-    b[0] = p->shapes[p->i_target].slice_ylimits(x);
-    int n = 1;
-    if (b[0].min >= b[0].max) {
-        return 0.;
-    }
-
+int process_bounds(Bounds *b, int n_relevant) {
     // Iterate through potential occluders, modifying the integration bounds stack as-needed
+    // Bound stack 'b' should be at least length n_relevant and contain the overall range
+    // in position [0], followed by the bounds of the potential occluders.
     int i, j, k;
     Bounds occ;
-    for (i = 0; i < p->n_objects; i++) {
-        // Skip occluders flagged as irrelevant in integrate_single(...)
-        if (!p->relevant[i]) {
-            continue;
-        }
-
-        occ = p->shapes[i].slice_ylimits(x);
+    int n_bounds = 1;
+    for (i = 1; i < n_relevant; i++) {
+        occ = b[i];
         j = 0;
-        while (j < n) {
+        while (j < n_bounds) {
             if (occ.min < b[j].min) {
                 if (occ.max < b[j].min) {
                     // No overlap -> skip
                 } else if (occ.max < b[j].max) {
                     // Upper overlap -> truncate
-                    b[i].min = occ.max;
+                    b[j].min = occ.max;
                 } else {
                     // Fully occluded -> remove entry
-                    for (int k = j; k < n - 1; k++) {
+                    for (int k = j; k < n_bounds - 1; k++) {
                         b[k] = b[k + 1];
                     }
-                    n -= 1;
+                    n_bounds -= 1;
                     continue;
                 }
             } else if (occ.max < b[j].max) {
                 // Contained within bounds -> split integration area
-                for (k = j; k < n; k++) {
+                for (k = n_bounds - 1; k >= j; k--) {
                     b[k + 1] = b[k];
                 }
                 b[j].max = occ.min;
                 b[j + 1].min = occ.max;
                 j += 1;
-                n += 1;
+                n_bounds += 1;
             } else if (occ.min < b[j].max) {
                 // Lower overlap -> truncate
-                b[i].max = occ.min;
+                b[j].max = occ.min;
             }
             j += 1;
         }
     }
+    return n_bounds;
+}
+
+
+double phase_curve_inner_integral(double x, void *params) {
+    int i;
+    PhaseIntegrator *p = (PhaseIntegrator *)params;
+    p->x = x;
+
+    // Determine the range(s) to integrate over
+    // Max size of the bounds "stack" is low, so using an array.
+    int n_bounds = 1;
+    Bounds b[MAX_PHASE_OBJECTS + 1];
+    // Initially, plan to integrate over the entire target
+    b[0] = p->shapes[p->i_target].slice_ylimits(x);
+    if (b[0].min >= b[0].max) {
+        return 0.;
+    }
+    // Get the bounds of occluding objects for processing
+    for (i = 0; i < p->n_objects; i++) {
+        if (p->relevant[i]) {
+            b[n_bounds] = p->shapes[i].slice_ylimits(x);
+            if (b[n_bounds].min < b[n_bounds].max) {
+                n_bounds += 1;
+            }
+        }
+    }
+    n_bounds = process_bounds(b, n_bounds);
 
     // Conduct the integration for each range identified.
     int code;
     double total = 0;
     double result, err;
-    for (i = 0; i < n; i++) {
+    for (i = 0; i < n_bounds; i++) {
         code = gsl_integration_qag(
             &p->integInner, b[i].min, b[i].max, .1 * p->atol, .1 * p->rtol, 100, 1,
             p->workspaceInner, &result, &err
@@ -153,7 +167,7 @@ void PhaseIntegrator::clear_objects() { n_objects = 0; }
 
 void PhaseIntegrator::set_time(double t) {
     for (int i = 0; i < n_objects; i++) {
-        shapes[i].position_from_orbit(t, orbits[i]);
+        shapes[i].position_from_orbit(t, orbits[i], rotate_with_orbit[i]);
         xlim[i] = shapes[i].x_bounds();
         ylim[i] = shapes[i].y_bounds();
     }

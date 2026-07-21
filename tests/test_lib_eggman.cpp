@@ -277,6 +277,17 @@ int test_phase_curve() {
     TEST_ASSERT(p.get_n_objects(), ==, 1, errors);
     TEST_APPROX(p.integrate_single(0), 1.0, 1e-7, errors);
 
+    // Test the bounds sorting mechanism.
+    Bounds b[5] = {
+        {-1, 1.}, {-3, -0.5}, {-.1, 0.1}, {-4.0, -0.7}, {0.9, 1.5},
+    };
+    int n_bounds = process_bounds(b, 5);
+    TEST_ASSERT(n_bounds, ==, 2, errors);
+    TEST_APPROX(b[0].min, -0.5, 1e-12, errors);
+    TEST_APPROX(b[0].max, -0.1, 1e-12, errors);
+    TEST_APPROX(b[1].min, 0.1, 1e-12, errors);
+    TEST_APPROX(b[1].max, 0.9, 1e-12, errors);
+
     return errors;
 }
 

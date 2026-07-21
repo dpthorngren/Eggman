@@ -52,3 +52,8 @@ cdef class PhaseIntegratorWrap:
         cdef LightSourceWrap source = LightSourceWrap("none", [])
         source.source = self.pci.lights[i]
         return (orbit, bell, source, self.pci.rotate_with_orbit[i])
+
+    def plot_objects(self, res=200, **args):
+        for i in range(self.get_n_objects()):
+            _, bell, _, _ = self[i]
+            bell.plot_area(res, zorder=bell.position[2], **args)

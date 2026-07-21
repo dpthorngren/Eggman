@@ -73,7 +73,9 @@ void Biellipsoid::set_rotation(double theta, double phi, double gamma, double ci
 void Biellipsoid::position_from_orbit(double t, const Orbit &orb, bool rotate_with_orbit) {
     set_position(orb.get_position(t));
     if (rotate_with_orbit) {
-        set_rotation(theta, phi, gamma, orb.get_cos_inc());
+        set_rotation(
+            theta * 180. / M_PI, phi * 180. / M_PI, gamma * 180. / M_PI, orb.get_cos_inc()
+        );
     }
 }
 

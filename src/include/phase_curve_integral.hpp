@@ -11,6 +11,7 @@
 
 double phase_curve_integrand(double y, void *params);
 double phase_curve_inner_integral(double y, void *params);
+int process_bounds(Bounds *b, int n_relevant);
 
 class PhaseIntegrator {
   private:
