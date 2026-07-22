@@ -35,7 +35,9 @@ class Biellipsoid {
     void set_position(Vec3 new_position);
     // Rotate around z, y, and x; then if ci (cos(inclination)) is given, align with orbit
     void set_rotation(double theta, double phi, double gamma, double ci = -2.);
-    void position_from_orbit(double t, const Orbit &orb, bool rotate_with_orbit = false);
+    void position_from_orbit(
+        double t, const Orbit &orb, bool rotate_with_orbit = false, Vec3 origin = {0., 0., 0.}
+    );
     void update_derived(); // Updates f_limb and b_limb when radii or rot change.
 
     // Derived info

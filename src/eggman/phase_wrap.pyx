@@ -5,10 +5,10 @@ cdef class PhaseIntegratorWrap:
         self.pci.atol = atol
         self.pci.rtol = rtol
 
-    def add_object(self, OrbitWrap orbit, BiellipsoidWrap bell, LightSourceWrap source, bint rotate_with_orbit=False):
-        self.pci.add_object(orbit.orb, bell.bell, source.source, rotate_with_orbit)
+    def add_object(self, OrbitWrap orbit, BiellipsoidWrap bell, LightSourceWrap source, bint rotate_with_orbit=False, int parent_index=-1):
+        self.pci.add_object(orbit.orb, bell.bell, source.source, rotate_with_orbit, parent_index)
 
-    def add_planet(self, double r_forward, double r_back, double r_up, double r_side, double theta, double phi, double gamma, double t0, double period, double semimajor, double inclination, double eccen=0, double lon_periapse=90., bint rotate_with_orbit=True, LightSourceWrap source=None):
+    def add_planet(self, double r_forward, double r_back, double r_up, double r_side, double theta, double phi, double gamma, double t0, double period, double semimajor, double inclination, double eccen=0, double lon_periapse=90., bint rotate_with_orbit=True, LightSourceWrap source=None, int parent_index=-1):
         cdef Orbit orb = Orbit(period, t0, semimajor, eccen, inclination, lon_periapse)
         cdef Biellipsoid bell = Biellipsoid(r_forward, r_back, r_up, r_side)
         bell.position_from_orbit(0., orb, rotate_with_orbit)
@@ -16,11 +16,11 @@ cdef class PhaseIntegratorWrap:
         cdef LightSource csource = LightSource()
         if source is not None:
             csource = source.source
-        self.pci.add_object(orb, bell, csource, rotate_with_orbit)
+        self.pci.add_object(orb, bell, csource, rotate_with_orbit, parent_index)
 
     def add_star(self, str limb_type, list[double] limb_params):
         cdef LightSource source = LightSourceWrap(limb_type, limb_params).source
-        self.pci.add_object(Orbit(), Biellipsoid(), source, False)
+        self.pci.add_object(Orbit(), Biellipsoid(), source, False, -1)
 
     def set_time(self, double t):
         self.pci.set_time(t)

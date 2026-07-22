@@ -150,10 +150,12 @@ PhaseIntegrator::~PhaseIntegrator() {
 }
 
 int PhaseIntegrator::add_object(
-    const Orbit &orb, const Biellipsoid &bell, const LightSource &source, bool rot_with_orbit
+    const Orbit &orb, const Biellipsoid &bell, const LightSource &source, bool rot_with_orbit,
+    int parent_index
 ) {
     // Note: These are all data-only structs, so these are copy operations
     orbits[n_objects] = orb;
+    parent_indices[n_objects] = parent_index;
     shapes[n_objects] = bell;
     lights[n_objects] = source;
     rotate_with_orbit[n_objects] = rot_with_orbit;
@@ -166,8 +168,10 @@ int PhaseIntegrator::add_object(
 void PhaseIntegrator::clear_objects() { n_objects = 0; }
 
 void PhaseIntegrator::set_time(double t) {
+    Vec3 origin;
     for (int i = 0; i < n_objects; i++) {
-        shapes[i].position_from_orbit(t, orbits[i], rotate_with_orbit[i]);
+        origin = parent_indices[i] > 0 ? shapes[parent_indices[i]].position : (Vec3){0., 0., 0.};
+        shapes[i].position_from_orbit(t, orbits[i], rotate_with_orbit[i], origin);
         xlim[i] = shapes[i].x_bounds();
         ylim[i] = shapes[i].y_bounds();
     }

@@ -28,6 +28,7 @@ class PhaseIntegrator {
 
   public:
     Orbit orbits[MAX_PHASE_OBJECTS];
+    int parent_indices[MAX_PHASE_OBJECTS];
     Biellipsoid shapes[MAX_PHASE_OBJECTS];
     LightSource lights[MAX_PHASE_OBJECTS];
     bool rotate_with_orbit[MAX_PHASE_OBJECTS];
@@ -36,11 +37,14 @@ class PhaseIntegrator {
     double atol;
     double rtol;
 
-    PhaseIntegrator(double atol=1e-6, double rtol=1e-3);
+    PhaseIntegrator(double atol = 1e-6, double rtol = 1e-3);
     PhaseIntegrator(PhaseIntegrator &p);
     ~PhaseIntegrator();
 
-    int add_object(const Orbit &orb, const Biellipsoid &bell, const LightSource &source, bool rot_with_orbit = false);
+    int add_object(
+        const Orbit &orb, const Biellipsoid &bell, const LightSource &source,
+        bool rot_with_orbit = false, int parent_index = -1
+    );
     int get_n_objects() const;
     void clear_objects();
     void set_time(double t);

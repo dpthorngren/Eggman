@@ -151,7 +151,7 @@ cdef extern from "phase_curve_integral.cpp":
         PhaseIntegrator()
         PhaseIntegrator(PhaseIntegrator &p)
 
-        int add_object(const Orbit &orb, const Biellipsoid &bell, const LightSource &source, bint rot_with_orbit)
+        int add_object(const Orbit &orb, const Biellipsoid &bell, const LightSource &source, bint rot_with_orbit, int parent_index)
         int get_n_objects() const
         void clear_objects()
         void set_time(double t)
