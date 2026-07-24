@@ -1,34 +1,58 @@
 cdef class BiellipsoidWrap:
-    '''A wrapper class for the C++ class Biellipsoid, with some added convenience functions.'''
+    '''A wrapper class for the C++ class Biellipsoid, with some added convenience functions.
+
+    The biellipsoid consists of two tri-axial ellipsoids which share radii along the y and z axis
+    but not necessarily the x axis, which are joined along the y-z plane, rotated arbitrarily, and then
+    shifted to some position.
+
+    For these calculations, three reference frames are used -- the conversion functions are exposed
+    fmainly for debugging purposes.  The frames are:
+        :View Frame: This is the native frame users will be operating in. It is easiest to think of
+            +x as being "right", +y as "up", and +z as "towards the viewer".
+        :Aligned Frame: This is the frame in which the forward vector points in the +x,
+            the up vector points in the +y, and the side vector points in the +z directions.  The
+            rotation matrix of the biellipsoid rotates points from this frame to the view frame.
+        :Sphere Frame: In this frame, the biellipsoid is a unit sphere.  This is a non-linear
+            transform from the aligned frame, scaling y and z by r_up and r_side respectively,
+            and x by r_forward or r_backward depending on whether x > 0.  Many geometric calculations
+            amount to transforming to this frame, finding some point, line, or plane, and then
+            transforming back to the view space.
+    '''
 
     @property
     def r_forward(self):
+        '''The forward radius of the object -- along the +x direction for an identity rotation matrix.'''
         return self.bell.r_forward
 
     @property
     def r_back(self):
+        '''The forward radius of the object -- along the -x direction for an identity rotation matrix.'''
         return self.bell.r_back
 
     @property
     def r_up(self):
+        '''The upward radius of the object -- along the y axis for an identity rotation matrix.'''
         return self.bell.r_up
 
     @property
     def r_side(self):
+        '''The upward radius of the object -- along the z axis for an identity rotation matrix.'''
         return self.bell.r_side
 
     @property
     def position(self):
+        '''The position of the center of the biellipsoid, as a numpy array.'''
         return np.array([self.bell.position.x, self.bell.position.y, self.bell.position.z])
 
     @property
     def radii(self):
-        '''The forward, backward, up, and side radii of the bielipsoid.'''
+        '''The forward, backward, up, and side radii of the bielipsoid, as a numpy array.'''
         return np.array([self.bell.r_forward, self.bell.r_back, self.bell.r_up, self.bell.r_side])
 
     @property
     def rot(self):
-        '''The rotation matrix of the biellipsoid, transforming from aligned to view space.'''
+        '''The rotation matrix of the biellipsoid, a 3x3 numpy array, which transforms points 
+            from aligned to view space.'''
         return np.array([
             [self.bell.rot.xx, self.bell.rot.xy, self.bell.rot.xz],
             [self.bell.rot.yx, self.bell.rot.yy, self.bell.rot.yz],
@@ -42,7 +66,7 @@ cdef class BiellipsoidWrap:
 
     @property
     def up(self):
-        '''The biellipsoid's up (polar) vector in view space.'''
+        '''The biellipsoid's up (along the poles) vector in view space.'''
         return np.array([self.bell.rot.xy, self.bell.rot.yy, self.bell.rot.zy])
 
     @property
@@ -52,6 +76,7 @@ cdef class BiellipsoidWrap:
 
     @property
     def limb_forward(self):
+        '''The ellipse defining the limb (visible edge) of the Biellipsoid in the forward direction.'''
         cdef Ellipse ell = self.bell.f_limb
         return EllipseWrap(
             np.array([ell.e1.x, ell.e1.y, ell.e1.z]),
@@ -60,6 +85,7 @@ cdef class BiellipsoidWrap:
 
     @property
     def limb_back(self):
+        '''The ellipse defining the limb (visible edge) of the Biellipsoid in the backwards direction.'''
         cdef Ellipse ell = self.bell.b_limb
         return EllipseWrap(
             np.array([ell.e1.x, ell.e1.y, ell.e1.z]),
@@ -68,49 +94,84 @@ cdef class BiellipsoidWrap:
 
     @property
     def joint(self):
+        '''The ellipse around the surface of the planet within the plane that joins the two ellipsoids
+        that make up the biellipsoid.'''
         cdef Ellipse split = self.bell.joint
         return EllipseWrap(
             np.array([split.e1.x, split.e1.y, split.e1.z]),
             np.array([split.e2.x, split.e2.y, split.e2.z]),
         )
 
-    def __init__(self, double x, double y, double z, double theta, double phi, double gamma,
-                 double r_forward, double r_back, double r_up, double r_side, double ci=-2):
-        self.bell = Biellipsoid(r_forward, r_back, r_up, r_side)
-        self.set_position(x, y, z)
-        self.set_rotation(theta, phi, gamma, ci)
+    def __init__(self, double r_forward, double r_back, double r_up, double r_side):
+        '''Define a biellipsoid in terms of it's origin position, rotation angles, and radii.
+        Users will likely wish to call `set_position` and `set_rotation` next, as the object is
+        initially placed at the origin with an identity rotation matrix.
 
-    def set_rotation(self, double theta, double phi, double gamma, double ci):
+        Args:
+            r_forward: The forward radius of the object -- along the +x direction for an identity rotation matrix.
+            r_back: The forward radius of the object -- along the -x direction for an identity rotation matrix.
+            r_up: The upward radius of the object -- along the y axis for an identity rotation matrix.
+            r_side: The upward radius of the object -- along the z axis for an identity rotation matrix.'''
+        self.bell = Biellipsoid(r_forward, r_back, r_up, r_side)
+
+    def set_rotation(self, double theta, double phi, double gamma, double ci=-2):
+        '''Sets the rotation of the biellipsoid to the new given values. The first three arguments are Euler angles
+            around the z, y, and x axes respectively, applied in reverse order.  If the final argument is between 0
+            and 1, the biellipsoid will further be rotated along its orbit.
+
+        Args:
+            theta: The counter-clockwise rotation of the biellipsoid around the z axis.
+            phi: The counter-clockwise rotation of the biellipsoid around the y axis.
+            gamma: The counter-clockwise rotation of the biellipsoid around the x axis.
+            ci: The cosine of the inclination of the orbit.  This is used only to reorient the object
+                along its orbit at the current position.  If the object should not be rotated with its
+                current position, set as -2.'''
         self.bell.set_rotation(theta, phi, gamma, ci)
 
     def set_position(self, double x, double y, double z):
+        '''Set the position of the biellipsoid.  Note that this will not update the rotation of the object with its
+        orbit; if this is desired, users should call set_rotation next.'''
         cdef Vec3 position = Vec3(x, y, z)
         self.bell.set_position(position)
 
     def is_visible(self, double x, double y, double z):
+        '''Determines whether a the given point is 'visible' from the view plane; that is, whether a straight ray from
+        the given point extending in the -z direction does NOT pass through the biellipsoid.'''
         cdef Vec3 loc = Vec3(x, y, z)
         return self.bell.is_visible(loc)
 
     def is_forward(self, double x, double y, double z):
+        '''Determines whether a point is on the forward half of the biellipsoid or the backwards half.  The point does
+        not need to be on the surface of the biellipsoid, as it will be compared against the joining plane.'''
         cdef Vec3 loc = Vec3(x, y, z)
         return self.bell.is_forward(loc)
 
     def is_forward_2d(self, double x, double y, bint local=0):
+        '''Determines whether the point closest to the viewer (lowest z) on the surface of the biellipsoid at [x, y]
+            is on the forward half of the biellipsoid or the backwards half. This is similar to `is_forward` but is
+            faster than using raycast to find the intersection point and subsequently is_forward.
+
+            Returns false if there are no points on the Biellipsoid at [x, y].'''
         return self.bell.is_forward_2d(x, y, local)
 
     def x_bounds(self):
+        '''Returns the maximum and minimum extent of the biellipsoid in the x direction.'''
         cdef Bounds b = self.bell.x_bounds()
         return np.array([b.min, b.max])
 
     def y_bounds(self):
+        '''Returns the maximum and minimum extent of the biellipsoid in the y direction.'''
         cdef Bounds b = self.bell.y_bounds()
         return np.array([b.min, b.max])
 
     def slice_ylimits(self, double x):
+        '''For a given x, returns the largest and smallest values of y for which there is some z such that [x, y, z]
+        is on the biellipsoid.  This is useful for computing integrals in view-space.'''
         cdef Bounds b = self.bell.slice_ylimits(x)
         return np.array([b.min, b.max])
 
     def line_intersects(self, double x, double y):
+        '''Determines whether the line passing through [x, y, 0] in the +/-z direction passes through the biellipsoid.'''
         return self.bell.line_intersects(x, y)
 
     def raycast(self, double x, double y):
