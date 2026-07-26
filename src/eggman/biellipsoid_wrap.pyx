@@ -51,7 +51,7 @@ cdef class BiellipsoidWrap:
 
     @property
     def rot(self):
-        '''The rotation matrix of the biellipsoid, a 3x3 numpy array, which transforms points 
+        '''The rotation matrix of the biellipsoid, a 3x3 numpy array, which transforms points
             from aligned to view space.'''
         return np.array([
             [self.bell.rot.xx, self.bell.rot.xy, self.bell.rot.xz],
@@ -102,17 +102,29 @@ cdef class BiellipsoidWrap:
             np.array([split.e2.x, split.e2.y, split.e2.z]),
         )
 
-    def __init__(self, double r_forward, double r_back, double r_up, double r_side):
+    def __init__(self, double r_forward, double r_back, double r_up, double r_side, double theta=0, double phi=0,
+                 double gamma=0, double ci=-2, double x=0, double y=0, double z=0):
         '''Define a biellipsoid in terms of it's origin position, rotation angles, and radii.
-        Users will likely wish to call `set_position` and `set_rotation` next, as the object is
-        initially placed at the origin with an identity rotation matrix.
 
         Args:
             r_forward: The forward radius of the object -- along the +x direction for an identity rotation matrix.
             r_back: The forward radius of the object -- along the -x direction for an identity rotation matrix.
             r_up: The upward radius of the object -- along the y axis for an identity rotation matrix.
-            r_side: The upward radius of the object -- along the z axis for an identity rotation matrix.'''
+            r_side: The upward radius of the object -- along the z axis for an identity rotation matrix.
+            theta: The counter-clockwise rotation of the biellipsoid around the z axis.
+            phi: The counter-clockwise rotation of the biellipsoid around the y axis.
+            gamma: The counter-clockwise rotation of the biellipsoid around the x axis.
+            ci: The cosine of the inclination of the orbit.  This is used only to reorient the object
+                along its orbit at the current position.  If the object should not be rotated with its
+                current position, set as -2.
+            x: The x position of the biellipsoid, in view space.
+            y: The y position of the biellipsoid, in view space.
+            z: The z position of the biellipsoid, in view space.
+        '''
         self.bell = Biellipsoid(r_forward, r_back, r_up, r_side)
+        cdef Vec3 loc = Vec3(x, y, z)
+        self.bell.set_position(loc)
+        self.bell.set_rotation(theta, phi, gamma, ci)
 
     def set_rotation(self, double theta, double phi, double gamma, double ci=-2):
         '''Sets the rotation of the biellipsoid to the new given values. The first three arguments are Euler angles

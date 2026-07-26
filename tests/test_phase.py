@@ -7,7 +7,7 @@ import eggman
 def test_phase_trivial():
     p = eggman.PhaseIntegratorWrap()
     p.add_star("quadratic_limb", [0.2, 0.1])
-    p.add_planet(.1, .11, .08, 1.3, 0., 0., 0., 0., 8., 5., 89., 0.)
+    p.add_planet(.1, .11, .08, 1.3, 8., 5., inclination=89.)
     assert p.get_n_objects() == 2
     p.set_time(0.)
 
