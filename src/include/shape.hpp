@@ -1,5 +1,5 @@
-#ifndef BIELLIPSOID_HPP
-#define BIELLIPSOID_HPP
+#ifndef STAR_SYSTEM_HPP
+#define STAR_SYSTEM_HPP
 
 #include "ellipse.hpp"
 #include "math_utils.hpp"
@@ -10,7 +10,7 @@
  * across them.  All members are public for simplicity, but mutation should be done via the
  * setters or outputs may be incorrect.
  */
-class Biellipsoid {
+class Shape {
   public:
     Vec3 position;
     double r_forward;
@@ -29,8 +29,8 @@ class Biellipsoid {
     Ellipse b_limb; // The ellipse defining the backwards portion of the limb
     Ellipse joint;  // The ellipse connecting the two half-ellipsoids
 
-    Biellipsoid();
-    Biellipsoid(double r_forward, double r_backward, double r_up, double r_side);
+    Shape();
+    Shape(double r_forward, double r_backward, double r_up, double r_side);
     void set_radii(double r_forward, double r_back, double r_up, double r_side);
     void set_position(Vec3 new_position);
     // Rotate around z, y, and x; then if ci (cos(inclination)) is given, align with orbit

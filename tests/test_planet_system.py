@@ -5,7 +5,7 @@ import eggman
 
 
 def test_phase_trivial():
-    p = eggman.PhaseIntegratorWrap()
+    p = eggman.PlanetSystem()
     p.add_star("quadratic_limb", [0.2, 0.1])
     p.add_planet(.1, .11, .08, 1.3, 8., 5., inclination=89.)
     assert p.get_n_objects() == 2
@@ -30,7 +30,7 @@ def test_phase_trivial():
         [0., 5 * np.cos(89 * np.pi / 180), 5 * np.sin(89 * np.pi / 180)], abs=1e-6)
     assert shape.radii == approx([.1, .11, .08, 1.3], abs=1e-6)
     assert light.source_type == "none"
-    bell = eggman.BiellipsoidWrap(0., 0., 0., 0., 0., 0., 1., 1., 1., 1.)
+    bell = eggman.Shape(0., 0., 0., 0., 0., 0., 1., 1., 1., 1.)
     assert light.get_brightness(1., 0., bell) == 0.
     with raises(IndexError):
         p[2]

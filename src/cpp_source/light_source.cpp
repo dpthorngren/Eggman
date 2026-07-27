@@ -33,7 +33,7 @@ LightSource::LightSource(SourceType type, double *params) {
     }
 }
 
-double LightSource::get_brightness(double x, double y, const Biellipsoid &bell) const {
+double LightSource::get_brightness(double x, double y, const Shape &shp) const {
     double mu, nu, limb_coeff;
     switch (stype) {
     case None:
@@ -41,14 +41,14 @@ double LightSource::get_brightness(double x, double y, const Biellipsoid &bell) 
     case Lambertian:
         return params[0];
     case QuadraticLimb:
-        if (!bell.raycast(x, y, &mu, nullptr)) {
+        if (!shp.raycast(x, y, &mu, nullptr)) {
             return 0; // Point doesn't intersect biellipsoid
         }
         nu = 1 - mu;
         limb_coeff = 1 - params[1] * nu - params[2] * nu * nu;
         return params[0] * limb_coeff / limb_norm;
     case NonLinearLimb:
-        if (!bell.raycast(x, y, &mu, nullptr)) {
+        if (!shp.raycast(x, y, &mu, nullptr)) {
             return 0; // Point doesn't intersect biellipsoid
         }
         nu = sqrt(mu);
@@ -91,16 +91,16 @@ double LightSource::get_brightness_sphere(double x, double y) const {
     }
 }
 
-double LightSource::get_integrated_brightness(const Biellipsoid &bell) const {
+double LightSource::get_integrated_brightness(const Shape &shp) const {
     switch (stype) {
     case None:
         return 0.;
     case Lambertian:
-        return params[0] * bell.get_area();
+        return params[0] * shp.get_area();
     case QuadraticLimb:
-        return bell.is_sphere ? params[0] * bell.get_area() : NAN;
+        return shp.is_sphere ? params[0] * shp.get_area() : NAN;
     case NonLinearLimb:
-        return bell.is_sphere ? params[0] * bell.get_area() : NAN;
+        return shp.is_sphere ? params[0] * shp.get_area() : NAN;
     default:
         return NAN;
     }

@@ -1,6 +1,6 @@
 import numpy as np
 
-from .cy_eggman import BiellipsoidWrap, LightSourceWrap, OrbitWrap
+from .cy_eggman import Shape, LightSource, Orbit
 
 
 def rotation_matrix(angle, axis, degrees=True):
@@ -40,18 +40,18 @@ def plot_transit(
     from matplotlib import pyplot as plt
     _, ax = plt.subplots(figsize=(12, 8))
 
-    orb = OrbitWrap(period, t0, semimajor, eccen, inclination, lon_periapse)
+    orb = Orbit(period, t0, semimajor, eccen, inclination, lon_periapse)
     assert (r_forward > 0) and (r_back > 0) and (r_side > 0), "Radii must be positive."
     ci = orb.cos_inc if rotate_with_orbit else -2.
     x, y, z = orb.get_position(t)
 
     # Draw the planet
     # TODO: Handle catwoman emulation
-    bell = BiellipsoidWrap(x, y, z, theta, phi, gamma, r_forward, r_back, r_pole, r_side, ci)
+    bell = Shape(x, y, z, theta, phi, gamma, r_forward, r_back, r_pole, r_side, ci)
     bell.plot_area(**area_args)
     bell.plot_meridians(**meridian_args)
 
     # Draw the parent star
-    source = LightSourceWrap("uniform", [1.0], limb_type, limb)
+    source = LightSource("uniform", [1.0], limb_type, limb)
     source_args.setdefault('zorder', -100 if z > 0 else 100)
     source.plot_brightness(pcm_args=source_args)

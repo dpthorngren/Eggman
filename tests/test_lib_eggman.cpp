@@ -1,7 +1,7 @@
-#include "biellipsoid.hpp"
+#include "shape.hpp"
 #include "light_source.hpp"
 #include "orbit.hpp"
-#include "phase_curve_integral.hpp"
+#include "planet_system.hpp"
 #include "transit_integral.hpp"
 #include <iostream>
 
@@ -26,48 +26,48 @@ using namespace std;
 int test_biellipsoid() {
     ANNOUNCE_TEST();
     int errors = 0;
-    Biellipsoid bell = Biellipsoid(.15, .1, .1, .1);
-    bell.update_derived();
-    TEST_APPROX(bell.x_bounds().min, -.1, 1e-12, errors);
-    TEST_APPROX(bell.x_bounds().max, .15, 1e-12, errors);
-    TEST_APPROX(bell.y_bounds().min, -.1, 1e-12, errors);
-    TEST_APPROX(bell.y_bounds().max, .1, 1e-12, errors);
-    bell.set_position((Vec3){1.0, 0.1, 0.3});
-    TEST_APPROX(bell.x_bounds().min, 1 - .1, 1e-12, errors);
-    TEST_APPROX(bell.x_bounds().max, 1 + .15, 1e-12, errors);
-    TEST_APPROX(bell.y_bounds().min, .1 + -.1, 1e-12, errors);
-    TEST_APPROX(bell.y_bounds().max, .1 + .1, 1e-12, errors);
+    Shape shp = Shape(.15, .1, .1, .1);
+    shp.update_derived();
+    TEST_APPROX(shp.x_bounds().min, -.1, 1e-12, errors);
+    TEST_APPROX(shp.x_bounds().max, .15, 1e-12, errors);
+    TEST_APPROX(shp.y_bounds().min, -.1, 1e-12, errors);
+    TEST_APPROX(shp.y_bounds().max, .1, 1e-12, errors);
+    shp.set_position((Vec3){1.0, 0.1, 0.3});
+    TEST_APPROX(shp.x_bounds().min, 1 - .1, 1e-12, errors);
+    TEST_APPROX(shp.x_bounds().max, 1 + .15, 1e-12, errors);
+    TEST_APPROX(shp.y_bounds().min, .1 + -.1, 1e-12, errors);
+    TEST_APPROX(shp.y_bounds().max, .1 + .1, 1e-12, errors);
 
     // Test line projection
-    bell = Biellipsoid(1., 1., 1., 1.);
+    shp = Shape(1., 1., 1., 1.);
     Vec3 loc;
     double mu;
-    bool hit = bell.raycast(0, 0, &mu, &loc);
+    bool hit = shp.raycast(0, 0, &mu, &loc);
     TEST_ASSERT(hit, ==, true, errors);
     TEST_APPROX(loc.x, 0., 1e-9, errors);
     TEST_APPROX(loc.y, 0., 1e-9, errors);
     TEST_APPROX(loc.z, 1., 1e-9, errors);
     TEST_APPROX(mu, 1.0, 1e-9, errors);
-    hit = bell.raycast(0.5, 0, &mu, &loc);
+    hit = shp.raycast(0.5, 0, &mu, &loc);
     TEST_ASSERT(hit, ==, true, errors);
     TEST_APPROX(loc.x, 0.5, 1e-9, errors);
     TEST_APPROX(loc.y, 0., 1e-9, errors);
     TEST_APPROX(loc.z, sqrt(1 - .5 * .5), 1e-9, errors);
-    bell.raycast(0.5, 0., &mu, &loc);
+    shp.raycast(0.5, 0., &mu, &loc);
     TEST_APPROX(0.5, loc.x, 1e-9, errors);
     TEST_APPROX(0, loc.y, 1e-9, errors);
     TEST_APPROX(mu, loc.z, 1e-9, errors);
     TEST_APPROX(mu, cos(M_PI / 6), 1e-9, errors);
-    bell.raycast(1 - 1e-12, 0., &mu);
+    shp.raycast(1 - 1e-12, 0., &mu);
     TEST_APPROX(mu, 0., 1e-4, errors);
     // Aligned but no longer spherical
-    bell.set_radii(1.5, 1.4, 1.0, 0.9);
-    hit = bell.raycast(0.5, 0.0, &mu, &loc);
+    shp.set_radii(1.5, 1.4, 1.0, 0.9);
+    hit = shp.raycast(0.5, 0.0, &mu, &loc);
     TEST_ASSERT(hit, ==, true, errors);
     TEST_APPROX(loc.x, .5 / 1.5, 1e-9, errors);
     TEST_APPROX(loc.y, 0., 1e-9, errors);
     TEST_ASSERT(loc.z, >, 0, errors);
-    hit = bell.raycast(-0.5, 0.0, &mu, &loc);
+    hit = shp.raycast(-0.5, 0.0, &mu, &loc);
     TEST_ASSERT(hit, ==, true, errors);
     TEST_APPROX(loc.x, -.5 / 1.4, 1e-9, errors);
     TEST_APPROX(loc.y, 0.0, 1e-9, errors);
@@ -76,49 +76,49 @@ int test_biellipsoid() {
     // TEST_APPROX(mu, 1.0, 1e-9, errors);
 
     // Test area calculation
-    bell = Biellipsoid(1., 1.5, 1.33, 1.);
-    bell.set_position({1., 1., 1.});
-    TEST_APPROX(bell.get_area(), M_PI * 1.33 * (1.5 + 1.) / 2.0, 1e-9, errors);
-    bell.set_rotation(0., 90., 0.);
-    TEST_APPROX(bell.get_area(), M_PI * 1.33, 1e-9, errors);
+    shp = Shape(1., 1.5, 1.33, 1.);
+    shp.set_position({1., 1., 1.});
+    TEST_APPROX(shp.get_area(), M_PI * 1.33 * (1.5 + 1.) / 2.0, 1e-9, errors);
+    shp.set_rotation(0., 90., 0.);
+    TEST_APPROX(shp.get_area(), M_PI * 1.33, 1e-9, errors);
     for (int i = 0; i < 10; i++) {
-        bell.set_rotation(i * 180. / 10., 0., 0.);
-        TEST_APPROX(bell.get_area(), M_PI * 1.33 * (1.5 + 1.) / 2.0, 1e-9, errors);
+        shp.set_rotation(i * 180. / 10., 0., 0.);
+        TEST_APPROX(shp.get_area(), M_PI * 1.33 * (1.5 + 1.) / 2.0, 1e-9, errors);
     }
 
     // Test forward/backward determination
-    bell = Biellipsoid(2., 1.5, 1., 0.9);
-    bell.set_position({4., 3., 2.});
-    bell.set_rotation(0., 10., 0.);
-    TEST_ASSERT(bell.is_forward_2d(3, 3.), ==, false, errors);
-    TEST_ASSERT(bell.is_forward_2d(4, 3.), ==, false, errors);
-    TEST_ASSERT(bell.is_forward_2d(5.3, 3.), ==, true, errors);
-    bell.set_rotation(0., -10., 0.);
-    TEST_ASSERT(bell.is_forward_2d(3, 3.2), ==, false, errors);
-    TEST_ASSERT(bell.is_forward_2d(4, 3.), ==, true, errors);
-    TEST_ASSERT(bell.is_forward_2d(5., 2.95), ==, true, errors);
-    bell.set_rotation(89., -10., 0.);
-    TEST_ASSERT(bell.is_forward_2d(4., 2.), ==, false, errors);
-    TEST_ASSERT(bell.is_forward_2d(4., 4.), ==, true, errors);
-    bell.set_rotation(30., 0., 0.);
-    TEST_ASSERT(bell.is_forward_2d(3, 3.), ==, false, errors);
-    TEST_ASSERT(bell.is_forward_2d(4.1, 3.1), ==, true, errors);
+    shp = Shape(2., 1.5, 1., 0.9);
+    shp.set_position({4., 3., 2.});
+    shp.set_rotation(0., 10., 0.);
+    TEST_ASSERT(shp.is_forward_2d(3, 3.), ==, false, errors);
+    TEST_ASSERT(shp.is_forward_2d(4, 3.), ==, false, errors);
+    TEST_ASSERT(shp.is_forward_2d(5.3, 3.), ==, true, errors);
+    shp.set_rotation(0., -10., 0.);
+    TEST_ASSERT(shp.is_forward_2d(3, 3.2), ==, false, errors);
+    TEST_ASSERT(shp.is_forward_2d(4, 3.), ==, true, errors);
+    TEST_ASSERT(shp.is_forward_2d(5., 2.95), ==, true, errors);
+    shp.set_rotation(89., -10., 0.);
+    TEST_ASSERT(shp.is_forward_2d(4., 2.), ==, false, errors);
+    TEST_ASSERT(shp.is_forward_2d(4., 4.), ==, true, errors);
+    shp.set_rotation(30., 0., 0.);
+    TEST_ASSERT(shp.is_forward_2d(3, 3.), ==, false, errors);
+    TEST_ASSERT(shp.is_forward_2d(4.1, 3.1), ==, true, errors);
     return errors;
 }
 
 int test_orbital_position() {
     ANNOUNCE_TEST();
     int errors = 0;
-    Biellipsoid bell = Biellipsoid(.2, .18, .15, .23);
+    Shape shp = Shape(.2, .18, .15, .23);
     Orbit orb = Orbit(2., 0., 5., 0., 85., 90.);
-    bell.position_from_orbit(0.0, orb);
-    TEST_APPROX(bell.position.x, 0., 1e-12, errors);
-    TEST_APPROX(bell.position.y, 5. * cos(85 * M_PI / 180), 1e-12, errors);
-    TEST_APPROX(bell.position.z, 5. * sin(85 * M_PI / 180), 1e-12, errors);
-    bell.position_from_orbit(0.5, orb);
-    TEST_APPROX(bell.position.x, 5., 1e-12, errors);
-    TEST_APPROX(bell.position.y, 0., 1e-12, errors);
-    TEST_APPROX(bell.position.z, 0., 1e-12, errors);
+    shp.position_from_orbit(0.0, orb);
+    TEST_APPROX(shp.position.x, 0., 1e-12, errors);
+    TEST_APPROX(shp.position.y, 5. * cos(85 * M_PI / 180), 1e-12, errors);
+    TEST_APPROX(shp.position.z, 5. * sin(85 * M_PI / 180), 1e-12, errors);
+    shp.position_from_orbit(0.5, orb);
+    TEST_APPROX(shp.position.x, 5., 1e-12, errors);
+    TEST_APPROX(shp.position.y, 0., 1e-12, errors);
+    TEST_APPROX(shp.position.z, 0., 1e-12, errors);
     return errors;
 }
 
@@ -201,31 +201,31 @@ int test_transit() {
     return errors;
 }
 
-int test_phase_curve() {
+int test_planetary_system() {
     ANNOUNCE_TEST();
     int errors = 0;
-    PhaseIntegrator p;
+    PlanetSystem p;
 
     // Add the star
     Orbit orb = Orbit();
     double source_params[MAX_SOURCE_PARAMS] = {1.0 / M_PI, 0.0, 0.0, 0.0, 0.0, 0.0,
                                                0.0,        0.0, 0.0, 0.0, 0.0, 0.0};
-    Biellipsoid bell = Biellipsoid();
+    Shape shp = Shape();
     LightSource star = LightSource(QuadraticLimb, source_params);
     TEST_APPROX(star.limb_norm, 1.0, 1e-9, errors)
-    TEST_APPROX(star.get_brightness(0., 0., bell), 1 / M_PI, 1e-9, errors)
-    p.add_object(orb, bell, star);
+    TEST_APPROX(star.get_brightness(0., 0., shp), 1 / M_PI, 1e-9, errors)
+    p.add_object(orb, shp, star);
     TEST_ASSERT(p.get_n_objects(), ==, 1, errors);
     TEST_APPROX(p.integrate_single(0), 1.0, 1e-7, errors);
 
     // Add the planet
     orb = Orbit(10., 0., 5., 0.00, 89., 90.);
-    bell = Biellipsoid(.12, .09, .08, .08);
+    shp = Shape(.12, .09, .08, .08);
     source_params[0] = 1e-6;
     LightSource planet = LightSource(Lambertian, source_params);
     TEST_APPROX(star.limb_norm, 1.0, 1e-9, errors);
-    TEST_APPROX(planet.get_brightness(0., 0., bell), 1e-6, 1e-9, errors)
-    p.add_object(orb, bell, planet);
+    TEST_APPROX(planet.get_brightness(0., 0., shp), 1e-6, 1e-9, errors)
+    p.add_object(orb, shp, planet);
     TEST_ASSERT(p.get_n_objects(), ==, 2, errors);
 
     // Test sources individually
@@ -265,7 +265,7 @@ int test_phase_curve() {
     source_params[1] = 0.2;
     source_params[2] = 0.1;
     source_params[0] = 1 / M_PI;
-    bell = Biellipsoid();
+    shp = Shape();
     star = LightSource(QuadraticLimb, source_params);
     double expect = 1. - .2 / 3 - .1 / 6.;
     TEST_APPROX(star.limb_norm, expect, 1e-9, errors);
@@ -273,7 +273,7 @@ int test_phase_curve() {
     expect = (1.0 - .2 * nu - .1 * nu * nu) / (expect * M_PI);
     TEST_APPROX(star.get_brightness_sphere(0.5, 0.), expect, 1e-9, errors);
     p.clear_objects();
-    p.add_object(Orbit(), bell, star);
+    p.add_object(Orbit(), shp, star);
     TEST_ASSERT(p.get_n_objects(), ==, 1, errors);
     TEST_APPROX(p.integrate_single(0), 1.0, 1e-7, errors);
 
@@ -297,17 +297,17 @@ int test_light_source() {
     double source_params[MAX_SOURCE_PARAMS] = {1.0 / M_PI, 0.01, 0.1, 0., 0., 0.,
                                                0.,         0.,   0.,  0., 0., 0.};
     // No source should always return 0
-    Biellipsoid bell = Biellipsoid();
+    Shape shp = Shape();
     LightSource s = LightSource(None, source_params);
     TEST_APPROX(s.get_brightness_sphere(0., 0.), 0., 1e-9, errors);
     TEST_APPROX(s.get_brightness_sphere(0.5, 0.5), 0., 1e-9, errors);
-    TEST_APPROX(s.get_brightness(0.9, 0.8, bell), 0., 1e-9, errors);
+    TEST_APPROX(s.get_brightness(0.9, 0.8, shp), 0., 1e-9, errors);
     // Lambertian emitter of total brightness 1
     double expect = 1 / M_PI;
     s = LightSource(Lambertian, source_params);
     TEST_APPROX(s.get_brightness_sphere(0., 0.), expect, 1e-9, errors);
     TEST_APPROX(s.get_brightness_sphere(0.5, 0.5), expect, 1e-9, errors);
-    TEST_APPROX(s.get_brightness(0.9, 0.8, bell), expect, 1e-9, errors);
+    TEST_APPROX(s.get_brightness(0.9, 0.8, shp), expect, 1e-9, errors);
     // Standard star (brightness 1, quadratic limb darkening)
     s = LightSource(QuadraticLimb, source_params);
     // Small params ~= lambertian
@@ -339,7 +339,7 @@ int main() {
     errors += test_biellipsoid();
     errors += test_orbital_position();
     errors += test_transit();
-    errors += test_phase_curve();
+    errors += test_planetary_system();
     errors += test_light_source();
     if (errors == 0) {
         cout << "All tests passed." << endl << endl;

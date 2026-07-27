@@ -1,7 +1,7 @@
 #ifndef LIGHT_SOURCE_HPP
 #define LIGHT_SOURCE_HPP
 
-#include "biellipsoid.hpp"
+#include "shape.hpp"
 #define MAX_SOURCE_PARAMS 12
 
 typedef enum {
@@ -22,13 +22,13 @@ class LightSource {
     LightSource();
     LightSource(SourceType type, double *params);
 
-    // Brightness of this source for the point on Biellipsoid bell through x, y (view space)
-    double get_brightness(double x, double y, const Biellipsoid &bell) const;
+    // Brightness of this source for the point on Biellipsoid shp through x, y (view space)
+    double get_brightness(double x, double y, const Shape &shp) const;
     // Wrapper for get_brightness on a unit sphere given x and y coordinates
     double get_brightness_sphere(double x, double y) const;
     // Total luminosity if the object is completely unobscured
     // Returns NAN if this cannot be computed without an actual integration
-    double get_integrated_brightness(const Biellipsoid &bell) const;
+    double get_integrated_brightness(const Shape &shp) const;
 };
 
 #endif

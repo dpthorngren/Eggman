@@ -6,13 +6,13 @@ import eggman
 
 def test_quadratic_darkening():
     # Exactly zero outside bounds
-    source = eggman.LightSourceWrap('quadratic_limb', [.1, .1])
+    source = eggman.LightSource('quadratic_limb', [.1, .1])
     assert source.get_brightness_sphere(.9, .9) == 0.0
     assert source.get_brightness_sphere(-.9, .85) == 0.0
     # Simple cases
     norm1 = (1. - .5/3 - .2/6)
-    source1 = eggman.LightSourceWrap('quadratic_limb', [0, 0])
-    source2 = eggman.LightSourceWrap('quadratic_limb', [1 / np.pi, .5, .2])
+    source1 = eggman.LightSource('quadratic_limb', [0, 0])
+    source2 = eggman.LightSource('quadratic_limb', [1 / np.pi, .5, .2])
     for x, y in 0.5 * np.random.rand(100, 2):
         assert source1.get_brightness_sphere(x, y) == approx(1.0 / np.pi, 1e-12)
         nu = 1.0 - np.sqrt(1 - x*x - y*y)
@@ -22,13 +22,13 @@ def test_quadratic_darkening():
 
 def test_nonlinear_darkening():
     # Exactly zero outside bounds
-    source = eggman.LightSourceWrap('nonlinear_limb', [.5, .1, .05, .05])
+    source = eggman.LightSource('nonlinear_limb', [.5, .1, .05, .05])
     assert source.get_brightness_sphere(.9, .9) == 0.0
     assert source.get_brightness_sphere(-.9, .85) == 0.0
     # Simple cases
     norm = (1 - .5/5. - .2/3. - 3.*.1/7. - .1/2.)
-    source1 = eggman.LightSourceWrap('nonlinear_limb', [0., 0., 0., 0.])
-    source2 = eggman.LightSourceWrap('nonlinear_limb', [.5, .2, .1, .1])
+    source1 = eggman.LightSource('nonlinear_limb', [0., 0., 0., 0.])
+    source2 = eggman.LightSource('nonlinear_limb', [.5, .2, .1, .1])
     for x, y in 0.5 * np.random.rand(100, 2):
         assert source1.get_brightness_sphere(x, y) == approx(1.0 / np.pi, 1e-12)
         nu = np.sqrt(np.sqrt(1 - x*x - y*y))

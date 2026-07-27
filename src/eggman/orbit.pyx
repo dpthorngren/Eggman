@@ -1,5 +1,5 @@
 
-cdef class OrbitWrap:
+cdef class Orbit:
     '''Describes an orbit so that the position at a given time may be calculated.
 
     This class wraps the C++ class Orbit, plus solve_kepler as a static function.'''
@@ -7,22 +7,22 @@ cdef class OrbitWrap:
     @property
     def period(self) -> double:
         '''The orbital period.'''
-        return self.orb.get_period()
+        return self.corbit.get_period()
 
     @property
     def semimajor(self) -> double:
         '''The orbital semimajor axis.'''
-        return self.orb.get_semimajor()
+        return self.corbit.get_semimajor()
 
     @property
     def eccen(self) -> double:
         '''The orbital eccentricity.'''
-        return self.orb.get_eccen()
+        return self.corbit.get_eccen()
 
     @property
     def cos_inc(self) -> double:
         '''The cosine of the inclination, which is useful for orienting objects along their orbits.'''
-        return self.orb.get_cos_inc()
+        return self.corbit.get_cos_inc()
 
     def __init__(self, double period, double t0, double semimajor, double eccen=0,
                  double inclination=90, double lon_periapse=90):
@@ -40,7 +40,7 @@ cdef class OrbitWrap:
             lon_periapse: The longitude of the orbit's periapse.  A value of 90 places the periapse at
                 [-a*(1-e), 0., 0.].
         '''
-        self.orb = Orbit(period, t0, semimajor, eccen, inclination, lon_periapse)
+        self.corbit = COrbit(period, t0, semimajor, eccen, inclination, lon_periapse)
 
     def get_position(self, double t):
         '''Calculates the position of the orbiting object at a given time.
@@ -52,7 +52,7 @@ cdef class OrbitWrap:
         Returns:
             The position of the orbiting object at time t, as a one-dimensional numpy array of size 3.
         '''
-        cdef Vec3 pos = self.orb.get_position(t)
+        cdef Vec3 pos = self.corbit.get_position(t)
         return np.array([pos.x, pos.y, pos.z])
 
     @staticmethod

@@ -1,8 +1,8 @@
-#include "biellipsoid.hpp"
+#include "shape.hpp"
 #include "math_utils.hpp"
 #include <cmath>
 
-Biellipsoid::Biellipsoid() {
+Shape::Shape() {
     position = {0., 0., 0.};
     r_forward = 1.0;
     r_back = 1.0;
@@ -15,7 +15,7 @@ Biellipsoid::Biellipsoid() {
     update_derived();
 }
 
-Biellipsoid::Biellipsoid(double r_forward, double r_back, double r_up, double r_side) {
+Shape::Shape(double r_forward, double r_back, double r_up, double r_side) {
     position = {0., 0., 0.};
     this->r_forward = r_forward;
     this->r_back = r_back;
@@ -29,7 +29,7 @@ Biellipsoid::Biellipsoid(double r_forward, double r_back, double r_up, double r_
     update_derived();
 }
 
-void Biellipsoid::set_radii(double r_forward, double r_back, double r_up, double r_side) {
+void Shape::set_radii(double r_forward, double r_back, double r_up, double r_side) {
     this->r_forward = r_forward;
     this->r_back = r_back;
     this->r_up = r_up;
@@ -37,7 +37,7 @@ void Biellipsoid::set_radii(double r_forward, double r_back, double r_up, double
     update_derived();
 }
 
-void Biellipsoid::set_rotation(double theta, double phi, double gamma, double ci) {
+void Shape::set_rotation(double theta, double phi, double gamma, double ci) {
     // Setup the rotation matrix (from ellipsoid-aligned to view frame)
     this->theta = theta * M_PI / 180;
     this->phi = phi * M_PI / 180;
@@ -70,7 +70,7 @@ void Biellipsoid::set_rotation(double theta, double phi, double gamma, double ci
     update_derived();
 }
 
-void Biellipsoid::position_from_orbit(
+void Shape::position_from_orbit(
     double t, const Orbit &orb, bool rotate_with_orbit, Vec3 origin
 ) {
     Vec3 new_pos = orb.get_position(t);
@@ -85,9 +85,9 @@ void Biellipsoid::position_from_orbit(
     }
 }
 
-void Biellipsoid::set_position(Vec3 new_position) { this->position = new_position; }
+void Shape::set_position(Vec3 new_position) { this->position = new_position; }
 
-void Biellipsoid::update_derived() {
+void Shape::update_derived() {
     // See if we can bypass these calculations
     is_sphere =
         isclose(r_forward, r_back) && isclose(r_forward, r_up) && isclose(r_forward, r_side);
@@ -165,7 +165,7 @@ void Biellipsoid::update_derived() {
     joint = Ellipse(e1, e2);
 }
 
-Bounds Biellipsoid::slice_ylimits(double x) const {
+Bounds Shape::slice_ylimits(double x) const {
     Vec3 lower, upper;
     Bounds result = {INFINITY, -INFINITY};
     x -= position.x;
@@ -203,7 +203,7 @@ Bounds Biellipsoid::slice_ylimits(double x) const {
     return result;
 }
 
-bool Biellipsoid::line_intersects(double x, double y) const {
+bool Shape::line_intersects(double x, double y) const {
     bool hit;
     Vec3 loc;
     x -= position.x;
@@ -219,7 +219,7 @@ bool Biellipsoid::line_intersects(double x, double y) const {
     return false;
 }
 
-bool Biellipsoid::raycast(double x, double y, double *mu_out, Vec3 *hit_out) const {
+bool Shape::raycast(double x, double y, double *mu_out, Vec3 *hit_out) const {
     double mu, rsq, len_u_sq, det, offset, lusq;
     Vec3 hit, p0, u;
     x -= position.x;
@@ -289,7 +289,7 @@ OUTPUT_RET: // Yes, yes, goto's are bad.  Deal with it :)
     return true;
 }
 
-Vec3 Biellipsoid::nearest_to_line(double x, double y) const {
+Vec3 Shape::nearest_to_line(double x, double y) const {
     Vec3 result;
     if (is_forward((Vec3){x, y, position.z})) {
         result = f_limb.nearest_to_line(x - position.x, y - position.y);
@@ -300,16 +300,16 @@ Vec3 Biellipsoid::nearest_to_line(double x, double y) const {
     return result;
 }
 
-inline bool Biellipsoid::is_forward(Vec3 loc) const {
+inline bool Shape::is_forward(Vec3 loc) const {
     return ((loc.x - position.x) * rot.xx + (loc.y - position.y) * rot.yx +
             (loc.z - position.z) * rot.zx) >= 0;
 }
 
-inline bool Biellipsoid::is_forward_local(Vec3 loc) const {
+inline bool Shape::is_forward_local(Vec3 loc) const {
     return (loc.x * rot.xx + loc.y * rot.yx + loc.z * rot.zx) >= 0;
 }
 
-bool Biellipsoid::is_forward_2d(double x, double y, bool local) const {
+bool Shape::is_forward_2d(double x, double y, bool local) const {
     if (!local) {
         x -= position.x;
         y -= position.y;
@@ -336,7 +336,7 @@ bool Biellipsoid::is_forward_2d(double x, double y, bool local) const {
     return !(in_ellipse ^ forward_near);
 }
 
-bool Biellipsoid::is_visible(Vec3 loc) const {
+bool Shape::is_visible(Vec3 loc) const {
     // In this niche world-aligned-but-scaled frame, planet is a unit sphere at the origin
     // but the view vector is (0, 0, -1)
     Vec3 loc_sph = world_to_sphere(loc);
@@ -352,7 +352,7 @@ bool Biellipsoid::is_visible(Vec3 loc) const {
     return (xysq + loc.z * loc.z) > 1;
 }
 
-Bounds Biellipsoid::x_bounds() const {
+Bounds Shape::x_bounds() const {
     if (rot.xx > 0) {
         return {position.x - b_limb.x_size, position.x + f_limb.x_size};
     } else {
@@ -360,7 +360,7 @@ Bounds Biellipsoid::x_bounds() const {
     }
 }
 
-Bounds Biellipsoid::y_bounds() const {
+Bounds Shape::y_bounds() const {
     if (rot.yy > 0) {
         return {position.y - b_limb.y_size, position.y + f_limb.y_size};
     } else {
@@ -368,9 +368,9 @@ Bounds Biellipsoid::y_bounds() const {
     }
 }
 
-double Biellipsoid::get_area() const { return 0.5 * (f_limb.get_area() + b_limb.get_area()); }
+double Shape::get_area() const { return 0.5 * (f_limb.get_area() + b_limb.get_area()); }
 
-inline Vec3 Biellipsoid::world_to_aligned(Vec3 loc) const {
+inline Vec3 Shape::world_to_aligned(Vec3 loc) const {
     Vec3 result;
     loc.x -= position.x;
     loc.y -= position.y;
@@ -379,7 +379,7 @@ inline Vec3 Biellipsoid::world_to_aligned(Vec3 loc) const {
     return result;
 }
 
-inline Vec3 Biellipsoid::world_to_sphere(Vec3 loc) const {
+inline Vec3 Shape::world_to_sphere(Vec3 loc) const {
     Vec3 result;
     loc.x -= position.x;
     loc.y -= position.y;
@@ -391,7 +391,7 @@ inline Vec3 Biellipsoid::world_to_sphere(Vec3 loc) const {
     return result;
 }
 
-inline Vec3 Biellipsoid::aligned_to_world(Vec3 loc) const {
+inline Vec3 Shape::aligned_to_world(Vec3 loc) const {
     Vec3 result;
     MATMUL(rot, loc, result);
     result.x += position.x;
@@ -400,14 +400,14 @@ inline Vec3 Biellipsoid::aligned_to_world(Vec3 loc) const {
     return result;
 }
 
-inline Vec3 Biellipsoid::aligned_to_sphere(Vec3 loc) const {
+inline Vec3 Shape::aligned_to_sphere(Vec3 loc) const {
     loc.x /= (loc.x < 0 ? r_back : r_forward);
     loc.y /= r_up;
     loc.z /= r_side;
     return loc;
 }
 
-inline Vec3 Biellipsoid::sphere_to_world(Vec3 loc) const {
+inline Vec3 Shape::sphere_to_world(Vec3 loc) const {
     Vec3 result;
     loc.x *= (loc.x < 0 ? r_back : r_forward);
     loc.y *= r_up;
@@ -419,7 +419,7 @@ inline Vec3 Biellipsoid::sphere_to_world(Vec3 loc) const {
     return result;
 }
 
-inline Vec3 Biellipsoid::sphere_to_aligned(Vec3 loc) const {
+inline Vec3 Shape::sphere_to_aligned(Vec3 loc) const {
     loc.x *= (loc.x < 0 ? r_back : r_forward);
     loc.y *= r_up;
     loc.z *= r_side;

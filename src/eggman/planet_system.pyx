@@ -1,5 +1,5 @@
 
-cdef class PhaseIntegratorWrap:
+cdef class PlanetSystem:
 
     def __init__(self, atol=1e-6, rtol=1e-3):
         '''Initialize a blank PhaseIntegratorWrap object, setting the integration tolerances.
@@ -7,28 +7,27 @@ cdef class PhaseIntegratorWrap:
         Args:
             atol: the absolute tolerance for the integrators.
             rtol: the tolerance for the integrators relative to the result.'''
-        self.pci.atol = atol
-        self.pci.rtol = rtol
+        self.cps.atol = atol
+        self.cps.rtol = rtol
 
-    def add_object(self, OrbitWrap orbit, BiellipsoidWrap bell, LightSourceWrap source, bint rotate_with_orbit=False, int parent_index=-1):
+    def add_object(self, Orbit orbit, Shape shape, LightSource source, bint rotate_with_orbit=False, int parent_index=-1):
         '''Adds an object of the given specifications to the system.
 
         Args:
-            orbit: An OrbitWrap object describing the orbit of the object being added.
-            bell: A BiellipsoidWrap object describing the shape of the object being added.
-            source: A LightSourceWrap object describing the emission of the object (may be non-emitting).
+            orbit: An Orbit object describing the orbit of the object being added.
+            shape: A Shape object describing the shape of the object being added.
+            source: A LightSource object describing the emission of the object (may be non-emitting).
             rotate_with_orbit: whether or not the object rotates as it moves through its orbit (tidal locking).
             parent_index: The index of a previously added object that the new object should orbit (like a moon); if negative,
                 the new object orbits the origin.
         '''
-        self.pci.add_object(orbit.orb, bell.bell, source.source, rotate_with_orbit, parent_index)
+        self.cps.add_object(orbit.corbit, shape.cshape, source.csource, rotate_with_orbit, parent_index)
 
     def add_planet(self, double r_forward, double r_back, double r_up, double r_side, double period, double semimajor,
                    double t0=0, double eccen=0, double inclination=90, double lon_periapse=90., double theta=0,
-                   double phi=0, double gamma=0, bint rotate_with_orbit=True, LightSourceWrap source=None,
+                   double phi=0, double gamma=0, bint rotate_with_orbit=True, LightSource source=None,
                    int parent_index=-1):
-        '''Adds a planet of the given specifications to the system.  This is a wrapper for add_object, whose arguments
-            are passed through to BiellipsoidWrap and OrbitWrap.
+        '''Adds a planet of the given specifications to the system.  This is a wrapper for add_object, whose arguments are passed through to Shape and Orbit.
 
         Args:
             r_forward: The forward radius of the object -- along the +x direction for an identity rotation matrix.
@@ -49,18 +48,18 @@ cdef class PhaseIntegratorWrap:
             phi: The counter-clockwise rotation of the biellipsoid around the y axis.
             gamma: The counter-clockwise rotation of the biellipsoid around the x axis.
             rotate_with_orbit: whether or not the object rotates as it moves through its orbit (tidal locking).
-            source: A LightSourceWrap object describing the emission of the object (if None, the planet is not-emitting).
+            source: A LightSource object describing the emission of the object (if None, the planet is not-emitting).
             parent_index: The index of a previously added object that the new object should orbit (like a moon); if negative,
                 the new object orbits the origin.
         '''
-        cdef Orbit orb = Orbit(period, t0, semimajor, eccen, inclination, lon_periapse)
-        cdef Biellipsoid bell = Biellipsoid(r_forward, r_back, r_up, r_side)
-        bell.position_from_orbit(0., orb, rotate_with_orbit)
-        bell.set_rotation(theta, phi, gamma, orb.get_cos_inc())
-        cdef LightSource csource = LightSource()
+        cdef COrbit orb = COrbit(period, t0, semimajor, eccen, inclination, lon_periapse)
+        cdef CShape shape = CShape(r_forward, r_back, r_up, r_side)
+        shape.position_from_orbit(0., orb, rotate_with_orbit)
+        shape.set_rotation(theta, phi, gamma, orb.get_cos_inc())
+        cdef CLightSource csource = CLightSource()
         if source is not None:
-            csource = source.source
-        self.pci.add_object(orb, bell, csource, rotate_with_orbit, parent_index)
+            csource = source.csource
+        self.cps.add_object(orb, shape, csource, rotate_with_orbit, parent_index)
 
     def add_star(self, str limb_type, list[double] limb_params):
         '''Adds a star to the system.  This is a wrapper for add_object, and places a unit-sphere at the origin.
@@ -72,8 +71,8 @@ cdef class PhaseIntegratorWrap:
                 the limb type (0, 2, and 4 respectively from the above list).  If provided, an additional parameter at
                 the start sets the overall brightness (1/pi results in a total luminosity of 1, and so is the default).
             '''
-        cdef LightSource source = LightSourceWrap(limb_type, limb_params).source
-        self.pci.add_object(Orbit(), Biellipsoid(), source, False, -1)
+        cdef CLightSource source = LightSource(limb_type, limb_params).csource
+        self.cps.add_object(COrbit(), CShape(), source, False, -1)
 
     def set_time(self, double t):
         '''Sets the time of the system, moving the objects into position based on their orbits.  This is automatically
@@ -81,14 +80,14 @@ cdef class PhaseIntegratorWrap:
 
         Args:
             t: the time, in the same units as the period and epoch time t0 specified in the object orbits.'''
-        self.pci.set_time(t)
+        self.cps.set_time(t)
 
     def integrate_single(self, int i):
         '''Get the brightness of a single target at the current time (set by set_time, defaulted to 0.)
 
         Args:
             i: Which object to get the brightness of -- these are indexed increasing from 0 in order of insertion.'''
-        return self.pci.integrate_single(i)
+        return self.cps.integrate_single(i)
 
     def phase_curve_integral(self, double[::1] times):
         '''Get the brightness of all objects in the system, added together, at the given times.  Once objects are added,
@@ -101,16 +100,16 @@ cdef class PhaseIntegratorWrap:
             A Numpy array of brightnesses at the specified times.'''
         results = np.full((len(times),), np.nan)
         cdef double[:] results_view = results
-        self.pci.phase_curve_integral(&(times[0]), &(results_view[0]), len(times))
+        self.cps.phase_curve_integral(&(times[0]), &(results_view[0]), len(times))
         return results
 
     def get_n_objects(self):
         '''Returns the number of objects that have been successfully inserted so far.'''
-        return self.pci.get_n_objects()
+        return self.cps.get_n_objects()
 
     def clear_objects(self):
         '''Deletes all the objects so far added, starting over from scratch.  This is slightly faster than creating a new object.'''
-        return self.pci.clear_objects()
+        return self.cps.clear_objects()
 
     def __getitem__(self, int i):
         '''Get an object previously added to the system.
@@ -119,20 +118,20 @@ cdef class PhaseIntegratorWrap:
             i: The index of the object, which were set in order of insertion starting from 0.
 
         Returns:
-            A tuple of an OrbitWrap, BiellipsoidWrap, LightSourceWrap, and bool object that describing the i'th object -- the final
+            A tuple of an OrbitWrap, Shape, LightSource, and bool object that describing the i'th object -- the final
                 bool is whether the object rotates with its orbit.
             '''
         if i < 0:
-            i = self.pci.get_n_objects() - i
-        if i >= self.pci.get_n_objects() or i < 0:
+            i = self.cps.get_n_objects() - i
+        if i >= self.cps.get_n_objects() or i < 0:
             raise IndexError
-        cdef OrbitWrap orbit = OrbitWrap(5., 0., 0.)
-        orbit.orb = self.pci.orbits[i]
-        cdef BiellipsoidWrap bell = BiellipsoidWrap(0., 0., 0., 0.)
-        bell.bell = self.pci.shapes[i]
-        cdef LightSourceWrap source = LightSourceWrap("none", [])
-        source.source = self.pci.lights[i]
-        return (orbit, bell, source, self.pci.rotate_with_orbit[i])
+        cdef Orbit orbit = Orbit(5., 0., 0.)
+        orbit.corbit = self.cps.orbits[i]
+        cdef Shape shape = Shape(0., 0., 0., 0.)
+        shape.cshape = self.cps.shapes[i]
+        cdef LightSource source = LightSource("none", [])
+        source.csource = self.cps.lights[i]
+        return (orbit, shape, source, self.cps.rotate_with_orbit[i])
 
     def plot_objects(self, res=200, **args):
         '''Create a simple plot of the system using matplotlib, at the current time previously set by set_time (defaulting to 0).
@@ -143,9 +142,9 @@ cdef class PhaseIntegratorWrap:
             res: The resolution to plot the objects at, as an integer.
             **args: Additional keyword arguments that are passed to pyplot.pcolormesh for objects with emission.'''
         for i in range(self.get_n_objects()):
-            _, bell, source, _ = self[i]
+            _, shape, source, _ = self[i]
             if source.source_type == "none":
-                bell.plot_area(res, zorder=bell.position[2])
+                shape.plot_area(res, zorder=shape.position[2])
             else:
-                args.setdefault('zorder', bell.position[2])
-                source.plot_brightness(bell, res, pcm_args=args)
+                args.setdefault('zorder', shape.position[2])
+                source.plot_brightness(shape, res, pcm_args=args)

@@ -1,7 +1,7 @@
 #ifndef TRANSIT_INTEGRAL_HPP
 #define TRANSIT_INTEGRAL_HPP
 
-#include "biellipsoid.hpp"
+#include "shape.hpp"
 #include "light_source.hpp"
 #include "orbit.hpp"
 #include <gsl/gsl_errno.h>
@@ -9,7 +9,7 @@
 
 typedef struct {
     LightSource emitter; // The star being transited
-    Biellipsoid bell;    // The planet doing the transiting
+    Shape shp;    // The planet doing the transiting
     double x;            // The x to evaluate the inner integral at (for this step)
     double atol;
     double rtol;

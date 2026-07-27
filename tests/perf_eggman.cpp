@@ -1,28 +1,28 @@
-#include "biellipsoid.hpp"
+#include "shape.hpp"
 #include "light_source.hpp"
 #include "orbit.hpp"
-#include "phase_curve_integral.hpp"
+#include "planet_system.hpp"
 
 
 int main() {
-    PhaseIntegrator p;
+    PlanetSystem p;
 
     // Add the star
     Orbit orb = Orbit();
     double source_params[MAX_SOURCE_PARAMS] = {1.0 / M_PI, 0.2, 0.1, 0.0, 0.0, 0.0,
                                                0.0,        0.0, 0.0, 0.0, 0.0, 0.0};
-    Biellipsoid bell = Biellipsoid();
+    Shape shp = Shape();
     LightSource star = LightSource(QuadraticLimb, source_params);
-    p.add_object(orb, bell, star);
+    p.add_object(orb, shp, star);
 
     // Add the planet
     orb = Orbit(10., 0., 5., 0.00, 89., 90.);
-    bell = Biellipsoid(.12, .09, .08, .08);
+    shp = Shape(.12, .09, .08, .08);
     source_params[0] = 1e-3;
     source_params[1] = 0.;
     source_params[2] = 0.;
     LightSource planet = LightSource(QuadraticLimb, source_params);
-    p.add_object(orb, bell, planet);
+    p.add_object(orb, shp, planet);
 
     // Test a full phase curve
     const int n_times = 10000;

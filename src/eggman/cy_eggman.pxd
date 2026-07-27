@@ -26,9 +26,9 @@ cdef extern from "math_utils.hpp":
 # ===== Orbit class and wrapper =====
 cdef extern from "orbit.cpp":
     double solve_kepler(double mean_anomaly, double eccen)
-    cdef cppclass Orbit:
-        Orbit() except +
-        Orbit(double, double, double, double, double, double) except +
+    cdef cppclass COrbit "Orbit":
+        COrbit() except +
+        COrbit(double, double, double, double, double, double) except +
         Vec3 get_position(double t) except +
         double get_period()
         double get_semimajor()
@@ -36,49 +36,49 @@ cdef extern from "orbit.cpp":
         double get_cos_inc()
 
 
-cdef class OrbitWrap:
-    cdef Orbit orb
+cdef class Orbit:
+    cdef COrbit corbit
     # All wrapper functions are implemented in Python, so aren't declared here.
     # For use from Cython, use the C++ class directly
 
 
-# ===== Biellipsoid class and wrapper =====
+# ===== Shape class and wrapper =====
 cdef extern from "ellipse.cpp":
-    cdef cppclass Ellipse:
+    cdef cppclass CEllipse "Ellipse":
         Vec3 e1
         Vec3 e2
         double det
         double x_size
         double y_size
-        Ellipse()
-        Ellipse(Vec3 e1, Vec3 e2)
+        CEllipse()
+        CEllipse(Vec3 e1, Vec3 e2)
         void get_ybounds(double x, Vec3 &out_min, Vec3 &out_max)
         bint line_intersects(double x, double y, Vec3* out)
         Vec3 nearest_to_line(double xt, double yt)
 
 
-cdef class EllipseWrap:
-    cdef Ellipse ell
+cdef class Ellipse:
+    cdef CEllipse cell
 
 
-cdef extern from "biellipsoid.cpp":
-    cdef cppclass Biellipsoid:
+cdef extern from "shape.cpp":
+    cdef cppclass CShape "Shape":
         Vec3 position
         double r_forward
         double r_back
         double r_up
         double r_side
         Mat3 rot
-        Ellipse f_limb
-        Ellipse b_limb
-        Ellipse joint
+        CEllipse f_limb
+        CEllipse b_limb
+        CEllipse joint
 
-        Biellipsoid()
-        Biellipsoid(double r_forward, double r_backward, double r_up, double r_side)
+        CShape()
+        CShape(double r_forward, double r_backward, double r_up, double r_side)
         void set_rotation(double theta, double phi, double gamma, double ci)
         void set_position(Vec3 new_position)
         void set_radii(double r_forward, double r_back, double r_up, double r_side)
-        void position_from_orbit(double t, const Orbit &orb, bint rotate_with_orbit)
+        void position_from_orbit(double t, const COrbit &orb, bint rotate_with_orbit)
         void update_derived()
         Vec3 forward_vector()
         bint is_forward(Vec3 loc)
@@ -97,8 +97,8 @@ cdef extern from "biellipsoid.cpp":
         Vec3 sphere_to_aligned(Vec3 loc)
 
 
-cdef class BiellipsoidWrap:
-    cdef Biellipsoid bell
+cdef class Shape:
+    cdef CShape cshape
     # All wrapper functions are implemented in Python, so aren't declared here.
     # For use from Cython, use the C++ class directly
 
@@ -112,46 +112,46 @@ cdef extern from "light_source.cpp":
         QuadraticLimb
         NonLinearLimb
         DayNight
-    cdef cppclass LightSource:
+    cdef cppclass CLightSource "LightSource":
         SourceType stype
         double params[MAX_SOURCE_PARAMS]
         double limb_norm
 
-        LightSource()
-        LightSource(int source_type, double *params)
+        CLightSource()
+        CLightSource(int source_type, double *params)
 
-        double get_brightness(double x, double y, const Biellipsoid &bell)
+        double get_brightness(double x, double y, const CShape &bell)
         double get_brightness_sphere(double x, double y)
 
 
-cdef class LightSourceWrap:
-    cdef LightSource source
+cdef class LightSource:
+    cdef CLightSource csource
     # All wrapper functions are implemented in Python, so aren't declared here.
     # For use from Cython, use the C++ class directly
 
 
 # ===== Transit integration function and wrapper =====
 cdef extern from "transit_integral.cpp":
-    void transit_integral(double *times, double *outputs, int n, const Orbit &orb, const LightSource &emitter, double theta, double phi, double gamma, double r_forward, double r_back, double r_up, double r_side, bint rotate_with_orbit, double atol, double rtol)
+    void transit_integral(double *times, double *outputs, int n, const COrbit &orb, const CLightSource &emitter, double theta, double phi, double gamma, double r_forward, double r_back, double r_up, double r_side, bint rotate_with_orbit, double atol, double rtol)
 
 cpdef object transit(double r_forward, double r_back, double r_up, double r_side, double theta, double phi, double gamma, double[::1] t, double t0, double period, double semimajor, double inclination, str limbType, object limb, double eccen=?, double lon_periapse=?, bint rotate_with_orbit=?, double atol=?, double rtol=?)
 
 
 # ===== Phase Curve Class and Wrapper =====
-cdef extern from "phase_curve_integral.cpp":
+cdef extern from "planet_system.cpp":
     const int MAX_PHASE_OBJECTS
-    cdef cppclass PhaseIntegrator:
-        Orbit orbits[MAX_PHASE_OBJECTS]
-        Biellipsoid shapes[MAX_PHASE_OBJECTS]
-        LightSource lights[MAX_PHASE_OBJECTS]
+    cdef cppclass CPlanetSystem "PlanetSystem":
+        COrbit orbits[MAX_PHASE_OBJECTS]
+        CShape shapes[MAX_PHASE_OBJECTS]
+        CLightSource lights[MAX_PHASE_OBJECTS]
         bint rotate_with_orbit[MAX_PHASE_OBJECTS]
         Bounds xlim[MAX_PHASE_OBJECTS]
         Bounds ylim[MAX_PHASE_OBJECTS]
 
-        PhaseIntegrator()
-        PhaseIntegrator(PhaseIntegrator &p)
+        CPlanetSystem()
+        CPlanetSystem(CPlanetSystem &p)
 
-        int add_object(const Orbit &orb, const Biellipsoid &bell, const LightSource &source, bint rot_with_orbit, int parent_index)
+        int add_object(const COrbit &orb, const CShape &bell, const CLightSource &source, bint rot_with_orbit, int parent_index)
         int get_n_objects() const
         void clear_objects()
         void set_time(double t)
@@ -160,7 +160,7 @@ cdef extern from "phase_curve_integral.cpp":
         double atol
         void phase_curve_integral(double *times, double *outputs, int n)
 
-cdef class PhaseIntegratorWrap:
-    cdef PhaseIntegrator pci
+cdef class PlanetSystem:
+    cdef CPlanetSystem cps
     # All wrapper functions are implemented in Python, so aren't declared here.
     # For use from Cython, use the C++ class directly

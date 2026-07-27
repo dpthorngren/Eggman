@@ -1,11 +1,4 @@
 from . import utils
-from .cy_eggman import (
-    BiellipsoidWrap, EllipseWrap, LightSourceWrap, OrbitWrap, PhaseIntegratorWrap, transit)
+from .cy_eggman import (Ellipse, LightSource, Orbit, PlanetSystem, Shape, transit)
 
-# Backwards compatibility
-# asymmetricTransit = transit2d
-
-__all__ = [
-    "OrbitWrap", "transit", "BiellipsoidWrap", "LightSourceWrap", "EllipseWrap", "utils",
-    "PhaseIntegratorWrap"
-]
+__all__ = ["Orbit", "transit", "Shape", "LightSource", "Ellipse", "utils", "PlanetSystem"]

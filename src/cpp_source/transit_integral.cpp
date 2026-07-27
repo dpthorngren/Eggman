@@ -15,7 +15,7 @@ double transit_inner_integral(double x, void *params) {
 
     // Get y bounds and check for no overlap between planet and star (at this x)
     double y_bound = sqrt(1 - x * x);
-    Bounds ylim = g->bell.slice_ylimits(x);
+    Bounds ylim = g->shp.slice_ylimits(x);
     ylim.min = fmax(ylim.min, -y_bound);
     ylim.max = fmin(ylim.max, y_bound);
     if (ylim.min >= ylim.max) {
@@ -50,9 +50,9 @@ void transit_integral(
         r_up = r_back;
         discontinuous_pole = true;
     }
-    Biellipsoid bell = Biellipsoid(r_forward, r_back, r_up, r_side);
+    Shape shp = Shape(r_forward, r_back, r_up, r_side);
     if (!(discontinuous_pole || rotate_with_orbit)) {
-        bell.set_rotation(theta, phi, gamma);
+        shp.set_rotation(theta, phi, gamma);
     }
 
     // Do not crash the program due to lack of precision
@@ -61,7 +61,7 @@ void transit_integral(
     // Prepare the inner (y) integral variables
     gsl_integration_workspace *workspaceInner = gsl_integration_workspace_alloc(100);
     gsl_function integInner;
-    TransitIntegralParams g = {emitter, bell, 0., atol, rtol, workspaceInner, &integInner};
+    TransitIntegralParams g = {emitter, shp, 0., atol, rtol, workspaceInner, &integInner};
     integInner.function = &transit_integrand;
     integInner.params = &g;
     g.integrand = &integInner;
@@ -73,28 +73,28 @@ void transit_integral(
     integOuter.params = &g;
 
     for (int i = 0; i < n; i++) {
-        g.bell.position_from_orbit(times[i], orb, rotate_with_orbit && (!discontinuous_pole));
-        if (g.bell.position.z < 0) {
+        g.shp.position_from_orbit(times[i], orb, rotate_with_orbit && (!discontinuous_pole));
+        if (g.shp.position.z < 0) {
             outputs[i] = 1.0;
             continue;
         }
 
         // Rotate and get planet bounding box
         if (discontinuous_pole) {
-            x = ct * g.bell.position.x + st * g.bell.position.y;
-            g.bell.position.y = -st * g.bell.position.x + ct * g.bell.position.y;
-            g.bell.position.x = x;
+            x = ct * g.shp.position.x + st * g.shp.position.y;
+            g.shp.position.y = -st * g.shp.position.x + ct * g.shp.position.y;
+            g.shp.position.x = x;
             x_lim = {x - r_back, x + r_forward};
             y_lim = {
-                g.bell.position.y - fmax(r_back, r_forward),
-                g.bell.position.y + fmax(r_back, r_forward)
+                g.shp.position.y - fmax(r_back, r_forward),
+                g.shp.position.y + fmax(r_back, r_forward)
             };
         } else {
             if (rotate_with_orbit) {
-                g.bell.set_rotation(theta, phi, gamma, orb.get_cos_inc());
+                g.shp.set_rotation(theta, phi, gamma, orb.get_cos_inc());
             }
-            x_lim = g.bell.x_bounds();
-            y_lim = g.bell.y_bounds();
+            x_lim = g.shp.x_bounds();
+            y_lim = g.shp.y_bounds();
         }
 
         // Quick bounding-box check to skip most non-transits
@@ -107,11 +107,11 @@ void transit_integral(
 
         if (discontinuous_pole) {
             // Split the integral around the middle of the planet to allow for a discontinuous pole
-            split_point = g.bell.position;
-            g.bell.set_radii(r_forward, r_back, r_back, r_side);
+            split_point = g.shp.position;
+            g.shp.set_radii(r_forward, r_back, r_back, r_side);
         } else {
             // Split the integral around the nearest point to help integrator find non-zero areas
-            split_point = g.bell.nearest_to_line(0., 0.);
+            split_point = g.shp.nearest_to_line(0., 0.);
             if (split_point.z > 1.) {
                 outputs[i] = 1.0;
                 continue;
@@ -127,7 +127,7 @@ void transit_integral(
         }
         outputs[i] = 1 - result;
         if (discontinuous_pole) {
-            g.bell.set_radii(r_forward, r_back, r_forward, r_side);
+            g.shp.set_radii(r_forward, r_back, r_forward, r_side);
         }
         code = gsl_integration_qag(
             &integOuter, split_point.x, x_max, .1 * atol, .1 * rtol, 100, 1, workspaceOuter,

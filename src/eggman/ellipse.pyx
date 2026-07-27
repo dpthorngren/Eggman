@@ -1,30 +1,30 @@
 import numpy as np
 
-cdef class EllipseWrap:
+cdef class Ellipse:
     @property
     def e1(self):
-        return np.array([self.ell.e1.x, self.ell.e1.y, self.ell.e1.z])
+        return np.array([self.cell.e1.x, self.cell.e1.y, self.cell.e1.z])
 
     @property
     def e2(self):
-        return np.array([self.ell.e2.x, self.ell.e2.y, self.ell.e2.z])
+        return np.array([self.cell.e2.x, self.cell.e2.y, self.cell.e2.z])
 
     @property
     def det(self):
-        return self.ell.det
+        return self.cell.det
 
     @property
     def x_size(self):
-        return self.ell.x_size
+        return self.cell.x_size
 
     @property
     def y_size(self):
-        return self.ell.y_size
+        return self.cell.y_size
 
     def __init__(self, e1, e2):
         cdef Vec3 ve1 = Vec3(e1[0], e1[1], e1[2])
         cdef Vec3 ve2 = Vec3(e2[0], e2[1], e2[2])
-        self.ell = Ellipse(ve1, ve2)
+        self.cell = CEllipse(ve1, ve2)
 
     @classmethod
     def create_from_rot_radii(cls, a, b, rot):
@@ -33,12 +33,12 @@ cdef class EllipseWrap:
         assert np.all(rot.T @ rot - np.eye(3) < 1e-9), "Invalid rotation matrix."
         e1 = (rot @ np.vstack([a, 0, 0])).flat
         e2 = (rot @ np.vstack([0, b, 0])).flat
-        return EllipseWrap(e1, e2)
+        return Ellipse(e1, e2)
 
     def get_ybounds(self, double x):
         cdef Vec3 out_min
         cdef Vec3 out_max
-        self.ell.get_ybounds(x, out_min, out_max)
+        self.cell.get_ybounds(x, out_min, out_max)
         return np.array([
             [out_min.x, out_min.y, out_min.z],
             [out_max.x, out_max.y, out_max.z],
@@ -46,11 +46,11 @@ cdef class EllipseWrap:
 
     def line_intersects(self, x, y):
         cdef Vec3 result
-        hit = self.ell.line_intersects(x, y, &result)
+        hit = self.cell.line_intersects(x, y, &result)
         return hit, np.array([result.x, result.y, result.z])
 
     def nearest_to_line(self, xt, yt):
-        cdef Vec3 result = self.ell.nearest_to_line(xt, yt)
+        cdef Vec3 result = self.cell.nearest_to_line(xt, yt)
         return np.array([result.x, result.y, result.z])
 
     def outline(self, res=200, dir=None, method="angles"):

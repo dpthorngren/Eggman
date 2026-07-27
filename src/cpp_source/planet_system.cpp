@@ -1,9 +1,9 @@
-#include "phase_curve_integral.hpp"
+#include "planet_system.hpp"
 #include "math_utils.hpp"
 #include <cmath>
 
 double phase_curve_integrand(double y, void *params) {
-    PhaseIntegrator *p = (PhaseIntegrator *)params;
+    PlanetSystem *p = (PlanetSystem *)params;
     return p->lights[p->i_target].get_brightness(p->x, y, p->shapes[p->i_target]);
 }
 
@@ -54,7 +54,7 @@ int process_bounds(Bounds *b, int n_relevant) {
 
 double phase_curve_inner_integral(double x, void *params) {
     int i;
-    PhaseIntegrator *p = (PhaseIntegrator *)params;
+    PlanetSystem *p = (PlanetSystem *)params;
     p->x = x;
 
     // Determine the range(s) to integrate over
@@ -95,7 +95,7 @@ double phase_curve_inner_integral(double x, void *params) {
 }
 
 
-PhaseIntegrator::PhaseIntegrator(double atol, double rtol) {
+PlanetSystem::PlanetSystem(double atol, double rtol) {
     x = 0.;
     i_target = 0;
     n_objects = 0;
@@ -116,7 +116,7 @@ PhaseIntegrator::PhaseIntegrator(double atol, double rtol) {
     gsl_set_error_handler_off();
 };
 
-PhaseIntegrator::PhaseIntegrator(PhaseIntegrator &p) {
+PlanetSystem::PlanetSystem(PlanetSystem &p) {
     x = p.x;
     i_target = p.i_target;
     n_objects = p.n_objects;
@@ -138,7 +138,7 @@ PhaseIntegrator::PhaseIntegrator(PhaseIntegrator &p) {
     }
 }
 
-PhaseIntegrator::~PhaseIntegrator() {
+PlanetSystem::~PlanetSystem() {
     if (workspaceInner != nullptr) {
         gsl_integration_workspace_free(workspaceInner);
         workspaceInner = nullptr;
@@ -149,14 +149,14 @@ PhaseIntegrator::~PhaseIntegrator() {
     }
 }
 
-int PhaseIntegrator::add_object(
-    const Orbit &orb, const Biellipsoid &bell, const LightSource &source, bool rot_with_orbit,
+int PlanetSystem::add_object(
+    const Orbit &orb, const Shape &shp, const LightSource &source, bool rot_with_orbit,
     int parent_index
 ) {
     // Note: These are all data-only structs, so these are copy operations
     orbits[n_objects] = orb;
     parent_indices[n_objects] = parent_index;
-    shapes[n_objects] = bell;
+    shapes[n_objects] = shp;
     lights[n_objects] = source;
     rotate_with_orbit[n_objects] = rot_with_orbit;
     xlim[n_objects] = shapes[n_objects].x_bounds();
@@ -165,9 +165,9 @@ int PhaseIntegrator::add_object(
     return 0;
 }
 
-void PhaseIntegrator::clear_objects() { n_objects = 0; }
+void PlanetSystem::clear_objects() { n_objects = 0; }
 
-void PhaseIntegrator::set_time(double t) {
+void PlanetSystem::set_time(double t) {
     Vec3 origin;
     for (int i = 0; i < n_objects; i++) {
         origin = parent_indices[i] > 0 ? shapes[parent_indices[i]].position : (Vec3){0., 0., 0.};
@@ -177,7 +177,7 @@ void PhaseIntegrator::set_time(double t) {
     }
 }
 
-double PhaseIntegrator::integrate_single(int it) {
+double PlanetSystem::integrate_single(int it) {
     // Skip non-emitting objects
     if (lights[it].stype == None) {
         return 0.;
@@ -217,9 +217,9 @@ double PhaseIntegrator::integrate_single(int it) {
     return result;
 }
 
-int PhaseIntegrator::get_n_objects() const { return n_objects; }
+int PlanetSystem::get_n_objects() const { return n_objects; }
 
-void PhaseIntegrator::phase_curve_integral(double *times, double *outputs, int n) {
+void PlanetSystem::phase_curve_integral(double *times, double *outputs, int n) {
     // TODO: Adjust to separately get the brightness of each component
     int i, j;
     double result = 0.;
