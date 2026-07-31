@@ -70,19 +70,17 @@ void Shape::set_rotation(double theta, double phi, double gamma, double ci) {
     update_derived();
 }
 
-void Shape::position_from_orbit(
-    double t, const Orbit &orb, bool rotate_with_orbit, Vec3 origin
-) {
+void Shape::position_from_orbit(double t, const Orbit &orb, bool rotate_with_orbit, Vec3 origin) {
     Vec3 new_pos = orb.get_position(t);
-    new_pos.x += origin.x;
-    new_pos.y += origin.y;
-    new_pos.z += origin.z;
     set_position(new_pos);
     if (rotate_with_orbit) {
         set_rotation(
             theta * 180. / M_PI, phi * 180. / M_PI, gamma * 180. / M_PI, orb.get_cos_inc()
         );
     }
+    position.x += origin.x;
+    position.y += origin.y;
+    position.z += origin.z;
 }
 
 void Shape::set_position(Vec3 new_position) { this->position = new_position; }
