@@ -146,5 +146,5 @@ cdef class PlanetSystem:
             if source.source_type == "none":
                 shape.plot_area(res, zorder=shape.position[2])
             else:
-                args.setdefault('zorder', shape.position[2])
+                args['zorder'] = shape.position[2]
                 source.plot_brightness(shape, res, pcm_args=args)

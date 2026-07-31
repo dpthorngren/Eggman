@@ -9,7 +9,7 @@ typedef enum {
     Lambertian,    // 1 params, uniform brightness regardless of angle
     QuadraticLimb, // 3 params, quadratic formula of Mandel & Agol 2002
     NonLinearLimb, // 5 params, non-linear formula of Mandel & Agol 2002
-    DayNight,      // 3 params
+    DayNight,      // 2 params
 } SourceType;
 
 

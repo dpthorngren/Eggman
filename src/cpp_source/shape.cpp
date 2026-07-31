@@ -229,7 +229,7 @@ bool Shape::raycast(double x, double y, double *mu_out, Vec3 *hit_out) const {
         hit.x = x / r_forward;
         hit.y = y / r_forward;
         rsq = hit.x * hit.x + hit.y * hit.y;
-        if (rsq < 0) {
+        if (rsq > 1) {
             return false; // No intersections
         }
         hit.z = sqrt(1 - rsq);

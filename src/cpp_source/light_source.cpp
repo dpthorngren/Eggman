@@ -35,6 +35,7 @@ LightSource::LightSource(SourceType type, double *params) {
 
 double LightSource::get_brightness(double x, double y, const Shape &shp) const {
     double mu, nu, limb_coeff;
+    Vec3 hit;
     switch (stype) {
     case None:
         return 0.;
@@ -57,6 +58,11 @@ double LightSource::get_brightness(double x, double y, const Shape &shp) const {
         limb_coeff -= params[3] * (1 - mu * nu);
         limb_coeff -= params[4] * (1 - mu * mu);
         return params[0] * limb_coeff / limb_norm;
+    case DayNight:
+        if (!shp.raycast(x, y, nullptr, &hit)) {
+            return 0; // Point doesn't intersect biellipsoid
+        }
+        return hit.z < 0 ? params[0] : params[1];
     default:
         return NAN;
     }
@@ -86,12 +92,16 @@ double LightSource::get_brightness_sphere(double x, double y) const {
         limb_coeff -= params[3] * (1 - mu * nu);
         limb_coeff -= params[4] * (1 - mu * mu);
         return params[0] * limb_coeff / limb_norm;
+    case DayNight:
+        // On an unrotated unit sphere, only the night side is visible
+        return params[1];
     default:
         return NAN;
     }
 }
 
 double LightSource::get_integrated_brightness(const Shape &shp) const {
+    double result;
     switch (stype) {
     case None:
         return 0.;
@@ -101,6 +111,12 @@ double LightSource::get_integrated_brightness(const Shape &shp) const {
         return shp.is_sphere ? params[0] * shp.get_area() : NAN;
     case NonLinearLimb:
         return shp.is_sphere ? params[0] * shp.get_area() : NAN;
+    case DayNight:
+        if (shp.is_sphere) {
+            result = params[0] + params[1] + (params[1] - params[0]) * shp.rot.zz;
+            return result * shp.get_area() / 2.0;
+        }
+        return NAN;
     default:
         return NAN;
     }

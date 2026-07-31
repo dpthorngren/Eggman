@@ -1,7 +1,7 @@
-#include "shape.hpp"
 #include "light_source.hpp"
 #include "orbit.hpp"
 #include "planet_system.hpp"
+#include "shape.hpp"
 #include "transit_integral.hpp"
 #include <iostream>
 
@@ -328,6 +328,23 @@ int test_light_source() {
     expect = 1.0 - sqrt(1 - 0.7 * 0.7);
     expect = (1.0 - .2 * expect - .1 * expect * expect) / (norm * M_PI);
     TEST_APPROX(s.get_brightness_sphere(0.7, 0.0), expect, 1e-9, errors)
+    // Testing day-night emission type
+    source_params[0] = 1.5;
+    source_params[1] = 0.3;
+    s = LightSource(DayNight, source_params);
+    TEST_APPROX(s.get_brightness_sphere(0., 0.), 0.3, 1e-12, errors);
+    TEST_APPROX(s.get_integrated_brightness(shp), M_PI * 0.3, 1e-9, errors);
+    shp.set_rotation(0., 45., 0.);
+    TEST_APPROX(s.get_integrated_brightness(shp), M_PI_2 * (1.8 - 1.2 * sqrt(0.5)), 1e-9, errors);
+    TEST_APPROX(s.get_brightness(-.9, 0, shp), 1.5, 1e-12, errors);
+    TEST_APPROX(s.get_brightness(.9, 0, shp), 0.3, 1e-12, errors);
+    TEST_APPROX(s.get_brightness(5, 5, shp), 0., 1e-12, errors);
+    TEST_APPROX(s.get_brightness(-.707, -.707, shp), 1.5, 1e-12, errors);
+    TEST_APPROX(s.get_brightness(.707, -.707, shp), 0.3, 1e-12, errors);
+    shp.set_rotation(0., 90., 0.);
+    TEST_APPROX(s.get_integrated_brightness(shp), M_PI * 0.9, 1e-9, errors);
+    shp.set_rotation(0., 180., 0.);
+    TEST_APPROX(s.get_integrated_brightness(shp), M_PI * 1.5, 1e-9, errors);
     return errors;
 }
 

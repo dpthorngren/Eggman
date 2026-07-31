@@ -1,7 +1,7 @@
 
 cdef class LightSource:
     _source_type_names_ = ['none', 'lambertian', 'quadratic_limb', 'nonlinear_limb', 'day_night']
-    _source_n_params_ = [0, 1, 3, 5, 3]
+    _source_n_params_ = [0, 1, 3, 5, 2]
     _source_enum_ = [SourceType.None, SourceType.Lambertian, SourceType.QuadraticLimb, SourceType.NonLinearLimb, SourceType.DayNight]
 
     @property
@@ -35,7 +35,7 @@ cdef class LightSource:
     def get_brightness(self, x, y, Shape bell):
         types = [float, np.float64, np.float32, np.int32, np.int64, int]
         if type(x) in types and type(y) in types:
-            return self.csource.get_brightness_sphere(x, y)
+            return self.csource.get_brightness(x, y, bell.cshape)
         x = np.atleast_1d(x)
         y = np.atleast_1d(y)
         assert x.ndim == 1 and y.ndim == 1
@@ -50,7 +50,7 @@ cdef class LightSource:
         cdef int i, j
         for i in range(len(x)):
             for j in range(len(y)):
-                output_view[i, j] = self.csource.get_brightness_sphere(x_view[i], y_view[j])
+                output_view[i, j] = self.csource.get_brightness(x_view[i], y_view[j], bell.cshape)
         return output
 
     def get_brightness_sphere(self, x, y):
