@@ -182,9 +182,27 @@ cdef class Shape:
         cdef Bounds b = self.cshape.slice_ylimits(x)
         return np.array([b.min, b.max])
 
-    def line_intersects(self, double x, double y):
+    def line_intersects(self, x, y):
         '''Determines whether the line passing through [x, y, 0] in the +/-z direction passes through the biellipsoid.'''
-        return self.cshape.line_intersects(x, y)
+        types = [float, np.float64, np.float32, np.int32, np.int64, int]
+        if type(x) in types and type(y) in types:
+            return self.cshape.line_intersects(x, y)
+        x = np.atleast_1d(x)
+        y = np.atleast_1d(y)
+        assert x.ndim == 1 and y.ndim == 1
+        xlen = len(x)
+        ylen = len(y)
+
+        output = np.zeros((xlen, ylen), dtype=np.double)
+        cdef double[:] x_view = x
+        cdef double[:] y_view = y
+        cdef double[:, :] output_view = output
+
+        cdef int i, j
+        for i in range(len(x)):
+            for j in range(len(y)):
+                output_view[i, j] = self.cshape.line_intersects(x_view[i], y_view[j])
+        return output
 
     def raycast(self, double x, double y):
         cdef Vec3 loc

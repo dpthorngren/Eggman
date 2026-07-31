@@ -74,16 +74,21 @@ cdef class LightSource:
                 output_view[i, j] = self.csource.get_brightness_sphere(x_view[i], y_view[j])
         return output
 
-    def plot_brightness(self, Shape bell, res=400, pcm_args=dict()):
+    def plot_brightness(self, Shape shp, res=400, **args):
         from matplotlib import pyplot as plt
 
-        xlim = bell.x_bounds()
-        ylim = bell.y_bounds()
+        xlim = shp.x_bounds()
+        ylim = shp.y_bounds()
         x = np.linspace(*xlim, res)
         y = np.linspace(*ylim, res)
 
-        brightness = self.get_brightness(x, y, bell)
-        brightness = np.ma.masked_equal(brightness, 0.)
+        if self.source_type_code != 0:
+            brightness = self.get_brightness(x, y, shp)
+            brightness = np.ma.masked_equal(brightness, 0.)
+        else:
+            brightness = shp.line_intersects(x, y)
+            brightness = np.ma.masked_equal(brightness, 0.)
+            brightness *= 0.
 
-        pcm_args.setdefault('cmap', 'autumn')
-        plt.pcolormesh(x, y, brightness.T, **pcm_args)
+        args.setdefault('cmap', 'autumn')
+        plt.pcolormesh(x, y, brightness.T, **args)

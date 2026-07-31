@@ -133,18 +133,21 @@ cdef class PlanetSystem:
         source.csource = self.cps.lights[i]
         return (orbit, shape, source, self.cps.rotate_with_orbit[i])
 
-    def plot_objects(self, res=200, **args):
+    def plot_objects(self, res=200, arg_list=list(), **args):
         '''Create a simple plot of the system using matplotlib, at the current time previously set by set_time (defaulting to 0).
 
         If the object is emissive, it is plotted with pyplot.pcolormesh, else it is plotted with pyplot.fill_between.
 
         Args:
             res: The resolution to plot the objects at, as an integer.
-            **args: Additional keyword arguments that are passed to pyplot.pcolormesh for objects with emission.'''
+            arg_list: A list of dictionaries containing keyword arguments to pass to pyplot.pcolormesh
+                for each object in the system in order.  These settings override global settings from **args.
+            **args: Additional keyword arguments to be passed to pyplot.pcolormesh for all objects in the system,
+                unless overridden by arg_list.'''
         for i in range(self.get_n_objects()):
             _, shape, source, _ = self[i]
-            if source.source_type == "none":
-                shape.plot_area(res, zorder=shape.position[2])
-            else:
-                args['zorder'] = shape.position[2]
-                source.plot_brightness(shape, res, pcm_args=args)
+            arguments = args.copy()
+            if arg_list:
+                arguments.update(arg_list[i])
+            arguments['zorder'] = shape.position[2]
+            source.plot_brightness(shape, res, **arguments)
