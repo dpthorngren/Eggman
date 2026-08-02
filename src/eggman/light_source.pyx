@@ -74,8 +74,9 @@ cdef class LightSource:
                 output_view[i, j] = self.csource.get_brightness_sphere(x_view[i], y_view[j])
         return output
 
-    def plot_brightness(self, Shape shp, res=400, **args):
+    def plot_brightness(self, Shape shp, res=400, axis=None, **args):
         from matplotlib import pyplot as plt
+        from matplotlib.colors import ListedColormap
 
         xlim = shp.x_bounds()
         ylim = shp.y_bounds()
@@ -90,5 +91,14 @@ cdef class LightSource:
             brightness = np.ma.masked_equal(brightness, 0.)
             brightness *= 0.
 
+        # Setting color works badly with masked array inputs, switch to an equivalent cmap
+        if 'color' in args.keys():
+            args['cmap'] = ListedColormap([args['color']]*2)
+            del args['color']
+        # Other plotting defaults
         args.setdefault('cmap', 'autumn')
-        plt.pcolormesh(x, y, brightness.T, **args)
+        args.setdefault('shading', 'gouraud')
+        args.setdefault('snap', True)
+        if axis is None:
+            axis = plt.gca()
+        axis.pcolormesh(x, y, brightness.T, **args)
