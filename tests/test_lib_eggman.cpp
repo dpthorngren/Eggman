@@ -1,12 +1,17 @@
 #include "light_source.hpp"
+#include "math_utils.hpp"
 #include "orbit.hpp"
 #include "planet_system.hpp"
 #include "shape.hpp"
 #include "transit_integral.hpp"
+#include <cmath>
+#include <cstdlib>
+#include <ctime>
 #include <iostream>
 
 using namespace std;
 
+#define DRAND(a, b) (drand48() * (b - a) + a)
 #define ANNOUNCE_TEST() cout << "Running " << __func__ << "." << endl;
 #define TEST_ASSERT(A, OP, B, out)                                                                 \
     if (!((A)OP(B))) {                                                                             \
@@ -103,6 +108,31 @@ int test_biellipsoid() {
     shp.set_rotation(30., 0., 0.);
     TEST_ASSERT(shp.is_forward_2d(3, 3.), ==, false, errors);
     TEST_ASSERT(shp.is_forward_2d(4.1, 3.1), ==, true, errors);
+
+    // Test raycasts against random shapes
+    double x, y;
+    bool forward;
+    for (int i = 0; i < 100; i++) {
+        shp = Shape(DRAND(.5, 2), DRAND(.5, 2), DRAND(.5, 2), DRAND(.5, 2));
+        shp.set_position({DRAND(-5, 5), DRAND(-5, 5), DRAND(-5, 5)});
+        shp.set_rotation(DRAND(0, 179), DRAND(0, 179), DRAND(0, 179));
+        for (int j = 0; j < 100; j++) {
+            x = DRAND(-2, 2) + shp.position.x;
+            y = DRAND(-2, 2) + shp.position.y;
+            hit = shp.raycast(x, y, &mu, &loc);
+            TEST_ASSERT(hit, ==, shp.line_intersects(x, y), errors);
+        }
+        if (hit) {
+            TEST_APPROX(loc.x * loc.x + loc.y * loc.y + loc.z * loc.z, 1.0, 1e-12, errors);
+            forward = loc.x > 0.;
+            loc = shp.sphere_to_world(loc);
+            TEST_APPROX(loc.x, x, 1e-12, errors);
+            TEST_APPROX(loc.y, y, 1e-12, errors);
+            TEST_ASSERT(forward, ==, shp.is_forward_2d(loc.x, loc.y), errors);
+            TEST_ASSERT(forward, ==, shp.is_forward(loc), errors);
+        }
+    }
+
     return errors;
 }
 
@@ -352,6 +382,9 @@ int main() {
     // Note: This tester is not as rigorous as the Pytest tests.  It is intended mainly to catch
     // memory management errors and distinguish between C++ errors and Cython wrapping errors.
     cout << "===== Running C++ Tester =====" << endl;
+    int seed = time(NULL);
+    cout << "Random seed: " << seed << endl;
+    srand48(seed);
     int errors = 0;
     errors += test_biellipsoid();
     errors += test_orbital_position();

@@ -149,14 +149,14 @@ void Shape::update_derived() {
     // Find the limb-joint intersection point
     double d1 = rot.xx * f_limb.e1.x + rot.yx * f_limb.e1.y + rot.zx * f_limb.e1.z;
     double d2 = rot.xx * f_limb.e2.x + rot.yx * f_limb.e2.y + rot.zx * f_limb.e2.z;
-    double ct = -1. / sqrt(1 + d1 * d1 / (d2 * d2));
-    double st = 1. / sqrt(1 + d2 * d2 / (d1 * d1));
+    double ct = 1. / sqrt(1 + d1 * d1 / (d2 * d2));
+    double st = -ct * d1 / d2;
     WEIGHTED_SUM(ct, st, f_limb.e1, f_limb.e2, e1);
+    // Reflect the e1 axis so that (forward x e1) is always positive
     if (e1.x * rot.yx - e1.y * rot.xx < 0) {
         RESCALE(e1, -1.);
     }
-
-    // Rotate the joint ellipse axes so that e1 points to the limb joint point
+    // Find the corresponding e2 such that the ellipse through e1, e2 is still the joint.
     double u = (joint.e2.y * e1.x - joint.e2.x * e1.y) / joint.det;
     double v = (-joint.e1.y * e1.x + joint.e1.x * e1.y) / joint.det;
     WEIGHTED_SUM(-v, u, joint.e1, joint.e2, e2);
@@ -218,7 +218,8 @@ bool Shape::line_intersects(double x, double y) const {
 }
 
 bool Shape::raycast(double x, double y, double *mu_out, Vec3 *hit_out) const {
-    double mu, rsq, len_u_sq, det, offset, lusq;
+    double rsq, len_p0_sq, disc, offset, len_u_sq, r_frontback;
+    bool forward;
     Vec3 hit, p0, u;
     x -= position.x;
     y -= position.y;
@@ -231,55 +232,40 @@ bool Shape::raycast(double x, double y, double *mu_out, Vec3 *hit_out) const {
             return false; // No intersections
         }
         hit.z = sqrt(1 - rsq);
-        mu = hit.z;
+        if (mu_out != nullptr) {
+            *mu_out = hit.z;
+        }
         if (hit_out != nullptr) {
             MATMUL_T(rot, hit, p0);
-            hit = p0;
+            *hit_out = p0;
         }
-        goto OUTPUT_RET;
+        return true;
     }
-    // TODO: Determine forward or backwards ellipse directly, skip for symmetric case
+    // TODO: Skip for symmetric case
+    forward = is_forward_2d(x, y, true);
 
+    r_frontback = forward ? r_forward : r_back;
     // Line origin in forward sphere-space: (x, y, 0) in world-space
     p0 = {
-        (rot.xx * x + rot.yx * y) / r_forward, (rot.xy * x + rot.yy * y) / r_up,
+        (rot.xx * x + rot.yx * y) / r_frontback, (rot.xy * x + rot.yy * y) / r_up,
         (rot.xz * x + rot.yz * y) / r_side
     };
     // Direction of the line in forward sphere-space
-    u = {rot.zx / r_forward, rot.zy / r_up, rot.zz / r_side};
+    u = {rot.zx / r_frontback, rot.zy / r_up, rot.zz / r_side};
     // Saving a sqrt by not normalizing u, but it makes some of the algebra a little funky
-    lusq = u.x * u.x + u.y * u.y + u.z * u.z;
+    len_u_sq = u.x * u.x + u.y * u.y + u.z * u.z;
     offset = u.x * p0.x + u.y * p0.y + u.z * p0.z;
-    len_u_sq = p0.x * p0.x + p0.y * p0.y + p0.z * p0.z;
-    det = offset * offset / lusq - len_u_sq + 1;
-    if (det >= 0) {
-        offset = (sqrt(lusq * det) - offset) / lusq;
-        hit = {(p0.x + offset * u.x), (p0.y + offset * u.y), (p0.z + offset * u.z)};
-        if (hit.x >= 0) {
-            // TODO: Calculate mu
-            goto OUTPUT_RET;
-        }
-    }
-
-    // Find the backward near-point in backward sphere-space
-    p0.x = p0.x * r_forward / r_back;
-    u = {rot.zx / r_back, rot.zy / r_up, rot.zz / r_side};
-    lusq = u.x * u.x + u.y * u.y + u.z * u.z;
-    offset = u.x * p0.x + u.y * p0.y + u.z * p0.z;
-    len_u_sq = p0.x * p0.x + p0.y * p0.y + p0.z * p0.z;
-    det = offset * offset / lusq - len_u_sq + 1;
-    if (det < 0) {
+    len_p0_sq = p0.x * p0.x + p0.y * p0.y + p0.z * p0.z;
+    disc = offset * offset / len_u_sq - len_p0_sq + 1;
+    if (disc < 0) {
         return false; // No intersections
     }
-    offset = (sqrt(lusq * det) - offset) / lusq;
+    offset = (sqrt(len_u_sq * disc) - offset) / len_u_sq;
     hit = {(p0.x + offset * u.x), (p0.y + offset * u.y), (p0.z + offset * u.z)};
-    if (hit.x > 0) {
-        return false; // No intersections
-    }
 
-OUTPUT_RET: // Yes, yes, goto's are bad.  Deal with it :)
     if (mu_out != nullptr) {
-        *mu_out = mu;
+        // TODO: Calculate mu if needed.
+        *mu_out = 0.;
     }
     if (hit_out != nullptr) {
         *hit_out = hit;
@@ -313,7 +299,7 @@ bool Shape::is_forward_2d(double x, double y, bool local) const {
         y -= position.y;
     }
     if (fabs(joint.det) < 1e-12) {
-        // Ellipse has no area, all points are outside it
+        // Joint Ellipse has no area, all points are outside it
         return x * rot.xx + y * rot.yx > 0.;
     }
     // Is the forward side closer to the viewer?
@@ -367,59 +353,3 @@ Bounds Shape::y_bounds() const {
 }
 
 double Shape::get_area() const { return 0.5 * (f_limb.get_area() + b_limb.get_area()); }
-
-inline Vec3 Shape::world_to_aligned(Vec3 loc) const {
-    Vec3 result;
-    loc.x -= position.x;
-    loc.y -= position.y;
-    loc.z -= position.z;
-    MATMUL_T(rot, loc, result);
-    return result;
-}
-
-inline Vec3 Shape::world_to_sphere(Vec3 loc) const {
-    Vec3 result;
-    loc.x -= position.x;
-    loc.y -= position.y;
-    loc.z -= position.z;
-    MATMUL_T(rot, loc, result);
-    result.x /= (result.x < 0 ? r_back : r_forward);
-    result.y /= r_up;
-    result.z /= r_side;
-    return result;
-}
-
-inline Vec3 Shape::aligned_to_world(Vec3 loc) const {
-    Vec3 result;
-    MATMUL(rot, loc, result);
-    result.x += position.x;
-    result.y += position.y;
-    result.z += position.z;
-    return result;
-}
-
-inline Vec3 Shape::aligned_to_sphere(Vec3 loc) const {
-    loc.x /= (loc.x < 0 ? r_back : r_forward);
-    loc.y /= r_up;
-    loc.z /= r_side;
-    return loc;
-}
-
-inline Vec3 Shape::sphere_to_world(Vec3 loc) const {
-    Vec3 result;
-    loc.x *= (loc.x < 0 ? r_back : r_forward);
-    loc.y *= r_up;
-    loc.z *= r_side;
-    MATMUL(rot, loc, result);
-    result.x += position.x;
-    result.y += position.y;
-    result.z += position.z;
-    return result;
-}
-
-inline Vec3 Shape::sphere_to_aligned(Vec3 loc) const {
-    loc.x *= (loc.x < 0 ? r_back : r_forward);
-    loc.y *= r_up;
-    loc.z *= r_side;
-    return loc;
-}
