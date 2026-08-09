@@ -2,11 +2,11 @@
 
 import numpy as np
 
-include "orbit.pyx"
-include "shape.pyx"
-include "light_source.pyx"
-include "ellipse.pyx"
-include "planet_system.pyx"
+include "orbit.py"
+include "shape.py"
+include "light_source.py"
+include "ellipse.py"
+include "planet_system.py"
 
 
 cpdef object transit(double r_forward, double r_back, double r_up, double r_side, double theta, double phi, double gamma, double[::1] t, double t0, double period, double semimajor, double inclination, str source_type, object source_params, double eccen=0, double lon_periapse=90, bint rotate_with_orbit=True, double atol=1e-6, double rtol=1e-3):

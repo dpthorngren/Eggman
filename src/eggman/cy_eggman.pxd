@@ -1,7 +1,10 @@
 cimport cython
 from libc cimport math
 from libc.math cimport M_PI as pi, NAN as nan
+import numpy.typing
 
+ctypedef double[::1] Array1d_f64
+ctypedef double[:,:] Array2d_f64
 
 cdef extern from "math_utils.hpp":
     ctypedef struct Mat3:
@@ -107,7 +110,7 @@ cdef class Shape:
 cdef extern from "light_source.cpp":
     const int MAX_SOURCE_PARAMS
     ctypedef enum SourceType:
-        None
+        NoEmission
         Lambertian
         QuadraticLimb
         NonLinearLimb
@@ -123,6 +126,8 @@ cdef extern from "light_source.cpp":
         double get_brightness(double x, double y, const CShape &bell)
         double get_brightness_sphere(double x, double y)
 
+
+ctypedef double[MAX_SOURCE_PARAMS] Array_SourceParams
 
 cdef class LightSource:
     cdef CLightSource csource
@@ -150,6 +155,7 @@ cdef extern from "planet_system.cpp":
 
         CPlanetSystem()
         CPlanetSystem(CPlanetSystem &p)
+        CPlanetSystem(double atol, double rtol)
 
         int add_object(const COrbit &orb, const CShape &bell, const CLightSource &source, bint rot_with_orbit, int parent_index)
         int get_n_objects() const

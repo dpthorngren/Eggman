@@ -2,8 +2,8 @@ from Cython.Build import cythonize
 from setuptools import Extension, setup
 
 ext = Extension(
-    "eggman.cy_eggman",
-    ["src/eggman/cy_eggman.pyx"],
+    name="eggman.cy_eggman",
+    sources=["src/eggman/cy_eggman.pyx"],
     libraries=["gsl"],
     include_dirs=["src/include/", "src/cpp_source/"],
     extra_compile_args=['-O3'],
@@ -11,7 +11,7 @@ ext = Extension(
 
 directives = {
     'language_level': "3",
-    'embedsignature': True,
+    'embedsignature': False,
     'cdivision': True,
     'initializedcheck': False,
     'boundscheck': False,

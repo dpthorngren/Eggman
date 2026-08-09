@@ -179,7 +179,7 @@ void PlanetSystem::set_time(double t) {
 
 double PlanetSystem::integrate_single(int it) {
     // Skip non-emitting objects
-    if (lights[it].stype == None) {
+    if (lights[it].stype == NoEmission) {
         return 0.;
     }
     // Determine which objects might occlude the target object

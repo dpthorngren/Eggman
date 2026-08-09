@@ -5,7 +5,7 @@
 #define MAX_SOURCE_PARAMS 12
 
 typedef enum {
-    None,          // 0 params, no emission
+    NoEmission,    // 0 params, no emission
     Lambertian,    // 1 params, uniform brightness regardless of angle
     QuadraticLimb, // 3 params, quadratic formula of Mandel & Agol 2002
     NonLinearLimb, // 5 params, non-linear formula of Mandel & Agol 2002

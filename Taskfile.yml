@@ -5,30 +5,44 @@ tasks:
   default:
     deps: [test]
 
+  stubgen:
+    desc: "Creates stubs for the Cython functions."
+    # deps: [lint]
+    run: once
+    sources:
+      - src/eggman/*.py
+      - src/eggman/*.pyx
+      - src/eggman/*.pxd
+    generates:
+      - src/eggman/cy_eggman.pyi
+    cmds:
+      - rm -f src/eggman/*.pyi
+      - stubgen-pyx src/eggman/ --file cy_eggman.pyx
+
   devbuild:
     desc: "Rebuild shared library (if cython files have changed) and reinstall."
     deps: [lint]
     run: once
     sources:
-      - src/eggman/*.pyx
-      - src/eggman/*.pxd
+      - src/eggman/*.py
+      - src/eggman/cy_eggman.pyx
+      - src/eggman/cy_eggman.pxd
       - src/cpp_source/[a-z_]*.cpp
       - src/include/[a-z_]*.hpp
     generates:
       - src/eggman/*.so
-      - src/eggman/cy_*.cpp
+      - src/eggman/cy_eggman.cpp
     cmds:
       - rm -rf build eggman.egg-info src/eggman/*.so src/eggman/*.cpp src/eggman/__pycache__
       - pip uninstall eggman --yes
       - pip install --no-build-isolation -e .[develop]
 
   lint:
-    desc: "Run cython linter"
+    desc: "Run linter"
     deps: [libtest]
     run: once
     cmds:
-      - flake8 ./setup.py ./src/eggman/*.py --count --show-source --statistics
-      - cython-lint .
+      - flake8 ./setup.py ./src/eggman/*.py --count --statistics
 
   libtest_build:
     desc: "Build the Eggman shared library and testing program."

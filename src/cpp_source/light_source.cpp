@@ -3,7 +3,7 @@
 #include <cmath>
 
 LightSource::LightSource() {
-    stype = None;
+    stype = NoEmission;
     for (int i = 0; i < MAX_SOURCE_PARAMS; i++) {
         params[i] = 0.;
     }
@@ -37,7 +37,7 @@ double LightSource::get_brightness(double x, double y, const Shape &shp) const {
     double mu, nu, limb_coeff;
     Vec3 hit;
     switch (stype) {
-    case None:
+    case NoEmission:
         return 0.;
     case Lambertian:
         return params[0];
@@ -76,7 +76,7 @@ double LightSource::get_brightness_sphere(double x, double y) const {
         return 0.; // Point is not on the sphere
     }
     switch (stype) {
-    case None:
+    case NoEmission:
         return 0.;
     case Lambertian:
         return params[0];
@@ -103,7 +103,7 @@ double LightSource::get_brightness_sphere(double x, double y) const {
 double LightSource::get_integrated_brightness(const Shape &shp) const {
     double result;
     switch (stype) {
-    case None:
+    case NoEmission:
         return 0.;
     case Lambertian:
         return params[0] * shp.get_area();

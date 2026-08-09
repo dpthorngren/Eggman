@@ -29,7 +29,7 @@ def test_phase_trivial():
     assert shape.position == approx(
         [0., 5 * np.cos(89 * np.pi / 180), 5 * np.sin(89 * np.pi / 180)], abs=1e-6)
     assert shape.radii == approx([.1, .11, .08, 1.3], abs=1e-6)
-    assert light.source_type == "none"
+    assert light.source_type == "no_emission"
     bell = eggman.Shape(0., 0., 0., 0., 0., 0., 1., 1., 1., 1.)
     assert light.get_brightness(1., 0., bell) == 0.
     with raises(IndexError):

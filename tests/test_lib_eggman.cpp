@@ -328,7 +328,7 @@ int test_light_source() {
                                                0.,         0.,   0.,  0., 0., 0.};
     // No source should always return 0
     Shape shp = Shape();
-    LightSource s = LightSource(None, source_params);
+    LightSource s = LightSource(NoEmission, source_params);
     TEST_APPROX(s.get_brightness_sphere(0., 0.), 0., 1e-9, errors);
     TEST_APPROX(s.get_brightness_sphere(0.5, 0.5), 0., 1e-9, errors);
     TEST_APPROX(s.get_brightness(0.9, 0.8, shp), 0., 1e-9, errors);

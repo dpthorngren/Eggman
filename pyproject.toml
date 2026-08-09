@@ -4,9 +4,6 @@ build-backend = "setuptools.build_meta"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-
-[tool.cython-lint]
-ignore="E501"
   
 [tool.yapf]
 based_on_style = "google"
@@ -15,3 +12,6 @@ column_limit = 100
 blank_line_before_nested_class_or_def = true
 coalesce_brackets = true
 arithmetic_precedence_indication = true
+
+[tool.isort]
+line_length = 100
