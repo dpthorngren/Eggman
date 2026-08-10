@@ -307,6 +307,24 @@ int test_planetary_system() {
     TEST_ASSERT(p.get_n_objects(), ==, 1, errors);
     TEST_APPROX(p.integrate_single(0), 1.0, 1e-7, errors);
 
+    // Test full day-night phase curve
+    p.clear_objects();
+    star = LightSource(QuadraticLimb, source_params);
+    shp = Shape();
+    p.add_object(Orbit(), shp, star);
+    source_params[0] = 1e-1;
+    source_params[1] = 1e-2;
+    orb = Orbit(10., 0., 5., 0.00, 89., 90.);
+    planet = LightSource(DayNight, source_params);
+    shp = Shape(0.1, 0.1, 0.1, 0.1);
+    p.add_object(orb, shp, planet, true);
+    TEST_ASSERT(p.get_n_objects(), ==, 2, errors);
+    p.phase_curve_integral(time, result, n_times);
+    TEST_ASSERT(result[0], <, 1, errors);
+    TEST_APPROX(result[1], 1 + M_PI * .1 * .1 * 1.1e-1 / 2., 1e-9, errors);
+    TEST_APPROX(result[2], 1, 1e-9, errors);
+    TEST_APPROX(result[3], result[1], 1e-9, errors);
+
     // Test the bounds sorting mechanism.
     Bounds b[5] = {
         {-1, 1.}, {-3, -0.5}, {-.1, 0.1}, {-4.0, -0.7}, {0.9, 1.5},
@@ -318,6 +336,30 @@ int test_planetary_system() {
     TEST_APPROX(b[1].min, 0.1, 1e-12, errors);
     TEST_APPROX(b[1].max, 0.9, 1e-12, errors);
 
+    // Test the inverse bounds sorting
+    b[0] = {-1, 1.};
+    b[1] = {-3, -0.5};
+    b[2] = {-.1, 0.1};
+    b[3] = {-4.0, -0.7};
+    b[4] = {0.9, 1.5};
+    n_bounds = process_bounds(b, 5, true);
+    TEST_ASSERT(n_bounds, ==, 3, errors);
+    TEST_APPROX(b[0].min, -1, 1e-12, errors);
+    TEST_APPROX(b[0].max, -0.5, 1e-12, errors);
+    TEST_APPROX(b[1].min, -0.1, 1e-12, errors);
+    TEST_APPROX(b[1].max, 0.1, 1e-12, errors);
+    TEST_APPROX(b[2].min, 0.9, 1e-12, errors);
+    TEST_APPROX(b[2].max, 1.0, 1e-12, errors);
+    // Again but without occluders on the edges
+    b[0] = {-1, 1.};
+    b[1] = {-0.5, 0.1};
+    b[2] = {0.3, 0.4};
+    n_bounds = process_bounds(b, 3, true);
+    TEST_ASSERT(n_bounds, ==, 2, errors);
+    TEST_APPROX(b[0].min, -.5, 1e-12, errors);
+    TEST_APPROX(b[0].max, 0.1, 1e-12, errors);
+    TEST_APPROX(b[1].min, 0.3, 1e-12, errors);
+    TEST_APPROX(b[1].max, 0.4, 1e-12, errors);
     return errors;
 }
 

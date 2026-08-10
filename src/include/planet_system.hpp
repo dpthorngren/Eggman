@@ -11,7 +11,7 @@
 
 double phase_curve_integrand(double y, void *params);
 double phase_curve_inner_integral(double y, void *params);
-int process_bounds(Bounds *b, int n_relevant);
+int process_bounds(Bounds *b, int n_relevant, bool invert = false);
 
 class PlanetSystem {
   private:
@@ -19,6 +19,7 @@ class PlanetSystem {
     double x;      // The x to evaluate the inner integral at (for this step)
     int i_target;  // Which object is currently being integrated
     bool relevant[MAX_PHASE_OBJECTS];
+    double invert_integral;
 
     // GSL integration working variables
     gsl_integration_workspace *workspaceOuter;
@@ -42,8 +43,8 @@ class PlanetSystem {
     ~PlanetSystem();
 
     int add_object(
-        const Orbit &orb, const Shape &bell, const LightSource &source,
-        bool rot_with_orbit = false, int parent_index = -1
+        const Orbit &orb, const Shape &bell, const LightSource &source, bool rot_with_orbit = false,
+        int parent_index = -1
     );
     int get_n_objects() const;
     void clear_objects();

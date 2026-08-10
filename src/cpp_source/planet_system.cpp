@@ -7,12 +7,13 @@ double phase_curve_integrand(double y, void *params) {
     return p->lights[p->i_target].get_brightness(p->x, y, p->shapes[p->i_target]);
 }
 
-int process_bounds(Bounds *b, int n_relevant) {
+int process_bounds(Bounds *b, int n_relevant, bool invert) {
     // Iterate through potential occluders, modifying the integration bounds stack as-needed
     // Bound stack 'b' should be at least length n_relevant and contain the overall range
     // in position [0], followed by the bounds of the potential occluders.
     int i, j, k;
     Bounds occ;
+    Bounds overall = b[0];
     int n_bounds = 1;
     for (i = 1; i < n_relevant; i++) {
         occ = b[i];
@@ -48,6 +49,26 @@ int process_bounds(Bounds *b, int n_relevant) {
             j += 1;
         }
     }
+    double last_max = b[0].max;
+    double this_max;
+    if (invert) {
+        i = 1; // Read position
+        j = 0; // Write position <= i
+        // Unoccluded range reaches lower bound?
+        if (b[0].min > overall.min) {
+            b[j++] = {overall.min, b[0].min};
+        }
+        while (i < n_bounds) {
+            this_max = b[i].max;
+            b[j++] = {last_max, b[i++].min};
+            last_max = this_max;
+        }
+        // Unoccluded range reaches upper bound?
+        if (last_max < overall.max) {
+            b[j++] = {last_max, overall.max};
+        }
+        n_bounds = j;
+    }
     return n_bounds;
 }
 
@@ -75,7 +96,7 @@ double phase_curve_inner_integral(double x, void *params) {
             }
         }
     }
-    n_bounds = process_bounds(b, n_bounds);
+    n_bounds = process_bounds(b, n_bounds, p->invert_integral);
 
     // Conduct the integration for each range identified.
     int code;
@@ -97,6 +118,7 @@ double phase_curve_inner_integral(double x, void *params) {
 
 PlanetSystem::PlanetSystem(double atol, double rtol) {
     x = 0.;
+    invert_integral = false;
     i_target = 0;
     n_objects = 0;
     this->atol = atol;
@@ -118,6 +140,7 @@ PlanetSystem::PlanetSystem(double atol, double rtol) {
 
 PlanetSystem::PlanetSystem(PlanetSystem &p) {
     x = p.x;
+    invert_integral = p.invert_integral;
     i_target = p.i_target;
     n_objects = p.n_objects;
     atol = p.atol;
@@ -183,8 +206,10 @@ double PlanetSystem::integrate_single(int it) {
         return 0.;
     }
     // Determine which objects might occlude the target object
-    double result, err;
+    double result, err, baseline_flux;
+    double area = 0.;
     i_target = it;
+    invert_integral = false;
     double xmin = xlim[i_target].min;
     double xmax = xlim[i_target].max;
 
@@ -200,12 +225,23 @@ double PlanetSystem::integrate_single(int it) {
              (xlim[i].max > xmin) && (xlim[i].min < xmax) &&
              // Objects that don't overlap in y with the target cannot occlude it
              (ylim[i].max > ylim[i_target].min) && (ylim[i].min < ylim[i_target].max));
-        n_occluders += relevant[i];
+        if (relevant[i]) {
+            n_occluders += 1;
+            area += shapes[i].get_area();
+        }
     }
+    // If no occluders, try to use get the brightness without an integral
     if (n_occluders == 0) {
         result = lights[it].get_integrated_brightness(shapes[it]);
         if (!isnan(result)) {
             return result;
+        }
+    }
+    // If the occluders area is small and the total brightness is available,
+    else if (area < 0.5 * shapes[it].get_area()) {
+        baseline_flux = lights[it].get_integrated_brightness(shapes[it]);
+        if (!isnan(baseline_flux)) {
+            invert_integral = true;
         }
     }
     int code = gsl_integration_qag(
@@ -213,6 +249,9 @@ double PlanetSystem::integrate_single(int it) {
     );
     if (integration_failed(code, result, err, atol, rtol)) {
         return NAN;
+    }
+    if (invert_integral) {
+        return baseline_flux - result;
     }
     return result;
 }
