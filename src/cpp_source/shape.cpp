@@ -264,8 +264,10 @@ bool Shape::raycast(double x, double y, double *mu_out, Vec3 *hit_out) const {
     hit = {(p0.x + offset * u.x), (p0.y + offset * u.y), (p0.z + offset * u.z)};
 
     if (mu_out != nullptr) {
-        // TODO: Calculate mu if needed.
-        *mu_out = 0.;
+        // Using p0 and u as scratch, since we're done with them
+        p0 = {hit.x / r_frontback, hit.y / r_up, hit.z / r_side};
+        MATMUL(rot, p0, u);
+        *mu_out = u.z / LENGTH(u);
     }
     if (hit_out != nullptr) {
         *hit_out = hit;

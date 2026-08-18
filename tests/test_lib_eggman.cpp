@@ -77,8 +77,10 @@ int test_biellipsoid() {
     TEST_APPROX(loc.x, -.5 / 1.4, 1e-9, errors);
     TEST_APPROX(loc.y, 0.0, 1e-9, errors);
     TEST_ASSERT(loc.z, >, 0, errors);
-    // TODO: Mu not currently calculated for non-spheres
-    // TEST_APPROX(mu, 1.0, 1e-9, errors);
+    TEST_ASSERT(mu, >, 0, errors);
+    TEST_ASSERT(mu, <, 1, errors);
+    hit = shp.raycast(0.0, 0.0, &mu, &loc);
+    TEST_APPROX(mu, 1.0, 1e-9, errors);
 
     // Test area calculation
     shp = Shape(1., 1.5, 1.33, 1.);
