@@ -86,18 +86,42 @@ void Shape::position_from_orbit(double t, const Orbit &orb, bool rotate_with_orb
 void Shape::set_position(Vec3 new_position) { this->position = new_position; }
 
 void Shape::update_derived() {
-    // See if we can bypass these calculations
-    is_sphere =
-        isclose(r_forward, r_back) && isclose(r_forward, r_up) && isclose(r_forward, r_side);
-    if (is_sphere) {
-        f_limb = Ellipse((Vec3){r_forward, 0., 0.}, (Vec3){0., r_forward, 0.});
+    Vec3 temp, e1, e2, limb_plane;
+    double l;
+    // Check for Shape subtypes
+    if (isclose(r_forward, r_back) && isclose(r_forward, r_up) && isclose(r_forward, r_side)) {
+        shape_type = Sphere;
+        f_limb = Ellipse({r_forward, 0., 0.}, {0., r_forward, 0.});
         b_limb = Ellipse({r_forward, 0., 0.}, {0., r_forward, 0.});
         return;
+    } else if (isclose(r_forward, r_back)) {
+        shape_type = Ellipsoid;
+    } else if (r_up == 0) {
+        shape_type = Ring;
+        // For Rings:
+        // - r_forward is outer radius, r_back is inner radius
+        // - rot is same as usual, identity is face-on.
+        // - f_limb is the outer disk edge:
+        temp = {r_forward, 0., 0.};
+        MATMUL(rot, temp, e1);
+        temp = {0., r_forward, 0.};
+        MATMUL(rot, temp, e2);
+        f_limb = Ellipse(e1, e2);
+        // - b_limb is the inner disk edge:
+        temp = {r_back, 0., 0.};
+        MATMUL(rot, temp, e1);
+        temp = {0., r_back, 0.};
+        MATMUL(rot, temp, e2);
+        b_limb = Ellipse(e1, e2);
+        // - joint is unused:
+        joint = Ellipse();
+        return;
+    } else {
+        shape_type = Biellipsoid;
     }
     // Calculate limb planes and construct the limb ellipses
-    Vec3 temp, e1, e2;
-    Vec3 limb_plane = (Vec3){-rot.zx / r_forward, -rot.zy / r_up, -rot.zz / r_side};
-    double l = LENGTH(limb_plane);
+    limb_plane = {-rot.zx / r_forward, -rot.zy / r_up, -rot.zz / r_side};
+    l = LENGTH(limb_plane);
     if (limb_plane.z < 0.0) {
         l *= -1.0;
     }
@@ -163,17 +187,32 @@ void Shape::update_derived() {
     joint = Ellipse(e1, e2);
 }
 
-Bounds Shape::slice_ylimits(double x) const {
+Bounds Shape::slice_ylimits(double x, Bounds *out2, int zcut) const {
     Vec3 lower, upper;
     Bounds result = {INFINITY, -INFINITY};
     x -= position.x;
 
-    if (is_sphere) {
+    if (shape_type == Sphere) {
         x /= r_forward;
         result.max = r_forward * sqrt(1 - x * x);
         result.min = position.y - result.max;
         result.max += position.y;
         return result;
+    } else if (shape_type == Ring) {
+        // Outer ring limits
+        f_limb.get_ybounds(x, lower, upper);
+        result = z_clamp(lower, upper, zcut);
+        if (fabs(x) > b_limb.x_size) {
+            // No overlap with inner hole
+            return result;
+        }
+        // Inner hole limits
+        b_limb.get_ybounds(x, lower, upper);
+        Bounds result2 = z_clamp(lower, upper, zcut);
+        if (out2 != nullptr) {
+            *out2 = {result.min, result2.min};
+        }
+        return {result2.max, result.max};
     }
 
     f_limb.get_ybounds(x, lower, upper);
@@ -207,6 +246,9 @@ bool Shape::line_intersects(double x, double y) const {
     x -= position.x;
     y -= position.y;
     hit = f_limb.line_intersects(x, y, &loc);
+    if (shape_type == Ring) {
+        return hit && (!b_limb.line_intersects(x, y));
+    }
     if (hit && is_forward_local(loc)) {
         return true;
     }
@@ -223,7 +265,7 @@ bool Shape::raycast(double x, double y, double *mu_out, Vec3 *hit_out) const {
     Vec3 hit, p0, u;
     x -= position.x;
     y -= position.y;
-    if (is_sphere) {
+    if (shape_type == Sphere) {
         // Much simpler calculation for spheres
         hit.x = x / r_forward;
         hit.y = y / r_forward;
@@ -240,9 +282,21 @@ bool Shape::raycast(double x, double y, double *mu_out, Vec3 *hit_out) const {
             *hit_out = p0;
         }
         return true;
+    } else if (shape_type == Ring) {
+        if (!f_limb.line_intersects(x, y, &hit) || b_limb.line_intersects(x, y, &hit)) {
+            return false;
+        }
+        // TODO: Hit out?  mu out?
+        if (hit_out != nullptr) {
+            *hit_out = hit;
+        }
+        if (mu_out != nullptr) {
+            // TODO: Calculate mu if needed (constant for a given rotation)
+            *mu_out = 0.;
+        }
+        return true;
     }
-    // TODO: Skip for symmetric case
-    forward = is_forward_2d(x, y, true);
+    forward = (shape_type == Ellipsoid) || is_forward_2d(x, y, true);
 
     r_frontback = forward ? r_forward : r_back;
     // Line origin in forward sphere-space: (x, y, 0) in world-space
@@ -323,23 +377,17 @@ bool Shape::is_forward_2d(double x, double y, bool local) const {
 }
 
 bool Shape::is_visible(Vec3 loc) const {
-    // In this niche world-aligned-but-scaled frame, planet is a unit sphere at the origin
-    // but the view vector is (0, 0, -1)
-    Vec3 loc_sph = world_to_sphere(loc);
-    MATMUL(rot, loc_sph, loc);
-    // Thus the visibilty test is simple: is the point behind a unit sphere at the origin?
-    double xysq = loc.x * loc.x + loc.y * loc.y;
-    if (xysq >= 1) {
-        return true;
-    }
-    if (loc.z < 0) {
-        return false;
-    }
-    return (xysq + loc.z * loc.z) > 1;
+    Vec3 pos;
+    bool hit = raycast(loc.x, loc.y, nullptr, &pos);
+    pos = sphere_to_world(pos);
+    return !hit || (loc.z > pos.z);
 }
 
 Bounds Shape::x_bounds() const {
-    if (rot.xx > 0) {
+    if (shape_type == Ring) {
+        return {position.x - f_limb.x_size, position.x + f_limb.x_size};
+    }
+    if ((rot.xx > 0)) {
         return {position.x - b_limb.x_size, position.x + f_limb.x_size};
     } else {
         return {position.x - f_limb.x_size, position.x + b_limb.x_size};
@@ -347,6 +395,9 @@ Bounds Shape::x_bounds() const {
 }
 
 Bounds Shape::y_bounds() const {
+    if (shape_type == Ring) {
+        return {position.y - f_limb.y_size, position.y + f_limb.y_size};
+    }
     if (rot.yy > 0) {
         return {position.y - b_limb.y_size, position.y + f_limb.y_size};
     } else {
@@ -354,4 +405,9 @@ Bounds Shape::y_bounds() const {
     }
 }
 
-double Shape::get_area() const { return 0.5 * (f_limb.get_area() + b_limb.get_area()); }
+double Shape::get_area() const {
+    if (shape_type == Ring) {
+        return f_limb.get_area() - b_limb.get_area();
+    }
+    return 0.5 * (f_limb.get_area() + b_limb.get_area());
+}

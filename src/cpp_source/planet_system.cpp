@@ -77,11 +77,12 @@ double phase_curve_inner_integral(double x, void *params) {
     int i;
     PlanetSystem *p = (PlanetSystem *)params;
     p->x = x;
+    int zcut;
 
     // Determine the range(s) to integrate over
     // Max size of the bounds "stack" is low, so using an array.
     int n_bounds = 1;
-    Bounds b[MAX_PHASE_OBJECTS + 1];
+    Bounds b[2 * MAX_PHASE_OBJECTS + 1];
     // Initially, plan to integrate over the entire target
     b[0] = p->shapes[p->i_target].slice_ylimits(x);
     if (b[0].min >= b[0].max) {
@@ -90,7 +91,16 @@ double phase_curve_inner_integral(double x, void *params) {
     // Get the bounds of occluding objects for processing
     for (i = 0; i < p->n_objects; i++) {
         if (p->relevant[i]) {
-            b[n_bounds] = p->shapes[i].slice_ylimits(x);
+            if (p->shapes[i].shape_type == Ring) {
+                b[n_bounds + 1] = {0., 0.};
+                zcut = p->parent_indices[i] == p->i_target ? 1 : 0;
+                b[n_bounds] = p->shapes[i].slice_ylimits(x, &(b[n_bounds + 1]), zcut);
+                if (b[n_bounds].min < b[n_bounds].max) {
+                    n_bounds += 1;
+                }
+            } else {
+                b[n_bounds] = p->shapes[i].slice_ylimits(x);
+            }
             if (b[n_bounds].min < b[n_bounds].max) {
                 n_bounds += 1;
             }
@@ -193,7 +203,7 @@ void PlanetSystem::clear_objects() { n_objects = 0; }
 void PlanetSystem::set_time(double t) {
     Vec3 origin;
     for (int i = 0; i < n_objects; i++) {
-        origin = parent_indices[i] > 0 ? shapes[parent_indices[i]].position : (Vec3){0., 0., 0.};
+        origin = parent_indices[i] >= 0 ? shapes[parent_indices[i]].position : (Vec3){0., 0., 0.};
         shapes[i].position_from_orbit(t, orbits[i], rotate_with_orbit[i], origin);
         xlim[i] = shapes[i].x_bounds();
         ylim[i] = shapes[i].y_bounds();

@@ -96,14 +96,12 @@ inline bool integration_failed(
         if (err > atol + rtol * fabs(result)) {
             // ...but it meets ours, so accept the result without error
             return false;
-        } else if (print_error) {
-            // ...nor our ftol / atol, so print an error and reject the result
-            const char *msg = gsl_strerror(code);
-            printf("INTEGRATION ERROR %i: %s. Result=%f, err=%f", code, msg, result, err);
-            return true;
         }
     }
-    // Other GSL error
+    if (print_error) {
+        const char *msg = gsl_strerror(code);
+        printf("INTEGRATION ERROR %i: %s. Result=%f, err=%f\n", code, msg, result, err);
+    }
     return true;
 }
 

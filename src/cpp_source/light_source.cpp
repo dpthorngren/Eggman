@@ -40,7 +40,7 @@ double LightSource::get_brightness(double x, double y, const Shape &shp) const {
     case NoEmission:
         return 0.;
     case Lambertian:
-        return params[0];
+        return shp.line_intersects(x, y) ? params[0] : 0.;
     case QuadraticLimb:
         if (!shp.raycast(x, y, &mu, nullptr)) {
             return 0; // Point doesn't intersect biellipsoid
@@ -108,11 +108,11 @@ double LightSource::get_integrated_brightness(const Shape &shp) const {
     case Lambertian:
         return params[0] * shp.get_area();
     case QuadraticLimb:
-        return shp.is_sphere ? params[0] * shp.get_area() : NAN;
+        return shp.shape_type == Sphere ? params[0] * shp.get_area() : NAN;
     case NonLinearLimb:
-        return shp.is_sphere ? params[0] * shp.get_area() : NAN;
+        return shp.shape_type == Sphere ? params[0] * shp.get_area() : NAN;
     case DayNight:
-        if (shp.is_sphere) {
+        if (shp.shape_type == Sphere) {
             result = params[0] + params[1] + (params[1] - params[0]) * shp.rot.zz;
             return result * shp.get_area() / 2.0;
         }

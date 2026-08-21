@@ -64,17 +64,22 @@ class LightSource:
             f"Error: wrong number of source parameters; should be {expect_n_params},"\
             f"was {n_params}."
 
-        # Create a c-readable
+        # Create a c-readable form of the source parameters
         source_params_c: cye.Array_SourceParams = [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.]
         for i, p in enumerate(source_params):
             source_params_c[i] = p
         self.csource = cye.CLightSource(source_code, source_params_c)
 
-    def get_brightness(self, x, y, bell: Shape):
+    def get_brightness(self, x, y, bell: Shape, ring_front: cython.bint = True):
         cython.declare(i=int, j=int)
 
         types = [float, np.float64, np.float32, np.int32, np.int64, int]
         if type(x) in types and type(y) in types:
+            if bell.r_up == 0:
+                loc = bell.raycast(x, y)[1]
+                loc = bell.sphere_to_world(loc)
+                if ring_front != loc[2] > 0.:
+                    return 0.
             return self.csource.get_brightness(x, y, bell.cshape)
         x = np.atleast_1d(x)
         y = np.atleast_1d(y)
@@ -87,6 +92,12 @@ class LightSource:
 
         for i in range(x_view.shape[0]):
             for j in range(y_view.shape[0]):
+                if bell.r_up == 0:
+                    loc = bell.raycast(x_view[i], y_view[j])[1]
+                    loc = bell.sphere_to_world(loc)
+                    if ring_front != loc[2] > 0.:
+                        output_view[i, j] = 0.
+                        continue
                 output_view[i, j] = self.csource.get_brightness(x_view[i], y_view[j], bell.cshape)
         return output
 
@@ -109,7 +120,8 @@ class LightSource:
                 output_view[i, j] = self.csource.get_brightness_sphere(x_view[i], y_view[j])
         return output
 
-    def plot_brightness(self, shp: Shape, res=400, axis=None, **args):
+    def plot_brightness(
+            self, shp: Shape, res=400, axis=None, ring_front: cython.bint = True, **args):
         from matplotlib import pyplot as plt
         from matplotlib.colors import ListedColormap
 
@@ -119,10 +131,10 @@ class LightSource:
         y = np.linspace(ylim[0], ylim[1], res)
 
         if self.source_type_code != 0:
-            brightness = self.get_brightness(x, y, shp)
+            brightness = self.get_brightness(x, y, shp, ring_front)
             brightness = np.ma.masked_equal(brightness, 0.)
         else:
-            brightness = shp.line_intersects(x, y)
+            brightness = shp.line_intersects(x, y, ring_front)
             brightness = np.ma.masked_equal(brightness, 0.)
             brightness *= 0.
 

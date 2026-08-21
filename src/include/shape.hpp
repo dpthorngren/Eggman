@@ -5,10 +5,25 @@
 #include "math_utils.hpp"
 #include "orbit.hpp"
 
-/* Describes a biellipsoid -- two ellipsoids smoothly and continuously joined along the yz plane,
- * then rotated and shifted. Member functions provide bounds and limits related to integrating
- * across them.  All members are public for simplicity, but mutation should be done via the
- * setters or outputs may be incorrect.
+typedef enum {
+    Biellipsoid, // General case: two ellipsoids smoothly and continuously joined along the yz plane
+    Ellipsoid,   // Forward and backward radii are equal
+    Sphere,      // All radii are equal
+    Ring,        // Upwards radius is zero (changes interpretation of radii and limbs)
+} ShapeType;
+
+/* Describes a shape for use in transit and emission calculations, taking one of the ShapeType
+ * types, rotated by rot and shifted by position. Member functions provide bounds and limits related
+ * to integrating across it.  All members are public for simplicity, but mutation should be done
+ * via the setters or outputs may be incorrect.
+ *
+ * If r_up == 0, then the Shape is interpreted as a ring (technically an annulus) and the member
+ * variables are interpreted as follows:
+ * - r_forward is outer radius
+ * - r_back is inner radius.
+ * - f_limb is the outer disk edge.
+ * - b_limb is the inner disk edge.
+ * - joint and r_side are unused.
  */
 class Shape {
   public:
@@ -17,10 +32,10 @@ class Shape {
     double r_back;
     double r_up;
     double r_side;
-    bool is_sphere;
     double theta;
     double phi;
     double gamma;
+    ShapeType shape_type;
     // Rotation matrix from ellipsoid space to view space.
     // Forward vector (view space) is the first column rot[::3].
     // View vector (ellipsoid space) is minus the last column -rot[2::3].
@@ -50,7 +65,7 @@ class Shape {
     // Checks if loc is not behind / inside the biellipsoid
     bool is_visible(Vec3 loc) const;
     // Determines the y range occupied by the biellipsoid for this x value (min=max outside range)
-    Bounds slice_ylimits(double x) const;
+    Bounds slice_ylimits(double x, Bounds *out2 = nullptr, int zcut = 0) const;
     // Returns whether the line through x, y intersects the biellipsoid
     bool line_intersects(double x, double y) const;
     // Finds the near intersection of a line through (x, y) with the biellipsoid
@@ -126,6 +141,18 @@ inline Vec3 Shape::sphere_to_aligned(Vec3 loc) const {
     loc.y *= r_up;
     loc.z *= r_side;
     return loc;
+}
+
+inline Bounds z_clamp(Vec3 lower, Vec3 upper, int zcut) {
+    if ((zcut == 0) || (upper.z == lower.z)) {
+        return {lower.y, upper.y};
+    }
+    double slope = (upper.y - lower.y) / (upper.z - lower.z);
+    double ycut = upper.y - upper.z * slope;
+    if ((zcut > 0) ^ (slope > 0)) {
+        return {fmin(lower.y, ycut), fmin(upper.y, ycut)};
+    }
+    return {fmax(lower.y, ycut), fmax(upper.y, ycut)};
 }
 
 #endif

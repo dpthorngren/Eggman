@@ -218,12 +218,16 @@ class Shape:
         b: cye.Bounds = self.cshape.slice_ylimits(x)
         return np.array([b.min, b.max])
 
-    def line_intersects(self, x, y):
+    def line_intersects(self, x, y, ring_front: cython.bint = True):
         '''Determines whether the line passing through [x, y, 0] in the +/-z direction passes
             through the biellipsoid.'''
         cython.declare(i=int, j=int)
         types = [float, np.float64, np.float32, np.int32, np.int64, int]
         if type(x) in types and type(y) in types:
+            if self.r_up == 0:
+                hit, loc, _ = self.raycast(x, y)
+                loc = self.sphere_to_world(loc) - self.position
+                return hit and ((loc[2] > 0) == ring_front)
             return self.cshape.line_intersects(x, y)
         x = np.atleast_1d(x)
         y = np.atleast_1d(y)
@@ -234,9 +238,16 @@ class Shape:
         y_view: cye.Array1d_f64 = y
         output_view: cye.Array2d_f64 = output
 
-        for i in range(x_view.shape[0]):
-            for j in range(y_view.shape[0]):
-                output_view[i, j] = self.cshape.line_intersects(x_view[i], y_view[j])
+        if self.r_up == 0:
+            for i in range(x_view.shape[0]):
+                for j in range(y_view.shape[0]):
+                    hit, loc, _ = self.raycast(x_view[i], y_view[j])
+                    loc = self.sphere_to_world(loc) - self.position
+                    output_view[i, j] = hit and ((loc[2] > 0) == ring_front)
+        else:
+            for i in range(x_view.shape[0]):
+                for j in range(y_view.shape[0]):
+                    output_view[i, j] = self.cshape.line_intersects(x_view[i], y_view[j])
         return output
 
     def raycast(self, x: float, y: float):

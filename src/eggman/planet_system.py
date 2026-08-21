@@ -97,10 +97,13 @@ class PlanetSystem:
                 (tidally locked to the parent or origin).
             parent_index: The index of a previously added object that the new object should orbit
                 (like a moon); if negative, the new object orbits the origin.'''
-        cython.declare(orb=cye.COrbit, shape=cye.CShape, csource=cye.CLightSource)
+        cython.declare(orb=cye.COrbit, shape=cye.CShape, csource=cye.CLightSource, origin=cye.Vec3)
         orb = cye.COrbit(period, t0, semimajor, eccen, inclination, lon_periapse)
         shape = cye.CShape(r_forward, r_back, r_up, r_side)
-        shape.position_from_orbit(0., orb, rotate_with_orbit)
+        origin = cye.Vec3(0., 0., 0.)
+        if parent_index >= 0:
+            origin = self.cps.shapes[parent_index].position
+        shape.position_from_orbit(0., orb, rotate_with_orbit, origin)
         shape.set_rotation(theta, phi, gamma, orb.get_cos_inc())
         csource = cye.CLightSource()
         if source is not None:
@@ -205,5 +208,11 @@ class PlanetSystem:
             arguments = args.copy()
             if arg_list:
                 arguments.update(arg_list[i])
-            arguments['zorder'] = shape.position[2]
-            source.plot_brightness(shape, res, axis, **arguments)
+            if shape.r_up == 0:
+                arguments['zorder'] = shape.position[2] + .5
+                source.plot_brightness(shape, res, axis, ring_front=True, **arguments)
+                arguments['zorder'] = shape.position[2] - .5
+                source.plot_brightness(shape, res, axis, ring_front=False, **arguments)
+            else:
+                arguments['zorder'] = shape.position[2]
+                source.plot_brightness(shape, res, axis, **arguments)

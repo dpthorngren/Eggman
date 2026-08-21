@@ -32,7 +32,6 @@ int test_biellipsoid() {
     ANNOUNCE_TEST();
     int errors = 0;
     Shape shp = Shape(.15, .1, .1, .1);
-    shp.update_derived();
     TEST_APPROX(shp.x_bounds().min, -.1, 1e-12, errors);
     TEST_APPROX(shp.x_bounds().max, .15, 1e-12, errors);
     TEST_APPROX(shp.y_bounds().min, -.1, 1e-12, errors);
@@ -42,9 +41,19 @@ int test_biellipsoid() {
     TEST_APPROX(shp.x_bounds().max, 1 + .15, 1e-12, errors);
     TEST_APPROX(shp.y_bounds().min, .1 + -.1, 1e-12, errors);
     TEST_APPROX(shp.y_bounds().max, .1 + .1, 1e-12, errors);
+    TEST_ASSERT(shp.shape_type, ==, Biellipsoid, errors);
+
+    // Test visibility
+    shp = Shape(1.33, 1.33, 1.33, 1.33);
+    TEST_ASSERT(shp.is_visible({0, 0, 0}), ==, false, errors);
+    TEST_ASSERT(shp.is_visible({0, 0, -10}), ==, false, errors);
+    TEST_ASSERT(shp.is_visible({1., 1., 0.}), ==, true, errors);
+    TEST_ASSERT(shp.is_visible({.7, .7, 0.}), ==, false, errors);
+    TEST_ASSERT(shp.is_visible({0, 0, 10}), ==, true, errors);
 
     // Test line projection
     shp = Shape(1., 1., 1., 1.);
+    TEST_ASSERT(shp.shape_type, ==, Sphere, errors);
     Vec3 loc;
     double mu;
     bool hit = shp.raycast(0, 0, &mu, &loc);
@@ -135,6 +144,45 @@ int test_biellipsoid() {
         }
     }
 
+    return errors;
+}
+
+int test_rings() {
+    ANNOUNCE_TEST();
+    int errors = 0;
+    Shape shp = Shape(1.0, 0.7, 0., 0.);
+    Bounds bottom, top;
+    top = shp.slice_ylimits(-0.3, &bottom, 0);
+    TEST_APPROX(bottom.min, -sqrt(1. - 0.09), 1e-9, errors);
+    TEST_APPROX(bottom.max, -sqrt(.7 * .7 - 0.09), 1e-9, errors);
+    TEST_APPROX(top.min, sqrt(.7 * .7 - 0.09), 1e-9, errors);
+    TEST_APPROX(top.max, sqrt(1. - 0.09), 1e-9, errors);
+    TEST_ASSERT(shp.raycast(0., 0., nullptr, nullptr), ==, false, errors);
+    TEST_ASSERT(shp.raycast(0.3, 0.23, nullptr, nullptr), ==, false, errors);
+    TEST_ASSERT(shp.raycast(10., 30., nullptr, nullptr), ==, false, errors);
+    TEST_ASSERT(shp.raycast(0.9, 0.1, nullptr, nullptr), ==, true, errors);
+    TEST_ASSERT(shp.raycast(-0.1, 0.9, nullptr, nullptr), ==, true, errors);
+    TEST_ASSERT(shp.raycast(-.8 / sqrt(2.), .8 / sqrt(2.), nullptr, nullptr), ==, true, errors);
+    TEST_APPROX(shp.get_area(), M_PI * (1 - .7 * .7), 1e-9, errors);
+
+    shp.set_rotation(0., 0., 60.);
+    top = shp.slice_ylimits(-0.3, &bottom, 0);
+    TEST_APPROX(bottom.min, -0.5 * sqrt(1. - 0.09), 1e-9, errors);
+    TEST_APPROX(bottom.max, -0.5 * sqrt(.7 * .7 - 0.09), 1e-9, errors);
+    TEST_APPROX(top.min, 0.5 * sqrt(.7 * .7 - 0.09), 1e-9, errors);
+    TEST_APPROX(top.max, 0.5 * sqrt(1. - 0.09), 1e-9, errors);
+    top = shp.slice_ylimits(-0.3, &bottom, -1);
+    TEST_APPROX(bottom.min, -0.5 * sqrt(1. - 0.09), 1e-9, errors);
+    TEST_APPROX(bottom.max, -0.5 * sqrt(.7 * .7 - 0.09), 1e-9, errors);
+    TEST_APPROX(top.min, 0., 1e-9, errors);
+    TEST_APPROX(top.max, 0., 1e-9, errors);
+    top = shp.slice_ylimits(-0.3, &bottom, 1);
+    TEST_APPROX(bottom.min, 0., 1e-9, errors);
+    TEST_APPROX(bottom.max, 0., 1e-9, errors);
+    TEST_APPROX(top.min, 0.5 * sqrt(.7 * .7 - 0.09), 1e-9, errors);
+    TEST_APPROX(top.max, 0.5 * sqrt(1. - 0.09), 1e-9, errors);
+    TEST_ASSERT(shp.raycast(0., 0.8, nullptr, nullptr), ==, false, errors);
+    TEST_APPROX(shp.get_area(), 0.5 * M_PI * (1 - .7 * .7), 1e-9, errors);
     return errors;
 }
 
@@ -381,7 +429,7 @@ int test_light_source() {
     s = LightSource(Lambertian, source_params);
     TEST_APPROX(s.get_brightness_sphere(0., 0.), expect, 1e-9, errors);
     TEST_APPROX(s.get_brightness_sphere(0.5, 0.5), expect, 1e-9, errors);
-    TEST_APPROX(s.get_brightness(0.9, 0.8, shp), expect, 1e-9, errors);
+    TEST_APPROX(s.get_brightness(0.9, 0.8, shp), 0., 1e-9, errors);
     // Standard star (brightness 1, quadratic limb darkening)
     s = LightSource(QuadraticLimb, source_params);
     // Small params ~= lambertian
@@ -431,6 +479,7 @@ int main() {
     srand48(seed);
     int errors = 0;
     errors += test_biellipsoid();
+    errors += test_rings();
     errors += test_orbital_position();
     errors += test_transit();
     errors += test_planetary_system();
