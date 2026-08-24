@@ -411,6 +411,30 @@ int test_planetary_system() {
     TEST_APPROX(b[1].min, 0.3, 1e-12, errors);
     TEST_APPROX(b[1].max, 0.4, 1e-12, errors);
     return errors;
+
+    // Test a ring system by comparison with planets
+    double d_inner, d_outer, d_ring;
+    p.clear_objects();
+    source_params[0] = 1 / M_PI;
+    source_params[1] = 0.22;
+    source_params[2] = 0.17;
+    star = LightSource(QuadraticLimb, source_params);
+    p.add_object(Orbit(), Shape(), star);
+    orb = Orbit(10., 0., 5., 0.00, 89., 90.);
+    LightSource nosource = LightSource(NoEmission, source_params);
+    p.add_object(orb, Shape(.2 * cos(M_PI * 70), .2, .2, .2), nosource);
+    p.set_time(.1);
+    d_inner = p.integrate_single(0);
+    p.shapes[1].set_radii(.05 * cos(M_PI * 70), .05, .05, .05);
+    d_outer = p.integrate_single(0);
+    TEST_ASSERT(d_outer, >, d_inner, errors);
+    Shape ring = Shape(.2, .05, 0., 0.);
+    ring.set_rotation(0., 0., 60.);
+    p.clear_objects();
+    p.add_object(Orbit(), Shape(), star);
+    p.add_object(orb, ring, nosource);
+    d_ring = p.integrate_single(0);
+    TEST_APPROX(d_ring, 1 - ((1 - d_inner) - (1 - d_outer)), 1e-6, errors);
 }
 
 int test_light_source() {

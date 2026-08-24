@@ -35,6 +35,11 @@ class Shape:
     cshape: cye.CShape
 
     @property
+    def area(self):
+        '''The area of the shape in the view frame.'''
+        return self.cshape.get_area()
+
+    @property
     def r_forward(self):
         '''The forward radius of the object; the +x direction for an identity rotation matrix.'''
         return self.cshape.r_forward

@@ -124,6 +124,37 @@ class PlanetSystem:
         source: cye.CLightSource = LightSource(limb_type, limb_params).csource
         self.cps.add_object(cye.COrbit(), cye.CShape(), source, False, -1)
 
+    def add_ring(
+            self,
+            r_outer: float,
+            r_inner: float,
+            parent_index: int,
+            theta: float = 0,
+            phi: float = 0,
+            gamma: float = 0):
+        '''Adds a ring around the given object. With rotations set to zero, the ring is face-on.
+            This is a wrapper for add_object, whose arguments are passed through to Shape and Orbit.
+
+        Args:
+            r_outer: The outer radius of the ring.
+            r_inner: The inner radius of the ring, that is, within this radius the ring will not
+                block any light.  This should be large enough that it is not touching the
+                parent object if the latter is emissive.
+            theta: The counter-clockwise rotation of the ring around the z axis.
+            phi: The counter-clockwise rotation of the ring around the y axis.
+            gamma: The counter-clockwise rotation of the ring around the x axis.
+            parent_index: The index of the object to place a ring around.'''
+        cython.declare(orb=cye.COrbit, shape=cye.CShape, csource=cye.CLightSource, origin=cye.Vec3)
+        orb = cye.COrbit()
+        shape = cye.CShape(r_outer, r_inner, 0, 0.)
+        origin = cye.Vec3(0., 0., 0.)
+        if parent_index >= 0:
+            origin = self.cps.shapes[parent_index].position
+        shape.position_from_orbit(0., orb, False, origin)
+        shape.set_rotation(theta, phi, gamma, orb.get_cos_inc())
+        csource = cye.CLightSource()
+        self.cps.add_object(orb, shape, csource, False, parent_index)
+
     def set_time(self, t: float) -> None:
         '''Sets the time of the system, moving the objects into position based on their orbits.
             This is automatically called in phase_curve_integral but can be useful for debugging

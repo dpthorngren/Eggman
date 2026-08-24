@@ -92,6 +92,7 @@ cdef extern from "shape.cpp":
         Bounds slice_ylimits(double x, Bounds* out2=nullptr, int zcut=0)
         bint line_intersects (double x, double y)
         bint raycast(double x, double y, double *mu_out, Vec3 *hit_out)
+        double get_area()
         Vec3 world_to_aligned(Vec3 loc)
         Vec3 world_to_sphere(Vec3 loc)
         Vec3 aligned_to_world(Vec3 loc)
