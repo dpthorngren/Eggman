@@ -6,7 +6,7 @@
 
 // Linear algebra structs and macros
 #define SIGN(x) ((x < 0.) ? -1. : ((x > 0.) ? 1. : 0.))
-#define CLAMP(x, xmin, xmax) (fmax(fmin(x, xmax), xmin));
+#define CLAMP(x, xmin, xmax) (fmax(fmin(x, xmax), xmin))
 #define LENGTH(arr) sqrt(arr.x *arr.x + arr.y * arr.y + arr.z * arr.z)
 #define RESCALE(arr, coeff)                                                                        \
     arr.x /= coeff;                                                                                \
@@ -103,6 +103,49 @@ inline bool integration_failed(
         printf("INTEGRATION ERROR %i: %s. Result=%f, err=%f\n", code, msg, result, err);
     }
     return true;
+}
+
+inline void sphere_to_gridmap(Vec3 &loc, int n, int m) {
+    double u = atan2(loc.y, loc.x) / (2 * M_PI);
+    loc.x = u < 0 ? n * (u + 1.) : n * u;
+    loc.y = (m + 1) * (CLAMP(loc.z, -1., 1.) + 1.) / 2. - 1.;
+    loc.z = 0.;
+    return;
+}
+
+inline void gridmap_to_sphere(Vec3 &loc, int n, int m) {
+    loc.z = 2 * ((loc.y + 1.) / (m + 1.)) - 1.;
+    double dist = sqrt(1 - loc.z * loc.z);
+    double theta = 2. * M_PI * loc.x / n;
+    loc.x = dist * cos(theta);
+    loc.y = dist * sin(theta);
+    return;
+}
+
+
+inline double interp_gridmap(Vec3 loc, int n, int m, double north, double south, double *data) {
+    if (data == nullptr) {
+        return NAN;
+    }
+    sphere_to_gridmap(loc, n, m);
+
+    double low, high;
+    double weight = fmod(loc.x, 1);
+    int i0 = (int)loc.x;
+    int i1 = (i0 + 1) % (n - 1);
+    int j = (int)loc.y;
+    if (loc.y < 0) {
+        low = south;
+        high = data[i0] * (1 - weight) + data[i1] * weight;
+    } else if (loc.y > m) {
+        low = data[n * j + i0] * (1 - weight) + data[n * j + i1] * weight;
+        high = north;
+    } else {
+        low = data[n * j + i0] * (1 - weight) + data[n * j + i1] * weight;
+        high = data[n * j + i0] * (1 - weight) + data[n * j + i1] * weight;
+    }
+    weight = fmod(1. + loc.y, 1);
+    return (1. - weight) * low + weight * high;
 }
 
 #endif

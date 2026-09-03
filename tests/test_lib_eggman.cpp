@@ -494,6 +494,71 @@ int test_light_source() {
     return errors;
 }
 
+inline double gridmap_test_func(Vec3 loc) {
+    return 2.0 + 0.3 * loc.x + 0.13 * loc.y * loc.y + 0.5 * loc.z;
+}
+
+int test_general_phasemap() {
+    ANNOUNCE_TEST();
+    Vec3 loc, loc2;
+    int errors = 0;
+    int n = 5;
+    int m = 5;
+    // Simple cases
+    loc = {0., 0., 1.};
+    sphere_to_gridmap(loc, n, m);
+    TEST_APPROX(loc.y, m, 1e-9, errors);
+    loc = {1., 0., 0.};
+    sphere_to_gridmap(loc, n, m);
+    TEST_APPROX(loc.x, 0., 1e-9, errors);
+    TEST_APPROX(loc.y, (m - 1) / 2., 1e-9, errors);
+    loc = {0., 1., 0.};
+    sphere_to_gridmap(loc, n, m);
+    TEST_APPROX(loc.x, n / 4., 1e-9, errors);
+    TEST_APPROX(loc.y, (m - 1) / 2., 1e-9, errors);
+
+    // Random cases
+    for (int i = 0; i < 3; i++) {
+        loc.x = DRAND(-1., 1.);
+        loc.y = DRAND(-1., 1.);
+        loc.z = DRAND(-1., 1.);
+        loc = normalized(loc);
+        loc2 = loc;
+        sphere_to_gridmap(loc, n, m);
+        gridmap_to_sphere(loc, n, m);
+        TEST_APPROX(loc.x, loc2.x, 1e-9, errors);
+        TEST_APPROX(loc.y, loc2.y, 1e-9, errors);
+        TEST_APPROX(loc.z, loc2.z, 1e-9, errors);
+    }
+
+
+    // Interpolation
+    const int np = 527;
+    const int mp = 739;
+    double data[np * mp];
+    for (int j = 0; j < mp; j++) {
+        for (int i = 0; i < np; i++) {
+            loc = {(double)i, (double)j, 0.};
+            gridmap_to_sphere(loc, np, mp);
+            data[np * j + i] = gridmap_test_func(loc);
+        }
+    }
+    double north = gridmap_test_func({0., 0., 1.});
+    double south = gridmap_test_func({0., 0., -1.});
+    double result, expect;
+    for (int i = 0; i < 1000; i++) {
+        loc.x = DRAND(-1., 1.);
+        loc.y = DRAND(-1., 1.);
+        loc.z = DRAND(-1., 1.);
+        loc = normalized(loc);
+        expect = gridmap_test_func(loc);
+        result = interp_gridmap(loc, np, mp, north, south, data);
+        // It's usually better than 1%, but near the poles it can be worse.
+        TEST_APPROX(result, expect, 1e-2, errors);
+    }
+    return errors;
+}
+
 int main() {
     // Note: This tester is not as rigorous as the Pytest tests.  It is intended mainly to catch
     // memory management errors and distinguish between C++ errors and Cython wrapping errors.
@@ -508,6 +573,7 @@ int main() {
     errors += test_transit();
     errors += test_planetary_system();
     errors += test_light_source();
+    errors += test_general_phasemap();
     if (errors == 0) {
         cout << "All tests passed." << endl << endl;
     } else {
