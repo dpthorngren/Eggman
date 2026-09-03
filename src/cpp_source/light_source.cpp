@@ -31,6 +31,77 @@ LightSource::LightSource(SourceType type, double *params) {
         limb_norm = 1.0;
         break;
     }
+
+    // Set up emission map if needed
+    if (stype == EmissionMap) {
+        n = (int)fmax(params[0], 1);
+        m = (int)fmax(params[1], 1);
+        emission_map = new double[n * m + 2];
+        for (int i = 0; i < n * m + 2; i++) {
+            emission_map[i] = 0.;
+        }
+    } else {
+        n = 0;
+        m = 0;
+        emission_map = nullptr;
+    }
+}
+
+LightSource::LightSource(const LightSource &other) {
+    stype = other.stype;
+    limb_norm = other.limb_norm;
+    for (int i = 0; i < MAX_SOURCE_PARAMS; i++) {
+        params[i] = other.params[i];
+    }
+    n = other.n;
+    m = other.m;
+
+    // Copy the emission map if needed
+    if (stype == EmissionMap) {
+        emission_map = new double[n * m + 2];
+        for (int i = 0; i < n * m + 2; i++) {
+            emission_map[i] = other.emission_map[i];
+        }
+    } else {
+        emission_map = nullptr;
+    }
+}
+
+LightSource &LightSource::operator=(const LightSource &other) {
+    if (&other == this) {
+        return *this;
+    }
+    stype = other.stype;
+    limb_norm = other.limb_norm;
+    for (int i = 0; i < MAX_SOURCE_PARAMS; i++) {
+        params[i] = other.params[i];
+    }
+    n = other.n;
+    m = other.m;
+
+    // Delete the old emission map if needed
+    if (emission_map != nullptr) {
+        delete[] emission_map;
+        emission_map = nullptr;
+    }
+
+    // Copy the emission map if needed
+    if (stype == EmissionMap) {
+        emission_map = new double[n * m + 2];
+        for (int i = 0; i < n * m + 2; i++) {
+            emission_map[i] = other.emission_map[i];
+        }
+    } else {
+        emission_map = nullptr;
+    }
+    return *this;
+}
+
+LightSource::~LightSource() {
+    if (emission_map != nullptr) {
+        delete[] emission_map;
+        emission_map = nullptr;
+    }
 }
 
 double LightSource::get_brightness(double x, double y, const Shape &shp) const {
@@ -63,6 +134,11 @@ double LightSource::get_brightness(double x, double y, const Shape &shp) const {
             return 0; // Point doesn't intersect biellipsoid
         }
         return hit.z < 0 ? params[0] : params[1];
+    case EmissionMap:
+        if (!shp.raycast(x, y, nullptr, &hit)) {
+            return 0; // Point doesn't intersect biellipsoid
+        }
+        return interp_emission(hit);
     default:
         return NAN;
     }
@@ -120,4 +196,35 @@ double LightSource::get_integrated_brightness(const Shape &shp) const {
     default:
         return NAN;
     }
+}
+
+double LightSource::get_emission_point(int i) {
+    if ((i < n * m + 2) && (i >= 0)) {
+        return emission_map[i];
+    }
+    return NAN;
+}
+
+int LightSource::set_emission_point(int i, double value) {
+    if ((i < n * m + 2) && (i >= 0)) {
+        emission_map[i] = value;
+        return 0;
+    }
+    return 1;
+}
+
+Vec3 LightSource::get_emission_location(int i) {
+    if ((i > n * m + 1) || (i < 0)) {
+        return {0., 0., 0.};
+    } else if (i == n * m) {
+        return {0., 0., -1.};
+    } else if (i == n * m + 1) {
+        return {0., 0., 1.};
+    }
+    // Yes the integer roundoff is intended.
+    int j = i / n;
+    i = i % n;
+    Vec3 result = {(double)i, (double)j, 0.};
+    gridmap_to_sphere(result, n, m);
+    return result;
 }

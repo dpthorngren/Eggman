@@ -123,7 +123,7 @@ inline void gridmap_to_sphere(Vec3 &loc, int n, int m) {
 }
 
 
-inline double interp_gridmap(Vec3 loc, int n, int m, double north, double south, double *data) {
+inline double interp_gridmap(Vec3 loc, int n, int m, double *data) {
     if (data == nullptr) {
         return NAN;
     }
@@ -135,11 +135,11 @@ inline double interp_gridmap(Vec3 loc, int n, int m, double north, double south,
     int i1 = (i0 + 1) % (n - 1);
     int j = (int)loc.y;
     if (loc.y < 0) {
-        low = south;
+        low = data[n * m];
         high = data[i0] * (1 - weight) + data[i1] * weight;
     } else if (loc.y > m) {
         low = data[n * j + i0] * (1 - weight) + data[n * j + i1] * weight;
-        high = north;
+        high = data[n * m + 1];
     } else {
         low = data[n * j + i0] * (1 - weight) + data[n * j + i1] * weight;
         high = data[n * j + i0] * (1 - weight) + data[n * j + i1] * weight;

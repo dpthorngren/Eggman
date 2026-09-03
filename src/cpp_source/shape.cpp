@@ -204,15 +204,15 @@ Bounds Shape::slice_ylimits(double x, Bounds *out2, int zcut) const {
         result = z_clamp(lower, upper, zcut);
         if (fabs(x) > b_limb.x_size) {
             // No overlap with inner hole
-            return result;
+            return {result.min + position.y, result.max + position.y};
         }
         // Inner hole limits
         b_limb.get_ybounds(x, lower, upper);
         Bounds result2 = z_clamp(lower, upper, zcut);
         if (out2 != nullptr) {
-            *out2 = {result.min, result2.min};
+            *out2 = {result.min + position.y, result2.min + position.y};
         }
-        return {result2.max, result.max};
+        return {result2.max + position.y, result.max + position.y};
     }
 
     f_limb.get_ybounds(x, lower, upper);
