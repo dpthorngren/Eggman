@@ -68,6 +68,16 @@ def test_orbit_positions():
         assert orb.get_position(t) == approx(pos, abs=1e-9)
 
 
+def test_nullorbits():
+    # Check that setting the period and semimajor do zero does not cause crashes.
+    orb = Orbit(0., 0., 0.)
+    assert orb.get_position(2.423) == approx(np.zeros(3))
+    assert orb.period == 0
+    assert orb.semimajor == 0
+    assert orb.eccen == 0
+    assert orb.cos_inc == approx(0)
+
+
 def test_numerical():
     # Test cases from Batman (https://github.com/lkreidberg/batman, batman-package 2.5.3 on pip)
     # Periastron and apoastron positions

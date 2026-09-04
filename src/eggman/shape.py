@@ -6,9 +6,9 @@ from cython.cimports.eggman import cy_eggman as cye  # type: ignore
 
 if not cython.compiled and typing.TYPE_CHECKING:
     # Allow editor LSP to find existing compiled code...
-    from eggman import Ellipse
+    from eggman import Ellipse, Orbit
 else:  # ...but provide the real cimports during compilation
-    from cython.cimports.eggman.cy_eggman import Ellipse  # type: ignore
+    from cython.cimports.eggman.cy_eggman import Ellipse, Orbit  # type: ignore
 
 
 @cython.cclass
@@ -182,6 +182,12 @@ class Shape:
             the object with its orbit; if this is desired, users should call set_rotation next.'''
         position: cye.Vec3 = cye.Vec3(x, y, z)
         self.cshape.set_position(position)
+
+    def position_from_orbit(
+            self, t: float, orb: Orbit, rotate_with_orbit: bool = False, origin=[0, 0, 0]):
+        cython.declare(loc=cye.Vec3)
+        loc = cye.Vec3(origin[0], origin[1], origin[2])
+        return self.cshape.position_from_orbit(t, orb.corbit, rotate_with_orbit, loc)
 
     def is_visible(self, x: float, y: float, z: float):
         '''Determines whether a the given point is 'visible' from the view plane; that is, whether

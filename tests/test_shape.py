@@ -1,7 +1,7 @@
 import numpy as np
 from pytest import approx
 
-from eggman.cy_eggman import Shape
+from eggman.cy_eggman import Orbit, Shape
 from eggman.utils import rotation_matrix
 
 
@@ -174,6 +174,18 @@ def test_intersect():
                 assert np.linalg.norm(pos_rot) == approx(1)
             else:
                 assert not found
+
+
+def test_position_from_orbit():
+    # First try a null orbit
+    orb = Orbit(0., 0., 0.)
+    shape = Shape(1, 1, 1, 1, ci=orb.cos_inc)
+    shape.position_from_orbit(3.4, orb, True, [1, 2, 3])
+    assert shape.position == approx([1, 2, 3])
+    orb = Orbit(5., -3., 5.)
+    theta = 2 * np.pi * (3.4+3) / 5.0
+    shape.position_from_orbit(3.4, orb, True, [1, 2, 3])
+    assert shape.position == approx([1 + 5 * np.sin(theta), 2, 3 + 5 * np.cos(theta)])
 
 
 def test_slice_ylimits():
