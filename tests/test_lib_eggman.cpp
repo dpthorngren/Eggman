@@ -554,16 +554,16 @@ int test_general_phasemap() {
     int n = 5;
     int m = 5;
     // Simple cases
-    loc = {0., 0., 1.};
+    loc = {0., 1., 0.};
     sphere_to_gridmap(loc, n, m);
     TEST_APPROX(loc.y, m, 1e-9, errors);
-    loc = {1., 0., 0.};
+    loc = {0., 0., -1.};
     sphere_to_gridmap(loc, n, m);
     TEST_APPROX(loc.x, 0., 1e-9, errors);
     TEST_APPROX(loc.y, (m - 1) / 2., 1e-9, errors);
-    loc = {0., 1., 0.};
+    loc = {1., 0., 0.};
     sphere_to_gridmap(loc, n, m);
-    TEST_APPROX(loc.x, n / 4., 1e-9, errors);
+    TEST_APPROX(loc.x, 3 * n / 4., 1e-9, errors);
     TEST_APPROX(loc.y, (m - 1) / 2., 1e-9, errors);
 
     // Random cases

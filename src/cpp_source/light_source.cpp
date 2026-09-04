@@ -8,6 +8,9 @@ LightSource::LightSource() {
         params[i] = 0.;
     }
     limb_norm = 1.0;
+    emission_map = nullptr;
+    m = 0;
+    n = 0;
 }
 
 LightSource::LightSource(SourceType type, double *params) {

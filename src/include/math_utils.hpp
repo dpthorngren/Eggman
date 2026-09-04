@@ -106,22 +106,28 @@ inline bool integration_failed(
 }
 
 inline void sphere_to_gridmap(Vec3 &loc, int n, int m) {
-    double u = atan2(loc.y, loc.x) / (2 * M_PI);
-    loc.x = u < 0 ? n * (u + 1.) : n * u;
-    loc.y = (m + 1) * (CLAMP(loc.z, -1., 1.) + 1.) / 2. - 1.;
+    loc.x = n * fmod(atan2(loc.x, loc.z) / (2 * M_PI) + 0.5, 1);
+    loc.y = (m + 1) * (CLAMP(loc.y, -1., 1.) + 1.) / 2. - 1.;
     loc.z = 0.;
     return;
 }
 
 inline void gridmap_to_sphere(Vec3 &loc, int n, int m) {
-    loc.z = 2 * ((loc.y + 1.) / (m + 1.)) - 1.;
-    double dist = sqrt(1 - loc.z * loc.z);
-    double theta = 2. * M_PI * loc.x / n;
-    loc.x = dist * cos(theta);
-    loc.y = dist * sin(theta);
+    loc.y = 2 * ((loc.y + 1.) / (m + 1.)) - 1.;
+    double dist = sqrt(1 - loc.y * loc.y);
+    double theta = 2 * M_PI * (loc.x / n - .5);
+    loc.z = dist * cos(theta);
+    loc.x = dist * sin(theta);
     return;
 }
 
+inline double smootherstep(double x) {
+    if (x < 0)
+        return 0.;
+    if (x > 1)
+        return 1.;
+    return x * x * x * (x * (6. * x - 15.) + 10.);
+}
 
 inline double interp_gridmap(Vec3 loc, int n, int m, double *data) {
     if (data == nullptr) {
@@ -130,21 +136,22 @@ inline double interp_gridmap(Vec3 loc, int n, int m, double *data) {
     sphere_to_gridmap(loc, n, m);
 
     double low, high;
-    double weight = fmod(loc.x, 1);
+    double weight = smootherstep(fmod(loc.x, 1));
     int i0 = (int)loc.x;
     int i1 = (i0 + 1) % (n - 1);
     int j = (int)loc.y;
     if (loc.y < 0) {
         low = data[n * m];
         high = data[i0] * (1 - weight) + data[i1] * weight;
-    } else if (loc.y > m) {
+    } else if (loc.y > m - 1) {
         low = data[n * j + i0] * (1 - weight) + data[n * j + i1] * weight;
         high = data[n * m + 1];
     } else {
         low = data[n * j + i0] * (1 - weight) + data[n * j + i1] * weight;
+        j += 1;
         high = data[n * j + i0] * (1 - weight) + data[n * j + i1] * weight;
     }
-    weight = fmod(1. + loc.y, 1);
+    weight = smootherstep(fmod(1. + loc.y, 1));
     return (1. - weight) * low + weight * high;
 }
 

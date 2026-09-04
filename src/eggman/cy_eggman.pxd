@@ -116,6 +116,7 @@ cdef extern from "light_source.cpp":
         QuadraticLimb
         NonLinearLimb
         DayNight
+        EmissionMap
     cdef cppclass CLightSource "LightSource":
         SourceType stype
         double params[MAX_SOURCE_PARAMS]
@@ -126,6 +127,14 @@ cdef extern from "light_source.cpp":
 
         double get_brightness(double x, double y, const CShape &bell)
         double get_brightness_sphere(double x, double y)
+
+        int get_n()
+        int get_m()
+        int get_map_size()
+        double get_emission_point(int i)
+        int set_emission_point(int i, double value)
+        Vec3 get_emission_location(int i)
+        double interp_emission(Vec3 loc)
 
 
 ctypedef double[MAX_SOURCE_PARAMS] Array_SourceParams

@@ -9,7 +9,8 @@ from cython.cimports.eggman import cy_eggman as cye  # type: ignore
 if not cython.compiled and typing.TYPE_CHECKING:
     # Allow editor LSP to find existing compiled code...
     SourceType = Enum(
-        "SourceType", ["NoEmission", "Lambertian", "QuadraticLimb", "NonLinearLimb", "DayNight"])
+        "SourceType",
+        ["NoEmission", "Lambertian", "QuadraticLimb", "NonLinearLimb", "DayNight", "EmissionMap"])
     from eggman import Shape
 else:  # ...but provide the real cimports during compilation
     from cython.cimports.eggman.cy_eggman import Shape, SourceType  # type: ignore
@@ -20,15 +21,16 @@ class LightSource:
     csource: cye.LightSource
 
     _source_type_names_ = [
-        'no_emission', 'lambertian', 'quadratic_limb', 'nonlinear_limb', 'day_night'
+        'no_emission', 'lambertian', 'quadratic_limb', 'nonlinear_limb', 'day_night', 'emission_map'
     ]
-    _source_n_params_ = [0, 1, 3, 5, 2]
+    _source_n_params_ = [0, 1, 3, 5, 2, 2]
     _source_enum_ = [
         SourceType.NoEmission,
         cye.SourceType.Lambertian,
         cye.SourceType.QuadraticLimb,
         cye.SourceType.NonLinearLimb,
         cye.SourceType.DayNight,
+        cye.SourceType.EmissionMap,
     ]
 
     @property
@@ -46,6 +48,18 @@ class LightSource:
     @property
     def limb_norm(self):
         return self.csource.limb_norm
+
+    @property
+    def n(self):
+        return self.csource.get_n()
+
+    @property
+    def m(self):
+        return self.csource.get_m()
+
+    @property
+    def map_size(self):
+        return self.csource.get_map_size()
 
     def __init__(self, source_type: str, source_params: list[float]):
         source_type = source_type.lower().strip()
@@ -119,6 +133,22 @@ class LightSource:
             for j in range(y_view.shape[0]):
                 output_view[i, j] = self.csource.get_brightness_sphere(x_view[i], y_view[j])
         return output
+
+    def get_emission_point(self, i: int) -> float:
+        return self.csource.get_emission_point(i)
+
+    def set_emission_point(self, i: int, value: float) -> None:
+        self.csource.set_emission_point(i, value)
+
+    def get_emission_location(self, i: int) -> np.ndarray:
+        cython.declare(loc=cye.Vec3)
+        loc = self.csource.get_emission_location(i)
+        return np.array([loc.x, loc.y, loc.z])
+
+    def interp_emission(self, x: float, y: float, z: float) -> float:
+        cython.declare(loc=cye.Vec3)
+        loc = cye.Vec3(x, y, z)
+        return self.csource.interp_emission(loc)
 
     def plot_brightness(
             self, shp: Shape, res=400, axis=None, ring_front: cython.bint = True, **args):
