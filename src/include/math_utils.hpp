@@ -130,7 +130,7 @@ inline double smootherstep(double x) {
     return x * x * x * (x * (6. * x - 15.) + 10.);
 }
 
-inline double interp_gridmap(Vec3 loc, int n, int m, std::vector<double> data) {
+inline double interp_gridmap(Vec3 loc, int n, int m, const std::vector<double> &data) {
     if (data.size() != n * m + 2) {
         return NAN;
     }
