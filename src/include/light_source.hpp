@@ -2,6 +2,7 @@
 #define LIGHT_SOURCE_HPP
 
 #include "shape.hpp"
+#include <vector>
 #define MAX_SOURCE_PARAMS 12
 
 typedef enum {
@@ -16,7 +17,7 @@ typedef enum {
 
 class LightSource {
   private:
-    double *emission_map;
+    std::vector<double> emission_map;
     int n;
     int m;
 
@@ -27,9 +28,6 @@ class LightSource {
 
     LightSource();
     LightSource(SourceType type, double *params);
-    LightSource(const LightSource &other);
-    LightSource &operator=(const LightSource &other);
-    ~LightSource();
 
     // Brightness of this source for the point on Biellipsoid shp through x, y (view space)
     double get_brightness(double x, double y, const Shape &shp) const;

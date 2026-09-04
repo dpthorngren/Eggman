@@ -3,6 +3,7 @@
 
 #include <cmath>
 #include <gsl/gsl_errno.h>
+#include <vector>
 
 // Linear algebra structs and macros
 #define SIGN(x) ((x < 0.) ? -1. : ((x > 0.) ? 1. : 0.))
@@ -129,8 +130,8 @@ inline double smootherstep(double x) {
     return x * x * x * (x * (6. * x - 15.) + 10.);
 }
 
-inline double interp_gridmap(Vec3 loc, int n, int m, double *data) {
-    if (data == nullptr) {
+inline double interp_gridmap(Vec3 loc, int n, int m, std::vector<double> data) {
+    if (data.size() != n * m + 2) {
         return NAN;
     }
     sphere_to_gridmap(loc, n, m);

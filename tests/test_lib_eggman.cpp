@@ -199,6 +199,17 @@ int test_orbital_position() {
     TEST_APPROX(shp.position.x, 5., 1e-12, errors);
     TEST_APPROX(shp.position.y, 0., 1e-12, errors);
     TEST_APPROX(shp.position.z, 0., 1e-12, errors);
+    // Check that t0 works correctly
+    orb = Orbit(2., 0., 5., .243, 85., 83.);
+    double expect = orb.get_position(2.3).x;
+    orb = Orbit(2., -2.3, 5., .243, 85., 83.);
+    TEST_APPROX(orb.get_position(0.).x, expect, 1e-12, errors);
+    // Test that non-orbits (a=0) work properly.
+    orb = Orbit(0., 0., 0., 0., 90., 90.);
+    shp.position_from_orbit(2.3, orb, true);
+    TEST_APPROX(shp.position.x, 0., 1e-12, errors);
+    TEST_APPROX(shp.position.y, 0., 1e-12, errors);
+    TEST_APPROX(shp.position.z, 0., 1e-12, errors);
     return errors;
 }
 
@@ -584,16 +595,17 @@ int test_general_phasemap() {
     // Interpolation
     const int np = 527;
     const int mp = 739;
-    double data[np * mp + 2];
+    std::vector<double> data;
+    data.reserve(np*mp+2);
     for (int j = 0; j < mp; j++) {
         for (int i = 0; i < np; i++) {
             loc = {(double)i, (double)j, 0.};
             gridmap_to_sphere(loc, np, mp);
-            data[np * j + i] = gridmap_test_func(loc);
+            data.push_back(gridmap_test_func(loc));
         }
     }
-    data[np * mp] = gridmap_test_func({0., 0., -1.});
-    data[np * mp + 1] = gridmap_test_func({0., 0., 1.});
+    data.push_back(gridmap_test_func({0., 0., -1.}));
+    data.push_back(gridmap_test_func({0., 0., 1.}));
     double result, expect;
     for (int i = 0; i < 1000; i++) {
         loc.x = DRAND(-1., 1.);
