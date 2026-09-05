@@ -57,7 +57,7 @@ void Shape::set_rotation(double theta, double phi, double gamma, double ci) {
         double si;
         Mat3 orbit_rot;
         Mat3 result;
-        if (rad >= 0) {
+        if (rad > 0) {
             // TODO: Wrong sign if not 0 < i < pi/2
             st = position.x / rad;
             ct = SIGN(position.z) * sqrt(1 - st * st);
@@ -286,7 +286,6 @@ bool Shape::raycast(double x, double y, double *mu_out, Vec3 *hit_out) const {
         if (!f_limb.line_intersects(x, y, &hit) || b_limb.line_intersects(x, y, &hit)) {
             return false;
         }
-        // TODO: Hit out?  mu out?
         if (hit_out != nullptr) {
             *hit_out = hit;
         }

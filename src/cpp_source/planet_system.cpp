@@ -171,6 +171,31 @@ PlanetSystem::PlanetSystem(PlanetSystem &p) {
     }
 }
 
+PlanetSystem &PlanetSystem::operator=(const PlanetSystem &other) {
+    if (&other == this) {
+        return *this;
+    }
+    x = other.x;
+    invert_integral = other.invert_integral;
+    i_target = other.i_target;
+    n_objects = other.n_objects;
+    atol = other.atol;
+    rtol = other.rtol;
+    integInner.function = &phase_curve_integrand;
+    integInner.params = this;
+    integOuter.function = &phase_curve_inner_integral;
+    integOuter.params = this;
+    for (int i = 0; i < n_objects; i++) {
+        orbits[i] = other.orbits[i];
+        shapes[i] = other.shapes[i];
+        lights[i] = other.lights[i];
+        rotate_with_orbit[i] = other.rotate_with_orbit[i];
+        xlim[i] = Bounds();
+        ylim[i] = Bounds();
+    }
+    return *this;
+}
+
 PlanetSystem::~PlanetSystem() {
     if (workspaceInner != nullptr) {
         gsl_integration_workspace_free(workspaceInner);

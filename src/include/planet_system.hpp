@@ -40,6 +40,7 @@ class PlanetSystem {
 
     PlanetSystem(double atol = 1e-6, double rtol = 1e-3);
     PlanetSystem(PlanetSystem &p);
+    PlanetSystem &operator=(const PlanetSystem &other);
     ~PlanetSystem();
 
     int add_object(

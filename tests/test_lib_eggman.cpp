@@ -469,15 +469,12 @@ int test_planetary_system() {
 
     // Test system with a general phase map
     p.clear_objects();
-    star = LightSource(QuadraticLimb, source_params);
-    shp = Shape();
-    p.add_object(Orbit(), shp, star);
     int n = 33;
     int m = 23;
     source_params[0] = n;
     source_params[1] = m;
-    orb = Orbit(10., 0., 5., 0.00, 89., 90.);
     planet = LightSource(EmissionMap, source_params);
+    star = LightSource(QuadraticLimb, source_params);
     Vec3 loc;
     double value;
     for (int i = 0; i < planet.get_map_size(); i++) {
@@ -486,8 +483,12 @@ int test_planetary_system() {
         // Day-night as before for easy testing (and allows small grid)
         value = loc.z < 0 ? 1e-1 : 1e-2;
         TEST_ASSERT(planet.set_emission_point(i, value), ==, 0, errors);
+        star.set_emission_point(i, 1 / M_PI);
     }
+    orb = Orbit(0., 0., 0., 0., 90., 90.);
+    p.add_object(orb, Shape(), star, true);
     shp = Shape(0.1, 0.1, 0.1, 0.1);
+    orb = Orbit(10., 0., 5., 0.00, 89., 90.);
     p.add_object(orb, shp, planet, true);
     p.phase_curve_integral(time, result, n_times);
     TEST_ASSERT(result[0], <, 1, errors);
@@ -596,7 +597,7 @@ int test_general_phasemap() {
     const int np = 527;
     const int mp = 739;
     std::vector<double> data;
-    data.reserve(np*mp+2);
+    data.reserve(np * mp + 2);
     for (int j = 0; j < mp; j++) {
         for (int i = 0; i < np; i++) {
             loc = {(double)i, (double)j, 0.};
