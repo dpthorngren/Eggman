@@ -158,12 +158,12 @@ int LightSource::set_emission_point(int i, double value) {
 }
 
 Vec3 LightSource::get_emission_location(int i) {
-    if ((i > n * m + 1) || (i < 0)) {
+    if (!(i >= 0 && i < get_map_size())) {
         return {0., 0., 0.};
     } else if (i == n * m) {
-        return {0., 0., -1.};
+        return {0., -1., 0.};
     } else if (i == n * m + 1) {
-        return {0., 0., 1.};
+        return {0., 1., 0.};
     }
     // Yes the integer roundoff is intended.
     int j = i / n;

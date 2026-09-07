@@ -139,18 +139,23 @@ inline double interp_gridmap(Vec3 loc, int n, int m, const std::vector<double> &
     double low, high;
     double weight = smootherstep(fmod(loc.x, 1));
     int i0 = (int)loc.x;
-    int i1 = (i0 + 1) % (n - 1);
+    int i1 = (i0 + 1) % n;
     int j = (int)loc.y;
+    if (!(i0 >= 0 && i0 < n)) {
+        return NAN;
+    }
     if (loc.y < 0) {
         low = data[n * m];
         high = data[i0] * (1 - weight) + data[i1] * weight;
     } else if (loc.y > m - 1) {
         low = data[n * j + i0] * (1 - weight) + data[n * j + i1] * weight;
         high = data[n * m + 1];
-    } else {
+    } else if (std::isfinite(loc.y)) {
         low = data[n * j + i0] * (1 - weight) + data[n * j + i1] * weight;
         j += 1;
         high = data[n * j + i0] * (1 - weight) + data[n * j + i1] * weight;
+    } else {
+        return NAN;
     }
     weight = smootherstep(fmod(1. + loc.y, 1));
     return (1. - weight) * low + weight * high;

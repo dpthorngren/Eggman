@@ -462,19 +462,20 @@ int test_planetary_system() {
     TEST_ASSERT(b[3].min, ==, 0., errors);
     TEST_ASSERT(b[3].max, ==, 0., errors);
 
-
     d_ring = p.integrate_single(0);
     // TODO: Fix bug -- ybounds output correctly, must be issue in PlanetSystem?
     TEST_APPROX(1 - d_ring, (1 - d_outer) - (1 - d_inner), 1e-6, errors);
 
     // Test system with a general phase map
     p.clear_objects();
+    star = LightSource(QuadraticLimb, source_params);
+    orb = Orbit(0., 0., 0., 0., 90., 90.);
+    p.add_object(orb, Shape(), star, true);
     int n = 33;
     int m = 23;
     source_params[0] = n;
     source_params[1] = m;
     planet = LightSource(EmissionMap, source_params);
-    star = LightSource(QuadraticLimb, source_params);
     Vec3 loc;
     double value;
     for (int i = 0; i < planet.get_map_size(); i++) {
@@ -483,10 +484,7 @@ int test_planetary_system() {
         // Day-night as before for easy testing (and allows small grid)
         value = loc.z < 0 ? 1e-1 : 1e-2;
         TEST_ASSERT(planet.set_emission_point(i, value), ==, 0, errors);
-        star.set_emission_point(i, 1 / M_PI);
     }
-    orb = Orbit(0., 0., 0., 0., 90., 90.);
-    p.add_object(orb, Shape(), star, true);
     shp = Shape(0.1, 0.1, 0.1, 0.1);
     orb = Orbit(10., 0., 5., 0.00, 89., 90.);
     p.add_object(orb, shp, planet, true);
@@ -605,8 +603,8 @@ int test_general_phasemap() {
             data.push_back(gridmap_test_func(loc));
         }
     }
-    data.push_back(gridmap_test_func({0., 0., -1.}));
-    data.push_back(gridmap_test_func({0., 0., 1.}));
+    data.push_back(gridmap_test_func({0., -1., 0.}));
+    data.push_back(gridmap_test_func({0., 1., 0.}));
     double result, expect;
     for (int i = 0; i < 1000; i++) {
         loc.x = DRAND(-1., 1.);
@@ -629,8 +627,8 @@ int test_general_phasemap() {
     TEST_ASSERT(source.get_map_size(), ==, 877 * 913 + 2, errors);
 
     // Check north and south poles are located properly
-    TEST_ASSERT(source.get_emission_location(source.get_map_size() - 1).z, ==, 1.0, errors);
-    TEST_ASSERT(source.get_emission_location(source.get_map_size() - 2).z, ==, -1.0, errors);
+    TEST_ASSERT(source.get_emission_location(source.get_map_size() - 1).y, ==, 1.0, errors);
+    TEST_ASSERT(source.get_emission_location(source.get_map_size() - 2).y, ==, -1.0, errors);
 
     for (int i = 0; i < source.get_map_size(); i++) {
         loc = source.get_emission_location(i);
