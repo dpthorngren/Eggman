@@ -16,14 +16,13 @@ else:  # ...but provide the real cimports during compilation
 class PlanetSystem:
     cps: cye.CPlanetSystem
 
-    def __init__(self, atol=1e-6, rtol=1e-3):
+    def __init__(self, atol=1e-6, rtol=1e-3, max_steps=100):
         '''Initialize a PlanetSystem with the integration tolerances.
 
         Args:
             atol: the absolute tolerance for the integrators.
             rtol: the tolerance for the integrators relative to the result.'''
-        self.cps.atol = atol
-        self.cps.rtol = rtol
+        self.cps = cye.CPlanetSystem(atol, rtol, max_steps)
 
     def add_object(
             self,
@@ -174,7 +173,7 @@ class PlanetSystem:
                 order of insertion.'''
         return self.cps.integrate_single(i)
 
-    def phase_curve_integral(self, times: cye.Array1d_f64):
+    def integrate(self, times: cye.Array1d_f64):
         '''Get the brightness of all objects in the system, added together, at the given times.
             This is the standard function to call for getting a light curve.
 
@@ -186,8 +185,7 @@ class PlanetSystem:
             A Numpy array of brightnesses at the specified times.'''
         results = np.full((len(times),), np.nan)
         results_view: cye.Array1d_f64 = results
-        self.cps.phase_curve_integral(
-            cython.address(times[0]), cython.address(results_view[0]), len(times))
+        self.cps.integrate(cython.address(times[0]), cython.address(results_view[0]), len(times))
         return results
 
     def get_n_objects(self) -> int:

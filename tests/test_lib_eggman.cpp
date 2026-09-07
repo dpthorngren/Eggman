@@ -340,7 +340,7 @@ int test_planetary_system() {
         time[i] = 10. * i / n_times;
         result[i] = -1.;
     }
-    p.phase_curve_integral(time, result, n_times);
+    p.integrate(time, result, n_times);
     for (int i = 0; i < n_times; i++) {
         TEST_ASSERT(result[i], >, 0., errors);
         TEST_ASSERT(result[i], <, 2., errors);
@@ -380,7 +380,7 @@ int test_planetary_system() {
     shp = Shape(0.1, 0.1, 0.1, 0.1);
     p.add_object(orb, shp, planet, true);
     TEST_ASSERT(p.get_n_objects(), ==, 2, errors);
-    p.phase_curve_integral(time, result, n_times);
+    p.integrate(time, result, n_times);
     TEST_ASSERT(result[0], <, 1, errors);
     TEST_APPROX(result[1], 1 + M_PI * .1 * .1 * 1.1e-1 / 2., 1e-9, errors);
     TEST_APPROX(result[2], 1, 1e-9, errors);
@@ -487,7 +487,7 @@ int test_planetary_system() {
     shp = Shape(0.1, 0.1, 0.1, 0.1);
     orb = Orbit(10., 0., 5., 0.00, 89., 90.);
     p.add_object(orb, shp, planet, true);
-    p.phase_curve_integral(time, result, n_times);
+    p.integrate(time, result, n_times);
     TEST_ASSERT(result[0], <, 1, errors);
     TEST_APPROX(result[1], 1 + 1e-2 * M_PI * .1 * .1, 1e-9, errors);
     TEST_APPROX(result[2], 1, 1e-9, errors);

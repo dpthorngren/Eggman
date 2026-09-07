@@ -154,18 +154,18 @@ cpdef object transit(double r_forward, double r_back, double r_up, double r_side
 
 # ===== Phase Curve Class and Wrapper =====
 cdef extern from "planet_system.cpp":
-    const int MAX_PHASE_OBJECTS
+    const int MAX_SYSTEM_OBJECTS
     cdef cppclass CPlanetSystem "PlanetSystem":
-        COrbit orbits[MAX_PHASE_OBJECTS]
-        CShape shapes[MAX_PHASE_OBJECTS]
-        CLightSource lights[MAX_PHASE_OBJECTS]
-        bint rotate_with_orbit[MAX_PHASE_OBJECTS]
-        Bounds xlim[MAX_PHASE_OBJECTS]
-        Bounds ylim[MAX_PHASE_OBJECTS]
+        COrbit orbits[MAX_SYSTEM_OBJECTS]
+        CShape shapes[MAX_SYSTEM_OBJECTS]
+        CLightSource lights[MAX_SYSTEM_OBJECTS]
+        bint rotate_with_orbit[MAX_SYSTEM_OBJECTS]
+        Bounds xlim[MAX_SYSTEM_OBJECTS]
+        Bounds ylim[MAX_SYSTEM_OBJECTS]
 
         CPlanetSystem()
         CPlanetSystem(CPlanetSystem &p)
-        CPlanetSystem(double atol, double rtol)
+        CPlanetSystem(double atol, double rtol, int max_steps)
 
         int add_object(const COrbit &orb, const CShape &bell, const CLightSource &source, bint rot_with_orbit, int parent_index)
         int get_n_objects() const
@@ -174,7 +174,7 @@ cdef extern from "planet_system.cpp":
         double integrate_single(int i)
         double rtol
         double atol
-        void phase_curve_integral(double *times, double *outputs, int n)
+        void integrate(double *times, double *outputs, int n)
 
 cdef class PlanetSystem:
     cdef CPlanetSystem cps

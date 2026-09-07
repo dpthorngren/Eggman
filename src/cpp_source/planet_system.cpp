@@ -2,7 +2,7 @@
 #include "math_utils.hpp"
 #include <cmath>
 
-double phase_curve_integrand(double y, void *params) {
+double emission_integrand(double y, void *params) {
     PlanetSystem *p = (PlanetSystem *)params;
     return p->lights[p->i_target].get_brightness(p->x, y, p->shapes[p->i_target]);
 }
@@ -73,7 +73,7 @@ int process_bounds(Bounds *b, int n_relevant, bool invert) {
 }
 
 
-double phase_curve_inner_integral(double x, void *params) {
+double emission_outer_integral(double x, void *params) {
     int i;
     PlanetSystem *p = (PlanetSystem *)params;
     p->x = x;
@@ -82,7 +82,7 @@ double phase_curve_inner_integral(double x, void *params) {
     // Determine the range(s) to integrate over
     // Max size of the bounds "stack" is low, so using an array.
     int n_bounds = 1;
-    Bounds b[2 * MAX_PHASE_OBJECTS + 1];
+    Bounds b[2 * MAX_SYSTEM_OBJECTS + 1];
     // Initially, plan to integrate over the entire target
     b[0] = p->shapes[p->i_target].slice_ylimits(x);
     if (b[0].min >= b[0].max) {
@@ -114,7 +114,7 @@ double phase_curve_inner_integral(double x, void *params) {
     double result, err;
     for (i = 0; i < n_bounds; i++) {
         code = gsl_integration_qag(
-            &p->integInner, b[i].min, b[i].max, .1 * p->atol, .1 * p->rtol, 100, 1,
+            &p->integInner, b[i].min, b[i].max, .1 * p->atol, .1 * p->rtol, p->max_steps, 1,
             p->workspaceInner, &result, &err
         );
         if (integration_failed(code, result, err, p->atol, p->rtol)) {
@@ -126,7 +126,7 @@ double phase_curve_inner_integral(double x, void *params) {
 }
 
 
-PlanetSystem::PlanetSystem(double atol, double rtol) {
+PlanetSystem::PlanetSystem(double atol, double rtol, int max_steps) {
     x = 0.;
     invert_integral = false;
     i_target = 0;
@@ -135,13 +135,15 @@ PlanetSystem::PlanetSystem(double atol, double rtol) {
     this->rtol = rtol;
 
     // Prepare the inner (y) integral variables
-    workspaceInner = gsl_integration_workspace_alloc(100);
-    workspaceOuter = gsl_integration_workspace_alloc(100);
-    integInner.function = &phase_curve_integrand;
+    max_steps = CLAMP(max_steps, 10, 5000);
+    this->max_steps = max_steps;
+    workspaceInner = gsl_integration_workspace_alloc(max_steps);
+    workspaceOuter = gsl_integration_workspace_alloc(max_steps);
+    integInner.function = &emission_integrand;
     integInner.params = this;
 
     // Now prepare the outer (x) integral variables
-    integOuter.function = &phase_curve_inner_integral;
+    integOuter.function = &emission_outer_integral;
     integOuter.params = this;
 
     // Do not crash the program due to lack of precision
@@ -155,11 +157,12 @@ PlanetSystem::PlanetSystem(PlanetSystem &p) {
     n_objects = p.n_objects;
     atol = p.atol;
     rtol = p.rtol;
-    workspaceInner = gsl_integration_workspace_alloc(100);
-    workspaceOuter = gsl_integration_workspace_alloc(100);
-    integInner.function = &phase_curve_integrand;
+    max_steps = p.max_steps;
+    workspaceInner = gsl_integration_workspace_alloc(max_steps);
+    workspaceOuter = gsl_integration_workspace_alloc(max_steps);
+    integInner.function = &emission_integrand;
     integInner.params = this;
-    integOuter.function = &phase_curve_inner_integral;
+    integOuter.function = &emission_outer_integral;
     integOuter.params = this;
     for (int i = 0; i < n_objects; i++) {
         orbits[i] = p.orbits[i];
@@ -181,9 +184,22 @@ PlanetSystem &PlanetSystem::operator=(const PlanetSystem &other) {
     n_objects = other.n_objects;
     atol = other.atol;
     rtol = other.rtol;
-    integInner.function = &phase_curve_integrand;
+    if (max_steps != other.max_steps || workspaceInner == nullptr || workspaceOuter == nullptr) {
+        max_steps = other.max_steps;
+        if (workspaceInner != nullptr) {
+            gsl_integration_workspace_free(workspaceInner);
+            workspaceInner = nullptr;
+        }
+        if (workspaceOuter != nullptr) {
+            gsl_integration_workspace_free(workspaceOuter);
+            workspaceOuter = nullptr;
+        }
+        workspaceInner = gsl_integration_workspace_alloc(max_steps);
+        workspaceOuter = gsl_integration_workspace_alloc(max_steps);
+    }
+    integInner.function = &emission_integrand;
     integInner.params = this;
-    integOuter.function = &phase_curve_inner_integral;
+    integOuter.function = &emission_outer_integral;
     integOuter.params = this;
     for (int i = 0; i < n_objects; i++) {
         orbits[i] = other.orbits[i];
@@ -292,7 +308,7 @@ double PlanetSystem::integrate_single(int it) {
         }
     }
     int code = gsl_integration_qag(
-        &integOuter, xmin, xmax, .1 * atol, .1 * rtol, 100, 1, workspaceOuter, &result, &err
+        &integOuter, xmin, xmax, .1 * atol, .1 * rtol, max_steps, 1, workspaceOuter, &result, &err
     );
     if (integration_failed(code, result, err, atol, rtol)) {
         return NAN;
@@ -305,7 +321,7 @@ double PlanetSystem::integrate_single(int it) {
 
 int PlanetSystem::get_n_objects() const { return n_objects; }
 
-void PlanetSystem::phase_curve_integral(double *times, double *outputs, int n) {
+void PlanetSystem::integrate(double *times, double *outputs, int n) {
     // TODO: Adjust to separately get the brightness of each component
     int i, j;
     double result = 0.;

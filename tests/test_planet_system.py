@@ -4,8 +4,8 @@ from pytest import approx, raises
 import eggman
 
 
-def test_phase_trivial():
-    p = eggman.PlanetSystem()
+def test_system_integration_trivial():
+    p = eggman.PlanetSystem(max_steps=200)
     p.add_star("quadratic_limb", [0.2, 0.1])
     p.add_planet(.1, .11, .08, 1.3, 8., 5., inclination=89.)
     assert p.get_n_objects() == 2
@@ -43,9 +43,9 @@ def test_phase_trivial():
     assert p.integrate_single(1) == 0.
     assert p.integrate_single(0) == approx(1., rel=1e-7)
 
-    # Test phase integral
+    # Test integral
     times = np.linspace(0, 8, 5)
-    result = p.phase_curve_integral(times)
+    result = p.integrate(times)
     assert len(result) == len(times)
     assert result[0] < 1.
     assert result[1] == approx(1., rel=1e-7)
@@ -65,7 +65,7 @@ def test_rings():
     assert p[2][1].area == approx(np.pi * (.16**2 - .12**2), abs=1e-12)
     assert p.get_n_objects() == 3
     t = np.array([1e-5, 4.0])
-    depths = p.phase_curve_integral(t)
+    depths = p.integrate(t)
     assert depths[0] == approx(1 - (p[1][1].area + p[2][1].area) / p[0][1].area, abs=1e-7)
     assert depths[1] == approx(1, abs=1e-6)
 
@@ -75,10 +75,10 @@ def test_rings():
     p.add_planet(.1, .11, .08, 1.3, 8., 5., inclination=89.)
     assert p.get_n_objects() == 2
     t = np.array([0.1, 4.0])
-    depths = p.phase_curve_integral(t)
+    depths = p.integrate(t)
     assert depths[0] < 1
     assert depths[1] == approx(1, abs=1e-6)
     p.add_ring(.16, .12, 1, gamma=60)
-    depths2 = p.phase_curve_integral(t)
+    depths2 = p.integrate(t)
     assert depths2[0] < depths[0]
     assert depths2[1] == approx(depths[1], abs=1e-6)
