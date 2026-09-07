@@ -463,7 +463,6 @@ int test_planetary_system() {
     TEST_ASSERT(b[3].max, ==, 0., errors);
 
     d_ring = p.integrate_single(0);
-    // TODO: Fix bug -- ybounds output correctly, must be issue in PlanetSystem?
     TEST_APPROX(1 - d_ring, (1 - d_outer) - (1 - d_inner), 1e-6, errors);
 
     // Test system with a general phase map

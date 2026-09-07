@@ -273,10 +273,22 @@ double PlanetSystem::integrate_single(int it) {
         }
     }
     // If the occluders area is small and the total brightness is available,
+    // try to integrate only the occluded area, and subtract from the total.
     else if (area < 0.5 * shapes[it].get_area()) {
         baseline_flux = lights[it].get_integrated_brightness(shapes[it]);
         if (!isnan(baseline_flux)) {
             invert_integral = true;
+            // Since we're integrating occluded area, recalculate x bounds.
+            xmin = INFINITY;
+            xmax = -INFINITY;
+            for (int i = 0; i < n_objects; i++) {
+                if (relevant[i]) {
+                    xmin = fmin(xlim[i].min, xmin);
+                    xmax = fmax(xlim[i].max, xmax);
+                }
+            }
+            xmin = fmax(xmin, xlim[i_target].min);
+            xmax = fmin(xmax, xlim[i_target].max);
         }
     }
     int code = gsl_integration_qag(
