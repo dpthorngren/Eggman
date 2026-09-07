@@ -481,8 +481,8 @@ int test_planetary_system() {
     for (int i = 0; i < planet.get_map_size(); i++) {
         loc = planet.get_emission_location(i);
         TEST_APPROX(LENGTH(loc), 1.0, 1e-9, errors);
-        // Day-night as before for easy testing (and allows small grid)
-        value = loc.z < 0 ? 1e-1 : 1e-2;
+        // Contrived map so that the integral works out to something simple
+        value = 1e-2 + 3e-3 * loc.z * loc.z * loc.z;
         TEST_ASSERT(planet.set_emission_point(i, value), ==, 0, errors);
     }
     shp = Shape(0.1, 0.1, 0.1, 0.1);
@@ -490,7 +490,7 @@ int test_planetary_system() {
     p.add_object(orb, shp, planet, true);
     p.phase_curve_integral(time, result, n_times);
     TEST_ASSERT(result[0], <, 1, errors);
-    TEST_APPROX(result[1], 1 + M_PI * .1 * .1 * 1.1e-1 / 2., 1e-9, errors);
+    TEST_APPROX(result[1], 1 + 1e-2 * M_PI * .1 * .1, 1e-9, errors);
     TEST_APPROX(result[2], 1, 1e-9, errors);
     TEST_APPROX(result[3], result[1], 1e-9, errors);
     return errors;
