@@ -393,6 +393,16 @@ Bounds Shape::x_bounds() const {
     }
 }
 
+bool Shape::fully_contains(const Shape other) const {
+    if (shape_type == Ring) {
+        return false;
+    }
+    double dx = (position.x - other.position.x);
+    double dy = (position.y - other.position.y);
+    double dist = sqrt(dx * dx + dy * dy);
+    return dist + other.get_outer_radius() < get_inner_radius();
+}
+
 Bounds Shape::y_bounds() const {
     if (shape_type == Ring) {
         return {position.y - f_limb.y_size, position.y + f_limb.y_size};

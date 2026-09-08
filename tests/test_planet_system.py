@@ -54,6 +54,29 @@ def test_system_integration_trivial():
     assert result[0] == approx(result[-1], rel=1e-7)
 
 
+def test_secondary_transits():
+    p = eggman.PlanetSystem(max_steps=200)
+    p.add_star("quadratic_limb", [0.2, 0.1])
+    planet_light = eggman.LightSource('lambertian', [.01])
+    p.add_planet(.1, .1, .1, .1, 8, 4., inclination=87.1, theta=23, source=planet_light)
+    assert p.get_n_objects() == 2
+
+    times = np.linspace(2, 6, 1000)
+    result = p.integrate(times)
+    l_planet = np.pi * .1**2 * .01
+    for t, r, in zip(times, result):
+        if abs(t - 4.0) > .35:
+            # Out of transit
+            assert r == approx(1 + l_planet)
+        elif abs(t - 4.0) < .28:
+            # Behind star
+            assert r == approx(1.0)
+        else:
+            # Secondary ingress / egress
+            assert r < 1. + l_planet, f"{t-4=}, {r=}"
+            assert r > 1., f"{t-4=}, {r=}"
+
+
 def test_rings():
     # Lambertian star, face-on-ring exact check
     p = eggman.PlanetSystem()

@@ -8,6 +8,8 @@ Ellipse::Ellipse() {
     x_size = 1.0;
     y_size = 1.0;
     det = e1.x * e2.y - e2.x * e1.y;
+    a = 1;
+    b = 1;
 }
 
 Ellipse::Ellipse(const Vec3 &e1, const Vec3 &e2) {
@@ -16,6 +18,10 @@ Ellipse::Ellipse(const Vec3 &e1, const Vec3 &e2) {
     x_size = sqrt(e1.x * e1.x + e2.x * e2.x);
     y_size = sqrt(e1.y * e1.y + e2.y * e2.y);
     det = e1.x * e2.y - e2.x * e1.y;
+    // Find the 2d major and minor axis lengths
+    double m = e1.x * e1.x + e1.y * e1.y + e2.x * e2.x + e2.y * e2.y;
+    a = (sqrt(m + 2 * fabs(det)) + sqrt(m - 2 * fabs(det))) / 2.;
+    b = (sqrt(m + 2 * fabs(det)) - sqrt(m - 2 * fabs(det))) / 2.;
 }
 
 void Ellipse::get_ybounds(double x, Vec3 &out_min, Vec3 &out_max) const {

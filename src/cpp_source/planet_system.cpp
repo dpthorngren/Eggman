@@ -279,6 +279,10 @@ double PlanetSystem::integrate_single(int it) {
         if (relevant[i]) {
             n_occluders += 1;
             area += shapes[i].get_area();
+            // Skip fully occluded objects if detected
+            if (shapes[i].fully_contains(shapes[i_target])) {
+                return 0.;
+            }
         }
     }
     // If no occluders, try to use get the brightness without an integral

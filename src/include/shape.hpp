@@ -58,6 +58,11 @@ class Shape {
     // Derived info
     Bounds x_bounds() const;
     Bounds y_bounds() const;
+    double get_inner_radius() const;
+    double get_outer_radius() const;
+    // Detect SOME (not all) cases where other is fully inside the shape's limb
+    // This is entirely 2d and does not conduct z testing
+    bool fully_contains(const Shape other) const;
     // Checks if loc is on the forward side of the biellipsoid or the back
     bool is_forward(Vec3 loc) const;
     bool is_forward_local(Vec3 loc) const;
@@ -86,6 +91,20 @@ class Shape {
 };
 
 // Inlined functions
+
+inline double Shape::get_inner_radius() const {
+    if (shape_type == Ring) {
+        return f_limb.b;
+    }
+    return fmin(f_limb.b, b_limb.b);
+}
+
+inline double Shape::get_outer_radius() const {
+    if (shape_type == Ring) {
+        return f_limb.a;
+    }
+    return fmax(f_limb.a, b_limb.a);
+}
 
 inline Vec3 Shape::world_to_aligned(Vec3 loc) const {
     Vec3 result;

@@ -21,12 +21,25 @@ using namespace std;
         out += 1;                                                                                  \
     }
 #define TEST_APPROX(A, B, atol, out)                                                               \
-    if (fabs((A) - (B)) > atol) {                                                                  \
+    if (!(fabs((A) - (B)) < atol)) {                                                               \
         cout << "  ERROR in " << __func__ << " at line " << __LINE__ << ":" << endl;               \
         cout << "    Assertion \"" << #A << "~=" << #B << "\" (" << (A) << "~=" << (B)             \
              << ") is false." << endl;                                                             \
         out += 1;                                                                                  \
     }
+
+int test_ellipse() {
+    ANNOUNCE_TEST();
+    int errors = 0;
+    double ct = cos(0.15);
+    double st = sin(0.15);
+    Ellipse ell({ct * 5., st * 5., 3.}, {-st * 3, ct * 3., -8.});
+    TEST_APPROX(ell.det, 15., 1e-9, errors);
+    TEST_APPROX(ell.get_area(), M_PI * 5 * 3, 1e-9, errors);
+    TEST_APPROX(ell.a, 5.0, 1e-9, errors);
+    TEST_APPROX(ell.b, 3.0, 1e-9, errors);
+    return errors;
+}
 
 int test_biellipsoid() {
     ANNOUNCE_TEST();
@@ -352,6 +365,18 @@ int test_planetary_system() {
     TEST_APPROX(result[3], 1 + .12 * .09 * 1e-6, 1e-6, errors);
     TEST_APPROX(result[2], result[1], 1e-6, errors);
 
+    // Test detecting that the planet is fully contained
+    p.set_time(-0.05);
+    TEST_ASSERT(p.shapes[0].fully_contains(p.shapes[1]), ==, true, errors);
+    TEST_ASSERT(p.shapes[1].fully_contains(p.shapes[0]), ==, false, errors);
+    p.set_time(2.9);
+    TEST_ASSERT(p.shapes[0].fully_contains(p.shapes[1]), ==, false, errors);
+    TEST_ASSERT(p.shapes[1].fully_contains(p.shapes[0]), ==, false, errors);
+    p.set_time(5.05);
+    TEST_ASSERT(p.shapes[0].fully_contains(p.shapes[1]), ==, true, errors);
+    TEST_ASSERT(p.shapes[1].fully_contains(p.shapes[0]), ==, false, errors);
+
+
     // Test star with quadratic limb-darkening
     source_params[1] = 0.2;
     source_params[2] = 0.1;
@@ -664,6 +689,7 @@ int main() {
     int errors = 0;
     errors += test_orbital_position();
     errors += test_light_source();
+    errors += test_ellipse();
     errors += test_biellipsoid();
     errors += test_rings();
     errors += test_general_phasemap();

@@ -16,6 +16,8 @@ class Ellipse {
     double det;    // The determinant of the 2d (x, y) transformation matrix.
     double x_size; // Bounds the ellipse in x to [+x_size, -x_size]
     double y_size; // Bounds the ellipse to y to [+y_size, -y_size]
+    double a;      // Length of the major axis in 2d space
+    double b;      // Length of the minor axis in 2d space
 
     Ellipse();
     Ellipse(const Vec3 &e1, const Vec3 &e2);
