@@ -145,6 +145,16 @@ class LightSource:
         loc = self.csource.get_emission_location(i)
         return np.array([loc.x, loc.y, loc.z])
 
+    def set_emission_map(self, func: typing.Callable) -> np.ndarray:
+        cython.declare(i=int, loc=cye.Vec3, value=float)
+        result = np.full(self.csource.get_map_size(), np.nan)
+        for i in range(self.csource.get_map_size()):
+            loc = self.csource.get_emission_location(i)
+            value = func(loc.x, loc.y, loc.z)
+            result[i] = value
+            self.csource.set_emission_point(i, value)
+        return result
+
     def interp_emission(self, x: float, y: float, z: float) -> float:
         cython.declare(loc=cye.Vec3)
         loc = cye.Vec3(x, y, z)

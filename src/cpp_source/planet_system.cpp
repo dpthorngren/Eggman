@@ -169,23 +169,24 @@ PlanetSystem::PlanetSystem(PlanetSystem &p) {
         shapes[i] = p.shapes[i];
         lights[i] = p.lights[i];
         rotate_with_orbit[i] = p.rotate_with_orbit[i];
-        xlim[i] = Bounds();
-        ylim[i] = Bounds();
+        xlim[i] = p.xlim[i];
+        ylim[i] = p.ylim[i];
+        lum_cache[i] = p.lum_cache[i];
     }
 }
 
-PlanetSystem &PlanetSystem::operator=(const PlanetSystem &other) {
-    if (&other == this) {
+PlanetSystem &PlanetSystem::operator=(const PlanetSystem &p) {
+    if (&p == this) {
         return *this;
     }
-    x = other.x;
-    invert_integral = other.invert_integral;
-    i_target = other.i_target;
-    n_objects = other.n_objects;
-    atol = other.atol;
-    rtol = other.rtol;
-    if (max_steps != other.max_steps || workspaceInner == nullptr || workspaceOuter == nullptr) {
-        max_steps = other.max_steps;
+    x = p.x;
+    invert_integral = p.invert_integral;
+    i_target = p.i_target;
+    n_objects = p.n_objects;
+    atol = p.atol;
+    rtol = p.rtol;
+    if (max_steps != p.max_steps || workspaceInner == nullptr || workspaceOuter == nullptr) {
+        max_steps = p.max_steps;
         if (workspaceInner != nullptr) {
             gsl_integration_workspace_free(workspaceInner);
             workspaceInner = nullptr;
@@ -202,12 +203,13 @@ PlanetSystem &PlanetSystem::operator=(const PlanetSystem &other) {
     integOuter.function = &emission_outer_integral;
     integOuter.params = this;
     for (int i = 0; i < n_objects; i++) {
-        orbits[i] = other.orbits[i];
-        shapes[i] = other.shapes[i];
-        lights[i] = other.lights[i];
-        rotate_with_orbit[i] = other.rotate_with_orbit[i];
-        xlim[i] = Bounds();
-        ylim[i] = Bounds();
+        orbits[i] = p.orbits[i];
+        shapes[i] = p.shapes[i];
+        lights[i] = p.lights[i];
+        rotate_with_orbit[i] = p.rotate_with_orbit[i];
+        xlim[i] = p.xlim[i];
+        ylim[i] = p.ylim[i];
+        lum_cache[i] = p.lum_cache[i];
     }
     return *this;
 }
@@ -227,7 +229,6 @@ int PlanetSystem::add_object(
     const Orbit &orb, const Shape &shp, const LightSource &source, bool rot_with_orbit,
     int parent_index
 ) {
-    // Note: These are all data-only structs, so these are copy operations
     orbits[n_objects] = orb;
     parent_indices[n_objects] = parent_index;
     shapes[n_objects] = shp;
@@ -235,6 +236,7 @@ int PlanetSystem::add_object(
     rotate_with_orbit[n_objects] = rot_with_orbit;
     xlim[n_objects] = shapes[n_objects].x_bounds();
     ylim[n_objects] = shapes[n_objects].y_bounds();
+    lum_cache[n_objects] = NAN;
     n_objects += 1;
     return 0;
 }
@@ -251,6 +253,55 @@ void PlanetSystem::set_time(double t) {
     }
 }
 
+double PlanetSystem::integrate_unoccluded_single(int it, bool may_integrate) {
+    // Skip non-emitting objects
+    if (lights[it].stype == NoEmission) {
+        return 0.;
+    }
+    // Used previously cached result, if available
+    if (isfinite(lum_cache[it])) {
+        return lum_cache[it];
+    }
+    // Use closed-form brightness if available
+    double result = lights[it].get_integrated_brightness(shapes[it]);
+    if (!isnan(result)) {
+        return result;
+    }
+    if (!may_integrate) {
+        return NAN;
+    }
+
+    // Temporarily mark all objects as irrelevant (not occluding)
+    bool prev_relevant[MAX_SYSTEM_OBJECTS];
+    for (int i = 0; i < n_objects; i++) {
+        prev_relevant[i] = relevant[i];
+        relevant[i] = false;
+    }
+
+    // Conduct the integral
+    i_target = it;
+    double err;
+    int code = gsl_integration_qag(
+        &integOuter, xlim[it].min, xlim[it].max, .1 * atol, .1 * rtol, max_steps, 1, workspaceOuter,
+        &result, &err
+    );
+    if (integration_failed(code, result, err, atol, rtol)) {
+        return NAN;
+    }
+
+    // May cache result if object doesn't rotate
+    if (!rotate_with_orbit[it]) {
+        lum_cache[it] = result;
+    }
+
+    // Restore relevancy array to prrevious state
+    for (int i = 0; i < n_objects; i++) {
+        relevant[i] = prev_relevant[i];
+    }
+
+    return result;
+}
+
 double PlanetSystem::integrate_single(int it) {
     // Skip non-emitting objects
     if (lights[it].stype == NoEmission) {
@@ -261,56 +312,54 @@ double PlanetSystem::integrate_single(int it) {
     double area = 0.;
     i_target = it;
     invert_integral = false;
-    double xmin = xlim[i_target].min;
-    double xmax = xlim[i_target].max;
+    double xmin = xlim[it].min;
+    double xmax = xlim[it].max;
 
     // Detect trivially non-overlapping objects and mark them to be skipped
     int n_occluders = 0;
     for (int i = 0; i < n_objects; i++) {
         relevant[i] =
             // Objects cannot occlude themselves
-            ((i != i_target) &&
+            ((i != it) &&
              // Objects behind the target cannot occlude it
-             (shapes[i].position.z > shapes[i_target].position.z) &&
+             (shapes[i].position.z > shapes[it].position.z) &&
              // Objects that don't overlap in x with the target cannot occlude it
              (xlim[i].max > xmin) && (xlim[i].min < xmax) &&
              // Objects that don't overlap in y with the target cannot occlude it
-             (ylim[i].max > ylim[i_target].min) && (ylim[i].min < ylim[i_target].max));
+             (ylim[i].max > ylim[it].min) && (ylim[i].min < ylim[it].max));
         if (relevant[i]) {
             n_occluders += 1;
             area += shapes[i].get_area();
-            // Skip fully occluded objects if detected
-            if (shapes[i].fully_contains(shapes[i_target])) {
+            // If object is fully occluded, no need to integrate
+            if (shapes[i].fully_contains(shapes[it])) {
                 return 0.;
             }
         }
     }
-    // If no occluders, try to use get the brightness without an integral
+
     if (n_occluders == 0) {
-        result = lights[it].get_integrated_brightness(shapes[it]);
-        if (!isnan(result)) {
-            return result;
-        }
+        return integrate_unoccluded_single(it, true);
     }
-    // If the occluders area is small and the total brightness is available,
-    // try to integrate only the occluded area, and subtract from the total.
-    else if (area < 0.5 * shapes[it].get_area()) {
-        baseline_flux = lights[it].get_integrated_brightness(shapes[it]);
-        if (!isnan(baseline_flux)) {
-            invert_integral = true;
-            // Since we're integrating occluded area, recalculate x bounds.
-            xmin = INFINITY;
-            xmax = -INFINITY;
-            for (int i = 0; i < n_objects; i++) {
-                if (relevant[i]) {
-                    xmin = fmin(xlim[i].min, xmin);
-                    xmax = fmax(xlim[i].max, xmax);
-                }
+
+    // If the occluder's area is small and the total brightness is available,
+    // integrate only the occluded area, and subtract from the total.
+    if (area < 0.5 * shapes[it].get_area()) {
+        invert_integral = true;
+        baseline_flux = integrate_unoccluded_single(it, true);
+        // Since we're integrating occluded area, recalculate x bounds.
+        xmin = INFINITY;
+        xmax = -INFINITY;
+        for (int i = 0; i < n_objects; i++) {
+            if (relevant[i]) {
+                xmin = fmin(xlim[i].min, xmin);
+                xmax = fmax(xlim[i].max, xmax);
             }
-            xmin = fmax(xmin, xlim[i_target].min);
-            xmax = fmin(xmax, xlim[i_target].max);
         }
+        xmin = fmax(xmin, xlim[it].min);
+        xmax = fmin(xmax, xlim[it].max);
     }
+
+    // Conduct the integral
     int code = gsl_integration_qag(
         &integOuter, xmin, xmax, .1 * atol, .1 * rtol, max_steps, 1, workspaceOuter, &result, &err
     );
@@ -326,7 +375,6 @@ double PlanetSystem::integrate_single(int it) {
 int PlanetSystem::get_n_objects() const { return n_objects; }
 
 void PlanetSystem::integrate(double *times, double *outputs, int n) {
-    // TODO: Adjust to separately get the brightness of each component
     int i, j;
     double result = 0.;
 
@@ -339,6 +387,13 @@ void PlanetSystem::integrate(double *times, double *outputs, int n) {
             result += integrate_single(j);
         }
         outputs[i] = result;
+    }
+    return;
+}
+
+void PlanetSystem::reset_cache() {
+    for (int i = 0; i < n_objects; i++) {
+        lum_cache[i] = NAN;
     }
     return;
 }

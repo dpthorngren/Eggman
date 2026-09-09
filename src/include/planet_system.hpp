@@ -41,6 +41,7 @@ class PlanetSystem {
     bool rotate_with_orbit[MAX_SYSTEM_OBJECTS];
     Bounds xlim[MAX_SYSTEM_OBJECTS];
     Bounds ylim[MAX_SYSTEM_OBJECTS];
+    double lum_cache[MAX_SYSTEM_OBJECTS];
     double atol;
     double rtol;
 
@@ -56,8 +57,13 @@ class PlanetSystem {
     int get_n_objects() const;
     void clear_objects();
     void set_time(double t);
-    double integrate_single(int i);
+    double integrate_unoccluded_single(int it, bool may_integrate);
+    double integrate_single(int it);
     void integrate(double *times, double *outputs, int n);
+
+    // Clear cached unocculted brightnesses -- must be called if
+    // non-rotating objects are directly modified between integrations.
+    void reset_cache();
 
     friend double emission_integrand(double y, void *params);
     friend double emission_outer_integral(double x, void *params);
