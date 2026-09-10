@@ -1,9 +1,19 @@
 #include "transit_integral.hpp"
+#include "math_utils.hpp"
 
 
 double transit_integrand(double y, void *params) {
     TransitIntegralParams *g = (TransitIntegralParams *)params;
-    return g->emitter.get_brightness_sphere(g->x, y);
+    double mu = sqrt(fmax(1 - g->x * g->x - y * y, 0));
+    double nu;
+    if (g->limb[3] < 0) {
+        nu = 1 - mu;
+        return 1. - g->limb[0] * nu - g->limb[1] * nu * nu;
+    } else {
+        nu = sqrt(mu);
+        return 1. - g->limb[0] * (1. - nu) - g->limb[1] * (1. - mu) - g->limb[2] * (1. - mu * nu) -
+               g->limb[3] * (1. - mu * mu);
+    }
 }
 
 
@@ -13,19 +23,22 @@ double transit_inner_integral(double x, void *params) {
     TransitIntegralParams *g = (TransitIntegralParams *)params;
     g->x = x;
 
-    // Get y bounds and check for no overlap between planet and star (at this x)
-    double y_bound = sqrt(1 - x * x);
-    Bounds ylim = g->shp.slice_ylimits(x);
-    ylim.min = fmax(ylim.min, -y_bound);
-    ylim.max = fmin(ylim.max, y_bound);
+    // Get y bounds of integral: overlap between planet and star
+    double y_star = sqrt(1 - x * x);
+    double y_planet = (x - g->xe) / g->a;
+    y_planet = g->b * sqrt(1 - y_planet * y_planet);
+    Bounds ylim = {fmax(-y_star, g->ye - y_planet), fmin(y_star, g->ye + y_planet)};
+
+    // Check for no overlap between star and planet at x
     if (ylim.min >= ylim.max) {
         return 0.;
     }
 
     code = gsl_integration_qag(
-        g->integrand, ylim.min, ylim.max, 1e-8, 1e-8, 100, 1, g->work, &result, &err
+        g->integrand, ylim.min, ylim.max, .1 * g->atol, .1 * g->rtol, g->max_steps, 1, g->work,
+        &result, &err
     );
-    if (integration_failed(code, result, err, 1e-9, 1e-7)) {
+    if (integration_failed(code, result, err, g->atol, g->rtol)) {
         return NAN;
     }
     return result;
@@ -33,111 +46,101 @@ double transit_inner_integral(double x, void *params) {
 
 
 void transit_integral(
-    double *times, double *outputs, int n, const Orbit &orb, const LightSource &emitter,
-    double theta, double phi, double gamma, double r_forward, double r_back, double r_up,
-    double r_side, bool rotate_with_orbit, double atol, double rtol
+    double *times, double *outputs, int n, const Orbit &orb, double r_forward, double r_back,
+    double r_up, double limb0, double limb1, double limb2, double limb3, double theta, double atol,
+    double rtol, int max_steps
 ) {
     int code = 0;
-    Vec3 split_point;
+    Vec3 loc;
     double result, err;
-    Bounds x_lim, y_lim;
-    double x_min, x_max, x;
+    Bounds xb, yb;
+
     double st = sin(theta);
     double ct = cos(theta);
-    bool discontinuous_pole = false;
-
-    if (r_up < 0) {
-        r_up = r_back;
-        discontinuous_pole = true;
-    }
-    Shape shp = Shape(r_forward, r_back, r_up, r_side);
-    if (!(discontinuous_pole || rotate_with_orbit)) {
-        shp.set_rotation(theta, phi, gamma);
+    double limb_norm;
+    if (limb3 < 0) {
+        limb_norm = M_PI * (1. - limb0 / 3. - limb1 / 6.);
+    } else {
+        limb_norm = M_PI * (1 - limb0 / 5. - limb1 / 3. - 3. * limb2 / 7. - limb3 / 2.);
     }
 
     // Do not crash the program due to lack of precision
     gsl_set_error_handler_off();
 
     // Prepare the inner (y) integral variables
-    gsl_integration_workspace *workspaceInner = gsl_integration_workspace_alloc(100);
+    gsl_integration_workspace *workspaceInner = gsl_integration_workspace_alloc(max_steps);
     gsl_function integInner;
-    TransitIntegralParams g = {emitter, shp, 0., atol, rtol, workspaceInner, &integInner};
+    TransitIntegralParams g = {
+        r_forward,   r_back, 0.,        0., {limb0, limb1, limb2, limb3},
+        atol,        rtol,   max_steps, 0., workspaceInner,
+        &integInner,
+    };
     integInner.function = &transit_integrand;
     integInner.params = &g;
-    g.integrand = &integInner;
 
     // Now prepare the outer (x) integral variables
-    gsl_integration_workspace *workspaceOuter = gsl_integration_workspace_alloc(100);
+    gsl_integration_workspace *workspaceOuter = gsl_integration_workspace_alloc(max_steps);
     gsl_function integOuter;
     integOuter.function = &transit_inner_integral;
     integOuter.params = &g;
 
     for (int i = 0; i < n; i++) {
-        g.shp.position_from_orbit(times[i], orb, rotate_with_orbit && (!discontinuous_pole));
-        if (g.shp.position.z < 0) {
+        loc = orb.get_position(times[i]);
+        if (loc.z < 0) {
             outputs[i] = 1.0;
             continue;
         }
 
-        // Rotate and get planet bounding box
-        if (discontinuous_pole) {
-            x = ct * g.shp.position.x + st * g.shp.position.y;
-            g.shp.position.y = -st * g.shp.position.x + ct * g.shp.position.y;
-            g.shp.position.x = x;
-            x_lim = {x - r_back, x + r_forward};
-            y_lim = {
-                g.shp.position.y - fmax(r_back, r_forward),
-                g.shp.position.y + fmax(r_back, r_forward)
-            };
+        // Rotate planet so it's axes are aligned with the coordinate system
+        g.xe = ct * loc.x - st * loc.y;
+        g.ye = st * loc.x + ct * loc.y;
+
+        // Get planet bounding box
+        xb = {g.xe - r_back, g.xe + r_forward};
+        if (r_up < 0) {
+            yb = {g.ye - fmax(r_back, r_forward), g.ye + fmax(r_back, r_forward)};
         } else {
-            if (rotate_with_orbit) {
-                g.shp.set_rotation(theta, phi, gamma, orb.get_cos_inc());
-            }
-            x_lim = g.shp.x_bounds();
-            y_lim = g.shp.y_bounds();
+            yb = {g.ye - r_up, g.ye + r_up};
         }
 
-        // Quick bounding-box check to skip most non-transits
-        x_min = fmax(x_lim.min, -1.);
-        x_max = fmin(x_lim.max, 1.);
-        if ((x_min >= x_max) || (y_lim.min > 1.) || (y_lim.max < -1)) {
+        // Clip to stellar bounding box and check for trivial non-transits
+        xb.min = fmax(xb.min, -1.);
+        xb.max = fmin(xb.max, 1.);
+        if ((xb.min >= xb.max) || (yb.min > 1.) || (yb.max < -1)) {
             outputs[i] = 1.0;
             continue;
         }
 
-        if (discontinuous_pole) {
-            // Split the integral around the middle of the planet to allow for a discontinuous pole
-            split_point = g.shp.position;
-            g.shp.set_radii(r_forward, r_back, r_back, r_side);
-        } else {
-            // Split the integral around the nearest point to help integrator find non-zero areas
-            split_point = g.shp.nearest_to_line(0., 0.);
-            if (split_point.z > 1.) {
-                outputs[i] = 1.0;
+        // Integrate the back side of the planet
+        outputs[i] = 1.0;
+        if (g.xe > xb.min) {
+            g.a = r_back;
+            g.b = r_up < 0 ? r_back : r_up;
+            code = gsl_integration_qag(
+                &integOuter, xb.min, g.xe, .1 * atol, .1 * rtol, max_steps, 1, workspaceOuter,
+                &result, &err
+            );
+            if (integration_failed(code, result, err, atol, rtol)) {
+                outputs[i] = NAN;
                 continue;
             }
+            outputs[i] -= result / limb_norm;
         }
-        code = gsl_integration_qag(
-            &integOuter, x_min, split_point.x, .1 * atol, .1 * rtol, 100, 1, workspaceOuter,
-            &result, &err
-        );
-        if (integration_failed(code, result, err, atol, rtol)) {
-            outputs[i] = NAN;
-            continue;
+
+        // Integrate the forward side of the planet
+        if (g.xe < xb.max) {
+            g.a = r_forward;
+            g.b = r_up < 0 ? r_forward : r_up;
+            code = gsl_integration_qag(
+                &integOuter, g.xe, xb.max, .1 * atol, .1 * rtol, max_steps, 1, workspaceOuter,
+                &result, &err
+            );
+            if (integration_failed(code, result, err, atol, rtol)) {
+                outputs[i] = NAN;
+                continue;
+            }
+            outputs[i] -= result / limb_norm;
         }
-        outputs[i] = 1 - result;
-        if (discontinuous_pole) {
-            g.shp.set_radii(r_forward, r_back, r_forward, r_side);
-        }
-        code = gsl_integration_qag(
-            &integOuter, split_point.x, x_max, .1 * atol, .1 * rtol, 100, 1, workspaceOuter,
-            &result, &err
-        );
-        if (integration_failed(code, result, err, atol, rtol)) {
-            outputs[i] = NAN;
-            continue;
-        }
-        outputs[i] -= result;
     }
 
     // Cleanup

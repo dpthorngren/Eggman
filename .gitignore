@@ -7,6 +7,7 @@ old/
 plots
 data
 scratch/
+cspice/
 src/eggman/cy_*.cpp
 src/eggman/*.html
 experiment*.py

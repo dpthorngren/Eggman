@@ -230,9 +230,6 @@ int test_transit() {
     ANNOUNCE_TEST();
     int errors = 0;
     Orbit orb = Orbit(2., 0., 5., 0.01, 85., 90.);
-    double source_params[MAX_SOURCE_PARAMS] = {1.0 / M_PI, 0.0, 0.0, 0.0, 0.0, 0.0,
-                                               0.0,        0.0, 0.0, 0.0, 0.0, 0.0};
-    LightSource star = LightSource(QuadraticLimb, source_params);
 
     const int n_times = 100;
     double outputs[n_times];
@@ -243,7 +240,7 @@ int test_transit() {
     }
 
     // No limb darkening, sphere
-    transit_integral(times, outputs, n_times, orb, star, 0., 0., 0., .1, .1, .1, .1, true);
+    transit_integral(times, outputs, n_times, orb, .1, .1, .1, 0., 0., 0., 0.);
     for (int i = 0; i < n_times; i++) { // General bounds
         TEST_ASSERT(outputs[i], <=, 1., errors);
         TEST_ASSERT(outputs[i], >=, 0., errors);
@@ -258,7 +255,7 @@ int test_transit() {
 
     // No limb darkening, oblate spheroid
     orb = Orbit(2., 0., 5., 0.01, 90., 90.);
-    transit_integral(times, outputs, n_times, orb, star, 0., 0., 0., .11, .11, .08, .11, true);
+    transit_integral(times, outputs, n_times, orb, .11, .11, .08, 0., 0., 0., 0.);
     // Out of transit
     TEST_APPROX(outputs[n_times / 4], 1.0, 1e-12, errors);
     TEST_APPROX(outputs[n_times / 2], 1.0, 1e-12, errors);
@@ -269,7 +266,7 @@ int test_transit() {
 
     // No limb darkening, asymmetric transit
     orb = Orbit(2., 0., 5., 0.01, 90., 90.);
-    transit_integral(times, outputs, n_times, orb, star, 0., 0., 0., .11, .09, -1., .1, false);
+    transit_integral(times, outputs, n_times, orb, .11, .09, -1., 0., 0., 0., 0.);
     // Out of transit
     TEST_APPROX(outputs[n_times / 4], 1.0, 1e-12, errors);
     TEST_APPROX(outputs[n_times / 2], 1.0, 1e-12, errors);
@@ -280,25 +277,20 @@ int test_transit() {
 
     // Limb Darkening, symmetric transit (ref from catwoman)
     orb = Orbit(1., 0., 15., 0, 90., 90.);
-    source_params[1] = .1;
-    source_params[2] = .3;
     double times2[2] = {.001, .01};
-    star = LightSource(QuadraticLimb, source_params);
-    transit_integral(times2, outputs, 2, orb, star, 0., 0., 0., .1, .1, .1, .1, true);
+    transit_integral(times2, outputs, 2, orb, .1, .1, .1, 0.1, 0.3, 0., -1.);
     TEST_APPROX(outputs[0], 0.989098764152, 1e-7, errors);
     TEST_APPROX(outputs[1], 0.992627976697, 1e-7, errors);
 
     // Limb Darkening, asymmetric transit (ref from catwoman)
-    star = LightSource(QuadraticLimb, source_params);
     orb = Orbit(1., 0., 15., 0, 90., 90.);
-    transit_integral(times2, outputs, 2, orb, star, 0., 0., 0., .11, .1, -1, .1, true);
+    transit_integral(times2, outputs, 2, orb, .11, .1, -1, 0.1, 0.3, 0., -1.);
     TEST_APPROX(outputs[0], 0.987955283022, 1e-7, errors);
     TEST_APPROX(outputs[1], 0.992339221135, 1e-7, errors);
 
     // Limb Darkening, asymmetric transit, slightly inclined (ref from catwoman)
-    star = LightSource(QuadraticLimb, source_params);
     orb = Orbit(1., 0., 15., 0, 89., 90.);
-    transit_integral(times2, outputs, 2, orb, star, 0., 0., 0., .11, .09, -1, .1, true);
+    transit_integral(times2, outputs, 2, orb, .11, .09, -1, 0.1, 0.3, 0., -1.);
     // Note the reduced precision.  I *think* this is Catwoman's fault, but it's hard to tell.
     TEST_APPROX(outputs[0], 0.989036885966, 1e-6, errors);
     TEST_APPROX(outputs[1], 0.995337628970, 1e-6, errors);

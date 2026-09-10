@@ -147,9 +147,9 @@ cdef class LightSource:
 
 # ===== Transit integration function and wrapper =====
 cdef extern from "transit_integral.cpp":
-    void transit_integral(double *times, double *outputs, int n, const COrbit &orb, const CLightSource &emitter, double theta, double phi, double gamma, double r_forward, double r_back, double r_up, double r_side, bint rotate_with_orbit, double atol, double rtol)
+    void transit_integral(double *times, double *outputs, int n, const COrbit &orb, double r_forward, double r_back, double r_up, double limb0, double limb1, double limb2, double limb3, double theta, double atol, double rtol, int max_steps)
 
-cpdef object transit(double r_forward, double r_back, double r_up, double r_side, double theta, double phi, double gamma, double[::1] t, double t0, double period, double semimajor, double inclination, str limbType, object limb, double eccen=?, double lon_periapse=?, bint rotate_with_orbit=?, double atol=?, double rtol=?)
+cpdef object asymmetricTransit(double rMorning, double rEvening, double rPole, double[:] t, double t0, double period, double semimajor, double inclination, str limbType, object limb, double eccen=?, double lonPeriapse=?, double theta=?, double atol=?, double rtol=?, int max_steps=?)
 
 
 # ===== Phase Curve Class and Wrapper =====
