@@ -502,13 +502,18 @@ int test_planetary_system() {
         TEST_ASSERT(planet.set_emission_point(i, value), ==, 0, errors);
     }
     shp = Shape(0.1, 0.1, 0.1, 0.1);
-    orb = Orbit(10., 0., 5., 0.00, 89., 90.);
+    orb = Orbit(10., 0., 5., 0.00, 90., 90.);
     p.add_object(orb, shp, planet, true);
     p.integrate(time, result, n_times);
     TEST_ASSERT(result[0], <, 1, errors);
     TEST_APPROX(result[1], 1 + 1e-2 * M_PI * .1 * .1, 1e-9, errors);
     TEST_APPROX(result[2], 1, 1e-9, errors);
     TEST_APPROX(result[3], result[1], 1e-9, errors);
+    for (int i = 0; i < 100; i++) {
+        time[0] = i * 10. / 1000.;
+        p.integrate(time, result, 1);
+        TEST_ASSERT(isfinite(result[0]), ==, true, errors);
+    }
     return errors;
 }
 

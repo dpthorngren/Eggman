@@ -5,7 +5,7 @@ import eggman
 
 
 def test_system_integration_trivial():
-    p = eggman.PlanetSystem(max_steps=200)
+    p = eggman.PlanetSystem(max_steps=400)
     p.add_star("quadratic_limb", [0.2, 0.1])
     p.add_planet(.1, .11, .08, 1.3, 8., 5., inclination=89.)
     assert p.get_n_objects() == 2
@@ -52,6 +52,20 @@ def test_system_integration_trivial():
     assert result[2] == approx(1., rel=1e-7)
     assert result[3] == approx(1., rel=1e-7)
     assert result[0] == approx(result[-1], rel=1e-7)
+
+
+def test_phase_curve():
+    p = eggman.PlanetSystem()
+    p.add_star("quadratic_limb", [0.2, 0.1])
+    planet_light = eggman.LightSource('emission_map', [100, 100])
+    result = planet_light.set_emission_map(lambda x, y, z: 1e-2 + 1e-3*z*z)
+    for i, res in enumerate(result):
+        loc = planet_light.get_emission_location(i)
+        assert res == approx(1e-2 + 1e-3 * loc[2]**2)
+    p.add_planet(.12, .11, .09, .115, 2., 5., source=planet_light)
+    times = np.linspace(0, 2, 50)
+    result = p.integrate(times)
+    assert np.all(np.isfinite(result))
 
 
 def test_secondary_transits():

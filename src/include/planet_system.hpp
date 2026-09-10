@@ -45,7 +45,7 @@ class PlanetSystem {
     double atol;
     double rtol;
 
-    PlanetSystem(double atol = 1e-6, double rtol = 1e-3, int max_steps = 100);
+    PlanetSystem(double atol = 1e-6, double rtol = 1e-3, int max_steps = 200);
     PlanetSystem(PlanetSystem &p);
     PlanetSystem &operator=(const PlanetSystem &other);
     ~PlanetSystem();

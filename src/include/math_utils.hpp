@@ -94,7 +94,7 @@ inline bool integration_failed(
     }
     if ((code == GSL_EMAXITER) || (code == GSL_EROUND)) {
         // Integrator didn't meet its error targets...
-        if (err > atol + rtol * fabs(result)) {
+        if (err < atol + rtol * fabs(result)) {
             // ...but it meets ours, so accept the result without error
             return false;
         }
