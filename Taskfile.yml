@@ -5,32 +5,79 @@ tasks:
   default:
     deps: [test]
 
+  stubgen:
+    desc: "Creates stubs for the Cython functions."
+    # deps: [lint]
+    run: once
+    sources:
+      - src/eggman/*.py
+      - src/eggman/*.pyx
+      - src/eggman/*.pxd
+    generates:
+      - src/eggman/cy_eggman.pyi
+    cmds:
+      - rm -f src/eggman/*.pyi
+      - stubgen-pyx src/eggman/ --file cy_eggman.pyx
+
   devbuild:
     desc: "Rebuild shared library (if cython files have changed) and reinstall."
     deps: [lint]
     run: once
     sources:
-      - src/eggman/*.pyx
-      - src/eggman/*.pxd
+      - src/eggman/*.py
+      - src/eggman/cy_eggman.pyx
+      - src/eggman/cy_eggman.pxd
+      - src/cpp_source/[a-z_]*.cpp
+      - src/include/[a-z_]*.hpp
     generates:
       - src/eggman/*.so
+      - src/eggman/cy_eggman.cpp
     cmds:
-      - rm -rf build eggman.egg-info src/eggman/*.so
+      - rm -rf build eggman.egg-info src/eggman/*.so src/eggman/*.cpp src/eggman/__pycache__
       - pip uninstall eggman --yes
-      - mkdir -p htmlcov/
-      - pip install -e .[develop]
-      - mv src/eggman/*.html htmlcov
+      - pip install --no-build-isolation -e .[develop]
 
   lint:
-    desc: "Run cython linter"
+    desc: "Run linter"
+    deps: [libtest]
     run: once
     cmds:
-      # - flake8 $(git ls-tree -r main --name-only | grep '.*py$') --count --show-source --statistics
-      - cython-lint .
+      - flake8 ./setup.py ./src/eggman/*.py --count --statistics
+
+  libtest_build:
+    desc: "Build the Eggman shared library and testing program."
+    sources:
+      - src/cpp_source/[a-z_]*.cpp
+      - src/include/[a-z_]*.hpp
+      - tests/test_lib_eggman.cpp
+      - makefile
+    generates:
+      - tests/tester
+    cmds:
+      - make tester
+
+  profile:
+    desc: "Build the performance test program and run it, getting results with gprof."
+    cmds:
+      - make perf
+      - time tests/perf_eggman
+      - gprof tests/perf_eggman
+
+  libtest:
+    desc: "Test the Eggman C++ code as a shared library (not using Cython or Python)"
+    deps: [libtest_build]
+    run: once
+    cmds:
+      - ./tests/tester
 
   test:
-    deps: [lint, devbuild]
-    desc: "Run pytest with coverage"
+    deps: [libtest, lint, devbuild]
+    desc: "Run pytest."
     cmds:
-      - pytest --cov=eggman  --cov-report='term' --cov-report="html"
+      - pytest -x
 
+  experiment:
+    deps: [lint, devbuild]
+    desc: "Run experiments file, bypassing pytest."
+    cmds:
+      - python experiment.py

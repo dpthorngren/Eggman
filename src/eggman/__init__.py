@@ -1,4 +1,4 @@
-from .cy_eggman import (
-    asymmetricTransit, orbit_to_position, orbitGeometry, solve_kepler, transitDepth, transitIntegral)
+from . import utils
+from .cy_eggman import (Ellipse, LightSource, Orbit, PlanetSystem, Shape, asymmetricTransit)
 
-__all__ = ["asymmetricTransit", "orbit_to_position", "orbitGeometry", "solve_kepler", "transitDepth", "transitIntegral"]
+__all__ = ["Orbit", "asymmetricTransit", "Shape", "LightSource", "Ellipse", "utils", "PlanetSystem"]

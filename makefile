@@ -1,0 +1,38 @@
+# This file is not used for the normal eggman build.
+# It is only here to provide a C++ library if desired.
+# You may need to adjust CXX to whatever your compiler is:
+CXX = clang++
+CXXFLAGS = -Wall -g -I src/include -fPIC
+LFLAGS = -shared -lgsl
+
+TARGET = cpp_build/lib_eggman
+SRCS=${wildcard src/cpp_source/*.cpp}
+OBJS=${patsubst src/cpp_source/%.cpp,cpp_build/%.o,${SRCS}}
+
+$(info Target: $(TARGET))
+$(info Sources: $(SRCS))
+$(info Objects: $(OBJS))
+
+all: $(TARGET)
+
+$(TARGET): $(OBJS) | cpp_build
+	$(info Building executable $<.)
+	$(CXX) $(LFLAGS) -o $(TARGET) $(OBJS)
+
+cpp_build/%.o: src/cpp_source/%.cpp | cpp_build
+	$(info Compiling $<.)
+	$(CXX) $(CXXFLAGS) -c $< -o $@
+
+cpp_build:
+	mkdir -p cpp_build
+
+tester: tests/test_lib_eggman.cpp | $(TARGET)
+	$(CXX) -Wall -g -I src/include -lgsl  tests/test_lib_eggman.cpp $(TARGET) -o tests/tester
+
+perf: tests/perf_eggman.cpp | $(TARGET)
+	g++ -O2 tests/perf_eggman.cpp $(SRCS) -o tests/perf_eggman -pg -g -I src/include -lgsl 
+
+clean:
+	rm -rf cpp_build
+	rm -f tests/tester
+	rm -f tests/perf_eggman

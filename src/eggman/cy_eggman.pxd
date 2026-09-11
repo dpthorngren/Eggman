@@ -1,104 +1,182 @@
 cimport cython
-from libc.math cimport sin, cos, sqrt, atan2, acos, log, exp
+from libc cimport math
 from libc.math cimport M_PI as pi, NAN as nan
+import numpy.typing
+
+ctypedef double[::1] Array1d_f64
+ctypedef double[:,:] Array2d_f64
+
+cdef extern from "math_utils.hpp":
+    ctypedef struct Mat3:
+        double xx
+        double xy
+        double xz
+        double yx
+        double yy
+        double yz
+        double zx
+        double zy
+        double zz
+    ctypedef struct Vec3:
+        double x
+        double y
+        double z
+    ctypedef struct Bounds:
+        double min
+        double max
 
 
-cdef extern from "cspice/SpiceUsr.h":
-    ctypedef double SpiceDouble
-    ctypedef bint SpiceBoolean
-    ctypedef struct SpicePlane:
-        pass
-    ctypedef struct SpiceEllipse:
-        pass
+# ===== Orbit class and wrapper =====
+cdef extern from "orbit.cpp":
+    double solve_kepler(double mean_anomaly, double eccen)
+    cdef cppclass COrbit "Orbit":
+        COrbit() except +
+        COrbit(double, double, double, double, double, double) except +
+        Vec3 get_position(double t) except +
+        double get_period()
+        double get_semimajor()
+        double get_eccen()
+        double get_cos_inc()
 
 
-cdef extern from "cspice/SpiceZfc.h":
-    # Initializes a SpicePlane given a normal vector and an offset from the origin
-    cdef void nvc2pl_c(SpiceDouble* normal, SpiceDouble offset, SpicePlane* outPlane)
-    # Gets the ellipse defined by the intersection of an ellipsoid and a plane
-    cdef void inedpl_c(SpiceDouble a, SpiceDouble b, SpiceDouble c, SpicePlane* plane, SpiceEllipse* limbEllipse, SpiceBoolean* found)
-    # Projects an ellipse onto the given plane
-    cdef void pjelpl_c(SpiceEllipse* inEllipse, SpicePlane* projPlane, SpiceEllipse* outEllipse)
-    # Gets the center and constructing vectors of an ellipse
-    cdef void el2cgv_c(SpiceEllipse* inEllipse, SpiceDouble* center, SpiceDouble* vec1, SpiceDouble* vec2)
-    # Gets the major and minor axis vectors from the constructing vectors.
-    cdef void saelgv_c(SpiceDouble* vec1, SpiceDouble* vec2, SpiceDouble* majorAxis, SpiceDouble* minorAxis)
+cdef class Orbit:
+    cdef COrbit corbit
+    # All wrapper functions are implemented in Python, so aren't declared here.
+    # For use from Cython, use the C++ class directly
 
 
-cdef extern from "gsl/gsl_math.h":
-    ctypedef struct gsl_function:
-        double (*function)(double x, void *params)
-        void * params
+# ===== Shape class and wrapper =====
+cdef extern from "ellipse.cpp":
+    cdef cppclass CEllipse "Ellipse":
+        Vec3 e1
+        Vec3 e2
+        double det
+        double x_size
+        double y_size
+        CEllipse()
+        CEllipse(Vec3 e1, Vec3 e2)
+        void get_ybounds(double x, Vec3 &out_min, Vec3 &out_max)
+        bint line_intersects(double x, double y, Vec3* out)
+        Vec3 nearest_to_line(double xt, double yt)
 
 
-cdef extern from "gsl/gsl_roots.h":
-    ctypedef struct gsl_root_fsolver:
-        pass
-    ctypedef struct gsl_root_fsolver_type:
-        pass
-
-    const gsl_root_fsolver_type* gsl_root_fsolver_brent
-
-    gsl_root_fsolver* gsl_root_fsolver_alloc(const gsl_root_fsolver_type* T)
-    void gsl_root_fsolver_free(gsl_root_fsolver *s)
-    int gsl_root_fsolver_set(gsl_root_fsolver *s, gsl_function *f, double x_lower, double x_upper)
-    int gsl_root_fsolver_iterate(gsl_root_fsolver *s)
-    double gsl_root_fsolver_root(const gsl_root_fsolver *s)
-    double gsl_root_fsolver_x_lower(const gsl_root_fsolver *s)
-    double gsl_root_fsolver_x_upper(const gsl_root_fsolver *s)
-
-cdef extern from "gsl/gsl_integration.h":
-    ctypedef struct gsl_integration_workspace:
-        size_t size
-
-    gsl_integration_workspace *gsl_integration_workspace_alloc(size_t n)
-    void gsl_integration_workspace_free(gsl_integration_workspace *w)
-    int gsl_integration_qag(const gsl_function *f, double a, double b, double epsabs, double epsrel, size_t limit, int key, gsl_integration_workspace *workspace, double *result, double *abserr)
-
-cdef extern from "gsl/gsl_errno.h":
-    ctypedef struct gsl_error_handler_t:
-        pass
-    gsl_error_handler_t* gsl_set_error_handler(gsl_error_handler_t *new_handler)
-    gsl_error_handler_t* gsl_set_error_handler_off()
-    const char *gsl_strerror(const int gsl_errno)
+cdef class Ellipse:
+    cdef CEllipse cell
 
 
-cdef struct IntegralParams:
-    double a
-    double b
-    double xe
-    double ye
-    double tNear
-    double tFar
-    double rsq
-    int limbType
-    double limb[5]
-    gsl_root_fsolver* solver
-    gsl_function* func
+cdef extern from "shape.cpp":
+    cdef cppclass CShape "Shape":
+        Vec3 position
+        double r_forward
+        double r_back
+        double r_up
+        double r_side
+        Mat3 rot
+        CEllipse f_limb
+        CEllipse b_limb
+        CEllipse joint
 
-cdef struct BruteIntegralParams:
-    double a
-    double b
-    double xe
-    double ye
-    double x
-    int limbType
-    double limb0
-    double limb1
-    double limb2
-    double limb3
-    gsl_integration_workspace* work
-    gsl_function* integrand
+        CShape()
+        CShape(double r_forward, double r_backward, double r_up, double r_side)
+        void set_rotation(double theta, double phi, double gamma, double ci)
+        void set_position(Vec3 new_position)
+        void set_radii(double r_forward, double r_back, double r_up, double r_side)
+        void position_from_orbit(double t, const COrbit &orb, bint rotate_with_orbit, Vec3 origin)
+        void update_derived()
+        Vec3 forward_vector()
+        bint is_forward(Vec3 loc)
+        bint is_forward_2d(double x, double y, bint local)
+        bint is_visible(Vec3 loc)
+        Bounds x_bounds()
+        Bounds y_bounds()
+        Bounds slice_ylimits(double x, Bounds* out2=nullptr, int zcut=0)
+        bint line_intersects (double x, double y)
+        bint raycast(double x, double y, double *mu_out, Vec3 *hit_out)
+        double get_area()
+        Vec3 world_to_aligned(Vec3 loc)
+        Vec3 world_to_sphere(Vec3 loc)
+        Vec3 aligned_to_world(Vec3 loc)
+        Vec3 aligned_to_sphere(Vec3 loc)
+        Vec3 sphere_to_world(Vec3 loc)
+        Vec3 sphere_to_aligned(Vec3 loc)
 
 
-cpdef (double, double, double, double) orbitGeometry(double a, double b, double c, double semimajor, double theta, double phi)
+cdef class Shape:
+    cdef CShape cshape
+    # All wrapper functions are implemented in Python, so aren't declared here.
+    # For use from Cython, use the C++ class directly
 
-cpdef double transitDepth(double a, double b, double c, double semimajor, double theta, double phi, double[:] limb)
 
-cpdef double transitIntegral(double a, double b, double xe, double ye, double[:] limb, int preferBrute=?)
+# ===== Light Source class and wrapper =====
+cdef extern from "light_source.cpp":
+    const int MAX_SOURCE_PARAMS
+    ctypedef enum SourceType:
+        NoEmission
+        Lambertian
+        QuadraticLimb
+        NonLinearLimb
+        DayNight
+        EmissionMap
+    cdef cppclass CLightSource "LightSource":
+        SourceType stype
+        double params[MAX_SOURCE_PARAMS]
+        double limb_norm
 
-cpdef object asymmetricTransit(double rMorning, double rEvening, double rPole, double[:] t, double t0, double period, double semimajor, double inclination, str limbType, object limb, double eccen=?, double lonPeriapse=?)
+        CLightSource()
+        CLightSource(int source_type, double *params)
 
-cpdef double solve_kepler(double mean_anomaly, double eccen)
+        double get_brightness(double x, double y, const CShape &bell)
+        double get_brightness_sphere(double x, double y)
 
-cpdef (double, double, double) orbit_to_position(double t, double semimajor, double period, double eccen, double inclination, double lon_periapse)
+        int get_n()
+        int get_m()
+        int get_map_size()
+        double get_emission_point(int i)
+        int set_emission_point(int i, double value)
+        Vec3 get_emission_location(int i)
+        double interp_emission(Vec3 loc)
+
+
+ctypedef double[MAX_SOURCE_PARAMS] Array_SourceParams
+
+cdef class LightSource:
+    cdef CLightSource csource
+    # All wrapper functions are implemented in Python, so aren't declared here.
+    # For use from Cython, use the C++ class directly
+
+
+# ===== Transit integration function and wrapper =====
+cdef extern from "transit_integral.cpp":
+    void transit_integral(double *times, double *outputs, int n, const COrbit &orb, double r_forward, double r_back, double r_up, double limb0, double limb1, double limb2, double limb3, double theta, double atol, double rtol, int max_steps)
+
+cpdef object asymmetricTransit(double rMorning, double rEvening, double rPole, double[:] t, double t0, double period, double semimajor, double inclination, str limbType, object limb, double eccen=?, double lonPeriapse=?, double theta=?, double atol=?, double rtol=?, int max_steps=?)
+
+
+# ===== Phase Curve Class and Wrapper =====
+cdef extern from "planet_system.cpp":
+    const int MAX_SYSTEM_OBJECTS
+    cdef cppclass CPlanetSystem "PlanetSystem":
+        COrbit orbits[MAX_SYSTEM_OBJECTS]
+        CShape shapes[MAX_SYSTEM_OBJECTS]
+        CLightSource lights[MAX_SYSTEM_OBJECTS]
+        bint rotate_with_orbit[MAX_SYSTEM_OBJECTS]
+        Bounds xlim[MAX_SYSTEM_OBJECTS]
+        Bounds ylim[MAX_SYSTEM_OBJECTS]
+
+        CPlanetSystem()
+        CPlanetSystem(CPlanetSystem &p)
+        CPlanetSystem(double atol, double rtol, int max_steps)
+
+        int add_object(const COrbit &orb, const CShape &bell, const CLightSource &source, bint rot_with_orbit, int parent_index)
+        int get_n_objects() const
+        void clear_objects()
+        void set_time(double t)
+        double integrate_single(int i)
+        double rtol
+        double atol
+        void integrate(double *times, double *outputs, int n)
+
+cdef class PlanetSystem:
+    cdef CPlanetSystem cps
+    # All wrapper functions are implemented in Python, so aren't declared here.
+    # For use from Cython, use the C++ class directly
