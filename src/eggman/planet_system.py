@@ -40,7 +40,7 @@ class PlanetSystem:
             rotate_with_orbit: whether or not the object rotates as it moves through its orbit
                 (tidally locked to the parent or origin).
             parent_index: The index of a previously added object that the new object should orbit
-                (like a moon); if negative, the new object orbits the origin.
+                (like a moon or ring); if negative, the new object orbits the origin.
         '''
         self.cps.add_object(
             orbit.corbit, shape.cshape, source.csource, rotate_with_orbit, parent_index)
@@ -132,7 +132,7 @@ class PlanetSystem:
             phi: float = 0,
             gamma: float = 0):
         '''Adds a ring around the given object. With rotations set to zero, the ring is face-on.
-            This is a wrapper for add_object, whose arguments are passed through to Shape and Orbit.
+        This is a wrapper for add_object, whose arguments are passed through to Shape and Orbit.
 
         Args:
             r_outer: The outer radius of the ring.
@@ -170,7 +170,12 @@ class PlanetSystem:
 
         Args:
             i: Which object to get the brightness of -- these are indexed increasing from 0 in
-                order of insertion.'''
+                order of insertion.
+
+        Returns:
+            The brightness constribution of the requested object, accounting for other objects
+            that obscure it.
+        '''
         return self.cps.integrate_single(i)
 
     def integrate(self, times: cye.Array1d_f64):
@@ -182,7 +187,7 @@ class PlanetSystem:
                 time t0 specified in the orbits.
 
         Returns:
-            A Numpy array of brightnesses at the specified times.'''
+            A Numpy array of total brightnesses at the specified times.'''
         results = np.full((len(times),), np.nan)
         results_view: cye.Array1d_f64 = results
         self.cps.integrate(cython.address(times[0]), cython.address(results_view[0]), len(times))
@@ -206,7 +211,7 @@ class PlanetSystem:
         Returns:
             A tuple of an OrbitWrap, Shape, LightSource, and bool object that describing the i'th
                 object -- the final bool is whether the object rotates with its orbit.
-            '''
+        '''
         if i < 0:
             i = self.cps.get_n_objects() - i
         if i >= self.cps.get_n_objects() or i < 0:
@@ -219,7 +224,7 @@ class PlanetSystem:
         source.csource = self.cps.lights[i]
         return (orbit, shape, source, self.cps.rotate_with_orbit[i])
 
-    def plot_objects(self, res=200, axis=None, arg_list=list(), **args):
+    def plot_objects(self, res=200, axis=None, arg_list=list(), **kwargs):
         '''Create a simple plot of the system using matplotlib, at the current time (set by
             set_time or 0 by default), using matplotlib.pcolormesh.
 
@@ -229,12 +234,12 @@ class PlanetSystem:
                 will be created.
             arg_list: A list of dictionaries containing keyword arguments to pass to
                 pyplot.pcolormesh. for each object in the system in order.  These settings override
-                global settings from **args.
-            **args: Additional keyword arguments to be passed to pyplot.pcolormesh for all objects
+                global settings from `kwargs`.
+            kwargs: Additional keyword arguments to be passed to pyplot.pcolormesh for all objects
                 in the system, unless overridden by arg_list.'''
         for i in range(self.get_n_objects()):
             _, shape, source, _ = self[i]
-            arguments = args.copy()
+            arguments = kwargs.copy()
             if arg_list:
                 arguments.update(arg_list[i])
             if shape.r_up == 0:

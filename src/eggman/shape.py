@@ -20,17 +20,18 @@ class Shape:
     then shifted to some position.
 
     For these calculations, three reference frames are used -- the conversion functions are exposed
-    fmainly for debugging purposes.  The frames are:
-        :View Frame: This is the native frame users will be operating in. It is easiest to think of
-            +x as being "right", +y as "up", and +z as "towards the viewer".
-        :Aligned Frame: This is the frame in which the forward vector points in the +x,
-            the up vector points in the +y, and the side vector points in the +z directions.  The
-            rotation matrix of the biellipsoid rotates points from this frame to the view frame.
-        :Sphere Frame: In this frame, the biellipsoid is a unit sphere.  This is a non-linear
-            transform from the aligned frame, scaling y and z by r_up and r_side respectively,
-            and x by r_forward or r_backward depending on whether x > 0.  Many geometric
-            calculations amount to transforming to this frame, finding some point, line, or plane,
-            and then transforming back to the view space.
+    mainly for debugging purposes.  The frames are:
+
+    :View Frame: This is the native frame users will be operating in. It is easiest to think of
+        +x as being "right", +y as "up", and +z as "towards the viewer".
+    :Aligned Frame: This is the frame in which the forward vector points in the +x,
+        the up vector points in the +y, and the side vector points in the +z directions.  The
+        rotation matrix of the biellipsoid rotates points from this frame to the view frame.
+    :Sphere Frame: In this frame, the biellipsoid is a unit sphere.  This is a non-linear
+        transform from the aligned frame, scaling y and z by r_up and r_side respectively,
+        and x by r_forward or r_backward depending on whether x > 0.  Many geometric
+        calculations amount to transforming to this frame, finding some point, line, or plane,
+        and then transforming back to the view space.
     '''
     cshape: cye.CShape
 

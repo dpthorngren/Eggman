@@ -35,33 +35,50 @@ class LightSource:
 
     @property
     def source_type(self):
+        '''The type of the source as a string.'''
         return self._source_type_names_[self.csource.stype]
 
     @property
     def source_type_code(self):
+        '''The type of the source as an integer.'''
         return self.csource.stype
 
     @property
     def source_params(self):
+        '''The parameters of the source (e.g. limb darkening parameters).'''
         return np.array(self.csource.params)[:self._source_n_params_[self.source_type_code]]
 
     @property
     def limb_norm(self):
+        '''The normalization constant of the source.'''
         return self.csource.limb_norm
 
     @property
     def n(self):
+        '''The number of points along the longitudinal axis defining the emission map (-1 if this
+        source does not use an emission map).'''
         return self.csource.get_n()
 
     @property
     def m(self):
+        '''The number of points along the latitudinal axis defining the emission map, not including
+        the two poles (-1 if this source does not use an emission map).'''
         return self.csource.get_m()
 
     @property
     def map_size(self):
+        '''The total number of points in of the emission map, equal to m*n + 2.'''
         return self.csource.get_map_size()
 
     def __init__(self, source_type: str, source_params: list[float]):
+        '''Create a new source object with the given type and parameters.
+
+        Args:
+            source_type: a string descrubing the type of source to use. See class documentation
+                for the list of valid options.
+            source_params: a list or array of parameters of the source. See class documentation
+                for how many params are required for each type.
+        '''
         source_type = source_type.lower().strip()
         assert source_type in self._source_type_names_, \
             f"Error: unknown source_type {source_type}, must be one of {self._source_type_names_}"
