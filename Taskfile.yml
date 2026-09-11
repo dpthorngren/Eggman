@@ -18,7 +18,7 @@ tasks:
       - rm -f src/eggman/*.pyi
       - stubgen-pyx src/eggman/ --file cy_eggman.pyx
 
-  devbuild:
+  dev_build:
     desc: "Rebuild shared library (if cython files have changed) and reinstall."
     deps: [lint]
     run: once
@@ -70,28 +70,26 @@ tasks:
       - ./tests/tester
 
   test:
-    deps: [libtest, lint, devbuild]
+    deps: [libtest, lint, dev_build]
     desc: "Run pytest."
     cmds:
       - pytest -x
 
   experiment:
-    deps: [lint, devbuild]
+    deps: [lint, dev_build]
     desc: "Run experiments file, bypassing pytest."
     cmds:
       - python experiment.py
 
-  build_docs:
-    deps: [devbuild, lint]
+  docs_build:
+    deps: [dev_build, lint]
     desc: "Build the documentation with Sphinx."
     sources:
       - src/eggman/*.py
       - src/eggman/*.pyx
       - src/eggman/*.pxd
       - docs/*.rst
-      # - docs/*/*.rst
-      # - docs/*/*.py
-      # - docs/*/*.toml
+      - docs/*/*.rst
       - docs/conf.py
     generates:
       - docs/build/html/index.html

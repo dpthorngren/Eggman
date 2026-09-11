@@ -14,7 +14,7 @@ Once the prerequisites are installed, Eggman can be compiled and installed from 
 
 ## Usage
 
-<img src="docs/eggmanComparison.png" width=20% align="right">
+<img src="docs/img/eggmanComparison.png" width=20% align="right">
 
 For now the only production ready function is `asymmetricTransit`, which calculates the transit of a piecewise-ellipsoidal planet consisting of two half-ellipses attached at the location of the planet (see diagram on the right).  They have the same polar radius *unless* the polar radius is set to a negative number, which eggman interprets to mean that the two half-circle model of [catwoman](https://github.com/KathrynJones1/catwoman) is to be used, such that the polar radius is `rMorning` for the morning side and `rEvening` for the evening side. <br clear="right">
 
