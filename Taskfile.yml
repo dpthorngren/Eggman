@@ -7,7 +7,6 @@ tasks:
 
   stubgen:
     desc: "Creates stubs for the Cython functions."
-    # deps: [lint]
     run: once
     sources:
       - src/eggman/*.py
@@ -81,3 +80,21 @@ tasks:
     desc: "Run experiments file, bypassing pytest."
     cmds:
       - python experiment.py
+
+  build_docs:
+    deps: [devbuild, lint]
+    desc: "Build the documentation with Sphinx."
+    sources:
+      - src/eggman/*.py
+      - src/eggman/*.pyx
+      - src/eggman/*.pxd
+      - docs/*.rst
+      # - docs/*/*.rst
+      # - docs/*/*.py
+      # - docs/*/*.toml
+      - docs/conf.py
+    generates:
+      - docs/build/html/index.html
+    cmds:
+      - rm -rf docs/build/html/
+      - sphinx-build docs/ docs/build/html/

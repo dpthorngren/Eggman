@@ -35,9 +35,9 @@ jobs:
       run: |
         flake8 . --count --show-source --statistics
 
-    # - name: Build Docs
-    #   run: |
-    #     sphinx-build docs/ htmldocs/
+    - name: Build Docs
+      run: |
+        sphinx-build docs/ htmldocs/
 
     - name: Pytest
       run: |

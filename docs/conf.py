@@ -1,0 +1,30 @@
+# Project Information
+# https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
+project = 'Eggman'
+copyright = '2026, Daniel Thorngren'
+author = 'Daniel Thorngren'
+release = '0.6.0'
+
+# General Configuration
+# https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
+extensions = [
+    'sphinx.ext.autodoc',
+    'sphinx.ext.napoleon',
+]
+exclude_patterns = []
+
+# Extension Settings
+autodoc_typehints = 'description'
+autoclass_content = 'class'
+autodoc_class_signature = "separated"
+napoleon_use_admonition_for_examples = True
+autodoc_default_options = {
+    'members': True,
+    'undoc-members': True,
+    'member-order': 'groupwise',
+}
+
+# HTML Output Options
+# https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
+html_theme = 'sphinx_rtd_theme'
+html_sidebars = {"**": ['searchbox.html', 'globaltoc.html']}
