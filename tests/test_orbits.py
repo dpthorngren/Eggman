@@ -90,7 +90,8 @@ def test_numerical():
     assert np.linalg.norm(orb.get_position(t_apo)) == approx(10. * (1.+.3), 1e-9)
     # Distance on-sky from star
     # eggman.OrbitWrap args: period, t0, semimajor, eccen, inclination, lon_periapse
-    # batman.rsky args: t, t_conj, period, semimajor, inclination, eccen, lon_periapse, transittype, nthreads
+    # batman.rsky args: t, t_conj, period, semimajor, inclination, eccen,
+    #                   lon_periapse, transittype, nthreads
     # batman._rsky._rsky(np.array([2.1]), 0., 5., 15., 89.*np.pi/180., .3, 35*np.pi/180., 0, 1)
     orb = Orbit(5., 0., 15., .3, 89., 35.)
     assert np.linalg.norm(orb.get_position(2.1)[:2]) == approx(15.80092098, abs=1e-6)
