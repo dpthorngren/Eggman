@@ -7,7 +7,7 @@
 Code for calculating the geometry and transit depths of piecewise ellipsoidal objects.
 
 ## Installation
-Eggman relies on the GNU Scientific Library (GSL), which the user must install before Eggman. This is a C libraries so the Python setup script cannot retrieve them itself. It can be installed through essentially any system package manager: `anaconda::gsl` for [Anaconda](https://anaconda.org/anaconda/gsl), `gsl` [for MacPorts](https://ports.macports.org/port/gsl/), `gsl` for [Homebrew](https://formulae.brew.sh/formula/gsl)and `libgsl-dev` for Linux using apt-get.  It can also be installed directly from the [GSL website](https://www.gnu.org/software/gsl/); just make sure you install it such that the compiler can locate it.
+Eggman relies on the GNU Scientific Library (GSL), which the user must install before Eggman. This is a C library so the Python setup script cannot retrieve them itself. It can be installed through essentially any system package manager: `anaconda::gsl` for [Anaconda](https://anaconda.org/anaconda/gsl), `gsl` [for MacPorts](https://ports.macports.org/port/gsl/), `gsl` for [Homebrew](https://formulae.brew.sh/formula/gsl)and `libgsl-dev` for Linux using apt-get.  It can also be installed directly from the [GSL website](https://www.gnu.org/software/gsl/); just make sure you install it such that the compiler can locate it.
 
 Once the prerequisites are installed, Eggman can be compiled and installed from the terminal with `pip install .` from the Eggman directory.
 

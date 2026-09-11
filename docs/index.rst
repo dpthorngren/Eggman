@@ -1,11 +1,10 @@
-Starlord Documentation
+Eggman Documentation
 ======================
 
 .. toctree::
-   :maxdepth: 2
+    :maxdepth: 2
 
-   transits
-   system
-   ref/index
-
-The documentation is currently being written.
+    installation
+    transits
+    system
+    ref/index
