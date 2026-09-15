@@ -18,6 +18,37 @@ else:  # ...but provide the real cimports during compilation
 
 @cython.cclass
 class LightSource:
+    '''Describes the emission of an object, so that the brightness at a given
+    point can be quickly looked up. The source must be one of the following
+    types, with the correct number of parameters provided:
+
+    ``no_emission``
+        0 parameters.  completely dark, always returns zero.
+
+    ``lambertian``
+        1 parameter: the brightness.  Uniform emission of light across the surface.
+
+    ``quadratic_limb``
+        3 parameters: the overall brightness and the two limb darkening
+        coefficients.  A source with limb darkening using the quadratic functional form.
+
+    ``nonlinear_limb``
+        5 parameters: the overall brightness and four limb darkening
+        coefficients.  A source with limb darkening using the nonlinear functional form.
+
+    ``day_night``
+        2 parameters: the day side brightness and the night-side brightness. What
+        it says on the tin, but note that this is much more efficient than an emission map.
+
+    ``emission map``
+        2 parameters: the azimuthal and longitudinal resolution of the grid.
+        Interpolates the brightness on a grid of values provided by the user.  Extremely general,
+        but much slower than other methods. Default grid values are zero, the user must set them
+        by calling :func:`eggman.LightSource.set_emission_map`.
+
+    Note that brightnesses are before accounting for surface area, so that e.g. the total
+    apparent brightness of a lambertian unit sphere is 2*pi*brightness.
+    '''
     csource: cye.LightSource
 
     _source_type_names_ = [
@@ -152,17 +183,46 @@ class LightSource:
         return output
 
     def get_emission_point(self, i: int) -> float:
+        '''Get the value of the emission map's i'th grid point.
+
+        Args:
+            i: the index of the point.  Must be an int between 0 and ``map_size``.
+
+        Returns: The value of the i'th grid point as a float.
+        '''
         return self.csource.get_emission_point(i)
 
     def set_emission_point(self, i: int, value: float) -> None:
+        '''Set the value of the i'th emission_map grid point.
+
+        Args:
+            i: the index of the point.  Must be an int between 0 and ``map_size``.
+            value: the new value for that grid point, as a float.
+        '''
         self.csource.set_emission_point(i, value)
 
     def get_emission_location(self, i: int) -> np.ndarray:
+        '''Get the location on the unit sphere corresponding to the i'th emission_map grid point.
+
+        Args:
+            i: the index of the point.  Must be an int between 0 and ``map_size``.
+
+        Returns: a 1-d numpy array of size 3 containing the x, y, and z coordinates of the
+            requested point.  This vector always has a length of 1.
+        '''
         cython.declare(loc=cye.Vec3)
         loc = self.csource.get_emission_location(i)
         return np.array([loc.x, loc.y, loc.z])
 
     def set_emission_map(self, func: typing.Callable) -> np.ndarray:
+        '''Set the emission map using an emission mapping function.
+
+        Args:
+            func: a function that maps locations on the unit sphere to brightness values.  It
+            should accept 3 arguments (x, y, and z coordinates) and return a single float.
+
+        Returns: An array of the values computed from the function at the grid points.
+        '''
         cython.declare(i=int, loc=cye.Vec3, value=float)
         result = np.full(self.csource.get_map_size(), np.nan)
         for i in range(self.csource.get_map_size()):
@@ -173,6 +233,18 @@ class LightSource:
         return result
 
     def interp_emission(self, x: float, y: float, z: float) -> float:
+        '''Interpolate the emission map at the given (x, y, z) coordinates.
+
+        Note that the coordinates provided will be clamped onto the surface of the unit sphere in
+        cylindrical coordinates (not spherical), with y as the up-down direction.
+
+        Args:
+            x: the first coordinate point to interpolate on.
+            y: the second coordinate point to interpolate on, which will be clamped to [-1, 1].
+            z: the third coordinate point to interpolate on.
+
+        Returns: The interpolated value as a float.
+        '''
         cython.declare(loc=cye.Vec3)
         loc = cye.Vec3(x, y, z)
         return self.csource.interp_emission(loc)

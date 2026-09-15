@@ -45,16 +45,7 @@ For good measure we have added a ring onto the planet as well.  This has fewer p
 
 Phase Curves and Eclipses
 -------------------------
-Evaluating phase curves requires specifying the brightness of the planet across its surface.  This is done using the :class:`eggman.LightSource` class, and has the following options for the type:
-
-- ``no_emission`` completely dark, the same as not specifying a planet's light source.
-- ``lambertian`` uniform emission of light across the surface.
-- ``quadratic_limb`` limb darkening using the quadratic functional form, usually only used for stars.
-- ``nonlinear_limb`` limb darkening using the non-linear functional form, usually only used for stars.
-- ``day_night`` a planet with one brightness across its day side and another on the night side.
-- ``emission map`` interpolates the brightness on a grid of values provided by the user.  Extremely general, but much slower.
-
-It is important to note for the latter two examples that rotating the planet rotates the source as well, so e.g. setting ``gamma=90`` in ``add_planet`` results in a planet whose "day side" points backwards along its orbit!  This isn't usually what you want, although it can make for an efficient approximation to a hot spot offset.
+Evaluating phase curves requires specifying the brightness of the planet across its surface.  This is done using the :class:`eggman.LightSource` class, and must have one of the following types ``no_emission``, ``lambertian``, ``quadratic_limb``, ``nonlinear_limb``, ``day_night``, or ``emission map``; see the :class:`eggman.LightSource` class documentation for more details, including parameter definitions. It is important to note for the latter two emission types that rotating the planet rotates the source as well, so e.g. setting ``gamma=90`` in ``add_planet`` results in a planet whose "day side" points backwards along its orbit!  This isn't usually what you want, although it can make for an efficient approximation to a hot spot offset.
 
 Here is an example using the day-night brightness map on a spherical planet.  The light source took two parameters -- the day and night side brightnesses -- and was specified as an argument to the ``add_planet`` function.
 

@@ -14,6 +14,7 @@ The orbit is specified by the ``t0`` (time of mid-transit), ``period``, ``semima
 The star's limb darkening is specified by the ``limbType`` and ``limb`` arguments; the former is either ``quadratic`` or ``nonlinear`` and the latter is a list of parameters (2 and 4 respectively).  These refer to the following formulas from `Mandel & Agol (2002) <https://ui.adsabs.harvard.edu/abs/2002ApJ...580L.171M/abstract>`__ respectively:
 
 :math:`I_\mathrm{q}(\mu)/N(\gamma_0, \gamma_1) = 1 - \gamma_0 (1-\mu) - \gamma_1 (1-\mu)^2`
+
 :math:`I_\mathrm{nl}(\mu)/N(\gamma_0, \gamma_1, \gamma_2, \gamma_3) = 1 - \gamma_0 (1 - \sqrt{\mu}) - \gamma_1 (1-\mu) - \gamma_2 (1-\mu^{3/2}) - \gamma_3 (1-\mu^2)`
 
 The functions `N(...)` normalize the star to a total brightness of 1.
