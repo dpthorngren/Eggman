@@ -55,8 +55,8 @@ void transit_integral(
     double result, err;
     Bounds xb, yb;
 
-    double st = sin(theta);
-    double ct = cos(theta);
+    double st = sin(-M_PI * theta / 180.);
+    double ct = cos(-M_PI * theta / 180.);
     double limb_norm;
     if (limb3 < 0) {
         limb_norm = M_PI * (1. - limb0 / 3. - limb1 / 6.);
@@ -91,7 +91,7 @@ void transit_integral(
             continue;
         }
 
-        // Rotate planet so it's axes are aligned with the coordinate system
+        // Rotate planet so its axes are aligned with the coordinate system
         g.xe = ct * loc.x - st * loc.y;
         g.ye = st * loc.x + ct * loc.y;
 
@@ -117,8 +117,8 @@ void transit_integral(
             g.a = r_back;
             g.b = r_up < 0 ? r_back : r_up;
             code = gsl_integration_qag(
-                &integOuter, xb.min, g.xe, .1 * atol, .1 * rtol, max_steps, 1, workspaceOuter,
-                &result, &err
+                &integOuter, xb.min, fmin(g.xe, xb.max), .1 * atol, .1 * rtol, max_steps, 1,
+                workspaceOuter, &result, &err
             );
             if (integration_failed(code, result, err, atol, rtol)) {
                 outputs[i] = NAN;
@@ -132,8 +132,8 @@ void transit_integral(
             g.a = r_forward;
             g.b = r_up < 0 ? r_forward : r_up;
             code = gsl_integration_qag(
-                &integOuter, g.xe, xb.max, .1 * atol, .1 * rtol, max_steps, 1, workspaceOuter,
-                &result, &err
+                &integOuter, fmax(g.xe, xb.min), xb.max, .1 * atol, .1 * rtol, max_steps, 1,
+                workspaceOuter, &result, &err
             );
             if (integration_failed(code, result, err, atol, rtol)) {
                 outputs[i] = NAN;

@@ -234,12 +234,22 @@ int test_transit() {
     const int n_times = 100;
     double outputs[n_times];
     double times[n_times];
+
+    // Transit should be monotonically increasing after mid-transit
+    for (int i = 0; i < n_times; i++) {
+        times[i] = i * 0.1 / n_times;
+        outputs[i] = -1.0;
+    }
+    transit_integral(times, outputs, n_times, orb, .1, .1, .1, 0., 0., 0., 0.);
+    for (int i = 0; i < n_times - 1; i++) {
+        TEST_ASSERT(outputs[i], <=, outputs[i + 1], errors);
+    }
+
+    // No limb darkening, sphere
     for (int i = 0; i < n_times; i++) {
         times[i] = i * orb.get_period() / n_times;
         outputs[i] = -1.0;
     }
-
-    // No limb darkening, sphere
     transit_integral(times, outputs, n_times, orb, .1, .1, .1, 0., 0., 0., 0.);
     for (int i = 0; i < n_times; i++) { // General bounds
         TEST_ASSERT(outputs[i], <=, 1., errors);
@@ -578,6 +588,55 @@ inline double gridmap_test_func(Vec3 loc) {
     return 2.0 + 0.3 * loc.x + 0.13 * loc.y * loc.y + 0.5 * loc.z;
 }
 
+int test_equivalency() {
+    ANNOUNCE_TEST();
+    int errors = 0;
+
+    Orbit orb = Orbit(2.27, 0.3, 7.3, 0.08, 91.5, 32.7);
+    const int n_times = 500;
+    double times[n_times];
+    double system_outputs[n_times];
+    double transit_outputs[n_times];
+
+    for (int i = 0; i < n_times; i++) {
+        times[i] = i * orb.get_period() / n_times;
+        transit_outputs[i] = -1.0;
+        system_outputs[i] = -1.0;
+    }
+
+    // Quadratic limb darkening
+    transit_integral(times, transit_outputs, n_times, orb, .07, .075, .06, .23, .07, 0., -1, 30.);
+
+    PlanetSystem p;
+    double source_params[MAX_SOURCE_PARAMS] = {1.0 / M_PI, 0.23, 0.07, 0.0, 0.0, 0.0,
+                                               0.0,        0.0,  0.0,  0.0, 0.0, 0.0};
+    p.add_object(Orbit(), Shape(), LightSource(QuadraticLimb, source_params));
+    Shape planet(0.07, 0.075, 0.06, 0.2);
+    planet.set_rotation(30., 0., 0.);
+    p.add_object(orb, planet, LightSource());
+    p.integrate(times, system_outputs, n_times);
+    for (int i = 0; i < n_times; i++) {
+        TEST_APPROX(transit_outputs[i], system_outputs[i], 1e-6, errors);
+    }
+
+    // Non-linear limb darkening
+    transit_integral(times, transit_outputs, n_times, orb, .07, .075, .06, .29, .13, 0.075, .015, -13.);
+    p.clear_objects();
+    source_params[1] = .29;
+    source_params[2] = .13;
+    source_params[3] = .075;
+    source_params[4] = .015;
+    p.add_object(Orbit(), Shape(), LightSource(NonLinearLimb, source_params));
+    planet = Shape(0.07, 0.075, 0.06, 0.2);
+    planet.set_rotation(-13., 0., 0.);
+    p.add_object(orb, planet, LightSource());
+    p.integrate(times, system_outputs, n_times);
+    for (int i = 0; i < n_times; i++) {
+        TEST_APPROX(transit_outputs[i], system_outputs[i], 1e-6, errors);
+    }
+    return errors;
+}
+
 int test_general_phasemap() {
     ANNOUNCE_TEST();
     Vec3 loc, loc2;
@@ -692,6 +751,7 @@ int main() {
     errors += test_general_phasemap();
     errors += test_transit();
     errors += test_planetary_system();
+    errors += test_equivalency();
     if (errors == 0) {
         cout << "All tests passed." << endl << endl;
     } else {
