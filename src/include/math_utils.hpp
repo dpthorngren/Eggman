@@ -108,26 +108,18 @@ inline bool integration_failed(
 
 inline void sphere_to_gridmap(Vec3 &loc, int n, int m) {
     loc.x = n * fmod(atan2(loc.x, loc.z) / (2 * M_PI) + 0.5, 1);
-    loc.y = (m + 1) * (CLAMP(loc.y, -1., 1.) + 1.) / 2. - 1.;
+    loc.y = (m + 1) * acos(CLAMP(-loc.y, -1, 1)) / M_PI - 1.;
     loc.z = 0.;
     return;
 }
 
 inline void gridmap_to_sphere(Vec3 &loc, int n, int m) {
-    loc.y = 2 * ((loc.y + 1.) / (m + 1.)) - 1.;
+    loc.y = -cos(M_PI * (loc.y + 1) / (m + 1));
     double dist = sqrt(1 - loc.y * loc.y);
     double theta = 2 * M_PI * (loc.x / n - .5);
     loc.z = dist * cos(theta);
     loc.x = dist * sin(theta);
     return;
-}
-
-inline double smootherstep(double x) {
-    if (x < 0)
-        return 0.;
-    if (x > 1)
-        return 1.;
-    return x * x * x * (x * (6. * x - 15.) + 10.);
 }
 
 inline double interp_gridmap(Vec3 loc, int n, int m, const std::vector<double> &data) {
@@ -137,7 +129,7 @@ inline double interp_gridmap(Vec3 loc, int n, int m, const std::vector<double> &
     sphere_to_gridmap(loc, n, m);
 
     double low, high;
-    double weight = smootherstep(fmod(loc.x, 1));
+    double weight = CLAMP(fmod(loc.x, 1), 0., 1.);
     int i0 = (int)loc.x;
     int i1 = (i0 + 1) % n;
     int j = (int)loc.y;
@@ -157,7 +149,7 @@ inline double interp_gridmap(Vec3 loc, int n, int m, const std::vector<double> &
     } else {
         return NAN;
     }
-    weight = smootherstep(fmod(1. + loc.y, 1));
+    weight = CLAMP(fmod(1. + loc.y, 1), 0., 1.);
     return (1. - weight) * low + weight * high;
 }
 

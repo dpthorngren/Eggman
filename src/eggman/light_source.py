@@ -182,6 +182,11 @@ class LightSource:
                 output_view[i, j] = self.csource.get_brightness_sphere(x_view[i], y_view[j])
         return output
 
+    def get_emission_grid(self) -> np.ndarray:
+        '''Get the full array of locations of the emission map points.'''
+        results = [self.get_emission_location(i) for i in range(self.map_size)]
+        return np.array(results)
+
     def get_emission_point(self, i: int) -> float:
         '''Get the value of the emission map's i'th grid point.
 
