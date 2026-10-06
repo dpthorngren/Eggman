@@ -10,9 +10,14 @@ For more general calculations than standard transits, the :class:`eggman.PlanetS
 
 Although ``add_object`` is completely general, the other functions are easier to use and recommended unless you need to do something very unusual.  The ``add_planet`` function in particular has a large number of optional arguments you can use for setting the orbit, rotation, emission, etc. -- you can click through to the API docs for each function.
 
+.. thumbnail:: img/angles.png
+   :align: center
+   :show_caption: True
+   :title: The radius and angle definitions used in add_object and its wrappers. The shape is defined by forward, backward, upward, and sideways radii, shown as colored lines on the plots. With the angles set to zero, if the planet rotates with its orbit (tidally locked) the forward vector points along the orbital motion and the up vector points normal to the orbital plane; otherwise the forward, up, and side vectors point along the +x, +y, and +z directions (left panel).  The angles rotate the object relative to this, adjusting the pitch θ, yaw ϕ, and roll γ as shown.
+
 Transits
 --------------------
-We'll start with a simple example of a non-spherical object transiting a star with quadratic limb darkening.  The ``add_star`` function always defines the star as a unit sphere and varies only the limb darkening format and parameters used.  The ``add_planet`` function is much more elaborate -- the first four arguments are the radius of the planet in the prograde (morning), retrograde evening), polar, and radial (away from the star) directions. Then the ``period`` and ``semimajor`` axis arguments are required.  Additional arguments allow you to refine the orbit (eccentricity, inclination, etc), but we'll keep things simple here.
+We'll start with a simple example of a non-spherical object transiting a star with quadratic limb darkening.  The ``add_star`` function always defines the star as a unit sphere and varies only the limb darkening format and parameters used.  The ``add_planet`` function is much more elaborate -- the first four arguments are the radius of the planet in the prograde (morning), retrograde evening), polar, and radial (away from the star) directions (see figure). Then the ``period`` and ``semimajor`` axis arguments are required.  Additional arguments allow you to refine the orbit (eccentricity, inclination, etc), but we'll keep things simple here.
 
 .. code:: python
 

@@ -10,6 +10,7 @@ release = '0.6.0'
 extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.napoleon',
+    'sphinxcontrib.images',
 ]
 exclude_patterns = []
 
