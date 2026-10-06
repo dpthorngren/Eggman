@@ -139,7 +139,7 @@ class LightSource:
         if type(x) in types and type(y) in types:
             if bell.r_up == 0:
                 loc = bell.raycast(x, y)[1]
-                loc = bell.sphere_to_world(loc)
+                loc = bell.sphere_to_world(loc) - bell.position
                 if ring_front != loc[2] > 0.:
                     return 0.
             return self.csource.get_brightness(x, y, bell.cshape)
@@ -156,7 +156,7 @@ class LightSource:
             for j in range(y_view.shape[0]):
                 if bell.r_up == 0:
                     loc = bell.raycast(x_view[i], y_view[j])[1]
-                    loc = bell.sphere_to_world(loc)
+                    loc = bell.sphere_to_world(loc) - bell.position
                     if ring_front != loc[2] > 0.:
                         output_view[i, j] = 0.
                         continue

@@ -145,9 +145,14 @@ inline Vec3 Shape::aligned_to_sphere(Vec3 loc) const {
 
 inline Vec3 Shape::sphere_to_world(Vec3 loc) const {
     Vec3 result;
-    loc.x *= (loc.x < 0 ? r_back : r_forward);
-    loc.y *= r_up;
-    loc.z *= r_side;
+    if (shape_type == Ring) {
+        loc.x *= r_forward;
+        loc.y *= r_forward;
+    } else {
+        loc.x *= (loc.x < 0 ? r_back : r_forward);
+        loc.y *= r_up;
+        loc.z *= r_side;
+    }
     MATMUL(rot, loc, result);
     result.x += position.x;
     result.y += position.y;
